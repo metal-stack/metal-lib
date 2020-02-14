@@ -1,0 +1,33 @@
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /home/test/.minikube/ca.crt
+    server: https://192.168.39.76:8443
+  name: testcluster
+contexts:
+- context:
+    cluster: testcluster
+    user: developer
+  name: mycluster
+- context:
+    cluster: testcluster
+    user: username
+  name: myContext
+current-context: myContext
+kind: Config
+preferences: {}
+users:
+- name: developer
+  user:
+    client-certificate: fake-cert-file
+    client-key: fake-key-file
+- name: username
+  user:
+    auth-provider:
+      config:
+        client-id: clientdId123
+        client-secret: clientSecret345
+        id-token: "1234"
+        idp-certificate-authority: /ca.cert
+        idp-issuer-url: https://issuer
+      name: oidc
