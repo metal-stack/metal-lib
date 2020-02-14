@@ -99,7 +99,10 @@ func UserAuth(ug security.UserGetter) restful.FilterFunction {
 			} else {
 				log.Error("cannot get user from request", zap.Error(err))
 			}
-			resp.WriteHeaderAndEntity(http.StatusForbidden, httperrors.NewHTTPError(http.StatusForbidden, err))
+			err = resp.WriteHeaderAndEntity(http.StatusForbidden, httperrors.NewHTTPError(http.StatusForbidden, err))
+			if err != nil {
+				log.Error("writeHeaderAndEntity", zap.Error(err))
+			}
 			return
 		}
 		log = log.With(zap.String("useremail", usr.EMail))

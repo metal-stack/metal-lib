@@ -42,7 +42,7 @@ func NewVersion(name string, basePath string) *restful.WebService {
 			Returns(http.StatusOK, "OK", version{}).
 			Operation("info").
 			To(func(r *restful.Request, rsp *restful.Response) {
-				rsp.WriteAsJson(vi)
+				_ = rsp.WriteAsJson(vi)
 			}))
 
 	return ws

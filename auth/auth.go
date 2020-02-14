@@ -7,9 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
 	"net"
@@ -18,6 +15,10 @@ import (
 	"os/exec"
 	"runtime"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	"github.com/metal-stack/metal-lib/zapup"
 
@@ -457,11 +458,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 // waits for the token to be generated
 func (a *app) waitShutdown() {
-
-	select {
-	case <-a.completeChan:
-		return
-	}
+	<-a.completeChan
 }
 
 // Opens the given url in the browser (OS-dependent).
@@ -482,7 +479,7 @@ func openBrowser(url string) error {
 	args = append(args, url)
 	err := exec.Command(cmd, args...).Start()
 	if err != nil {
-		return fmt.Errorf("error opening browser cmd:%s args:%s error:%v\n", cmd, args, err)
+		return fmt.Errorf("error opening browser cmd:%s args:%s error:%v", cmd, args, err)
 	}
 	return nil
 }

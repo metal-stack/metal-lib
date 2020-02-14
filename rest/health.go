@@ -67,8 +67,11 @@ func check(log *zap.Logger, handlers ...HealthCheck) func(request *restful.Reque
 					Status:  HealthStatusUnhealthy,
 					Message: e.Error(),
 				}
-				log.Error("unhealthy", zap.String("error", e.Error()))
-				response.WriteHeaderAndEntity(http.StatusInternalServerError, s)
+				log.Error("unhealthy", zap.Error(e))
+				err := response.WriteHeaderAndEntity(http.StatusInternalServerError, s)
+				if err != nil {
+					log.Error("writeHeaderAndEntity", zap.Error(err))
+				}
 				return
 			}
 		}
@@ -76,6 +79,9 @@ func check(log *zap.Logger, handlers ...HealthCheck) func(request *restful.Reque
 			Status:  HealthStatusHealthy,
 			Message: "OK",
 		}
-		response.WriteEntity(s)
+		err := response.WriteEntity(s)
+		if err != nil {
+			log.Error("writeEntity", zap.Error(err))
+		}
 	}
 }
