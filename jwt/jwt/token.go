@@ -134,7 +134,7 @@ func GenerateToken(tenant string, grps []string, issuedAt, expiresAt time.Time) 
 	}
 
 	cl := jwt.Claims{
-		Issuer:   "https://dex.test.fi-ts.io/dex",
+		Issuer:   "https://dex.test.metal-stack.io/dex",
 		Subject:  "achim",
 		Audience: jwt.Audience{"theAudience"},
 		Expiry:   jwt.NewNumericDate(expiresAt),

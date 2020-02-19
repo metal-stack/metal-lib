@@ -10,13 +10,6 @@ It was intentionally created to provide a zap logger instance that considers:
 
 ## Quickstart
 
-Enable go modules and go proxy to fetch the sources from `git.f-i-ts.de`:
-
-```bash
-export GO111MODULE=on
-export GOPROXY=https://gomods.fi-ts.io
-```
-
 Create a `zapuptest` app:
 
 ```go
