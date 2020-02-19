@@ -1,4 +1,3 @@
-export GOPROXY := https://gomods.fi-ts.io
 export GO111MODULE := on
 
 .DEFAULT_GOAL := build

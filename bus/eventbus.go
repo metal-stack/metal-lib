@@ -341,7 +341,7 @@ func (p *nsqPublisher) CreateTopic(topic string) error {
 // understands the nsq log message and writes it in the zap.logger
 //
 // Format:
-// INF    2 [switch/fra-equ01-leaf01] querying nsqlookupd http://metal.test.fi-ts.io:4161/lookup?topic=switch      {"app": "metal-core"}
+// INF    2 [switch/fra-equ01-leaf01] querying nsqlookupd http://metal.test.metal-stack.io:4161/lookup?topic=switch      {"app": "metal-core"}
 func bridgeNsqLogToCoreLog(nsqLogMessage string, log *zap.Logger) {
 	logLevel := nsqLogMessage[:3]
 	logMessage := nsqLogMessage[5:]

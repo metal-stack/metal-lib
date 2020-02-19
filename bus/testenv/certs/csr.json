@@ -1,7 +1,7 @@
 {
-  "CN": "metal-pod.xyz",
+  "CN": "metal-stack.io",
   "hosts": [
-    "api.metal-pod.xyz",
+    "api.metal-stack.io",
     "metal-control-plane-nsqd"
   ],
   "key": {
@@ -12,7 +12,7 @@
     {
       "C":  "DE",
       "L":  "Muenchen",
-      "O":  "FI-TS",
+      "O":  "Metal-Stack",
       "OU": "DevOps",
       "ST": "Bayern"
     }

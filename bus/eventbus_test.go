@@ -333,19 +333,19 @@ func TestBridgeNsqLogToCoreLog(t *testing.T) {
 
 	tests := []Test{
 		{
-			NsqMsg: "INF  123 [switch/fra-equ01-leaf01] querying nsqlookupd http://metal.test.fi-ts.io:4161/lookup?topic=switch {\"app\": \"metal-core\"} ",
+			NsqMsg: "INF  123 [switch/fra-equ01-leaf01] querying nsqlookupd http://metal.test.metal-stack.io:4161/lookup?topic=switch {\"app\": \"metal-core\"} ",
 			Level:  zap.InfoLevel,
 		},
 		{
-			NsqMsg: "ERR    2 [switch/fra-equ01-leaf01] error querying nsqlookupd (http://metal.test.fi-ts.io:4161/lookup?topic=switch) - Get http://metal.test.fi-ts.io:4161/lookup?topic=switch: dial tcp: i/o timeout        {\"app\": \"metal-core\"}",
+			NsqMsg: "ERR    2 [switch/fra-equ01-leaf01] error querying nsqlookupd (http://metal.test.metal-stack.io:4161/lookup?topic=switch) - Get http://metal.test.metal-stack.io:4161/lookup?topic=switch: dial tcp: i/o timeout        {\"app\": \"metal-core\"}",
 			Level:  zap.ErrorLevel,
 		},
 		{
-			NsqMsg: "WRN    1 [switch/fra-equ01-leaf01] error querying nsqlookupd (http://metal.test.fi-ts.io:4161/lookup?topic=switch) - Get http://metal.test.fi-ts.io:4161/lookup?topic=switch: dial tcp: i/o timeout        {\"app\": \"metal-core\"}",
+			NsqMsg: "WRN    1 [switch/fra-equ01-leaf01] error querying nsqlookupd (http://metal.test.metal-stack.io:4161/lookup?topic=switch) - Get http://metal.test.metal-stack.io:4161/lookup?topic=switch: dial tcp: i/o timeout        {\"app\": \"metal-core\"}",
 			Level:  zap.WarnLevel,
 		},
 		{
-			NsqMsg: "DBG    1 [switch/fra-equ01-leaf01] error querying nsqlookupd (http://metal.test.fi-ts.io:4161/lookup?topic=switch) - Get http://metal.test.fi-ts.io:4161/lookup?topic=switch: dial tcp: i/o timeout        {\"app\": \"metal-core\"}",
+			NsqMsg: "DBG    1 [switch/fra-equ01-leaf01] error querying nsqlookupd (http://metal.test.metal-stack.io:4161/lookup?topic=switch) - Get http://metal.test.metal-stack.io:4161/lookup?topic=switch: dial tcp: i/o timeout        {\"app\": \"metal-core\"}",
 			Level:  zap.DebugLevel,
 		},
 	}

@@ -48,7 +48,7 @@ func TestGenerateFullToken(t *testing.T) {
 	assert.NoError(t, err, "error creating keypair")
 
 	cl := jwt.Claims{
-		Issuer:   "https://dex.test.fi-ts.io/dex",
+		Issuer:   "https://dex.test.metal-stack.io/dex",
 		Subject:  "achim",
 		Audience: jwt.Audience{"token-forge", "auth-go-cli"},
 		Expiry:   jwt.NewNumericDate(time.Unix(1557410799, 0)),

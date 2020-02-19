@@ -21,11 +21,11 @@ func NewPlugin(grpr *grp.Grpr) *Plugin {
 // Groups will reformatted [app]-[]-[]-[role], e.g. "maas-all-all-admin", "kaas-all-all-kaasadmin", "k8s-all-all-admin".
 // All groups without or with another the tenant-prefix are filtered.
 func (p *Plugin) ExtractUserProcessGroups(claims *security.Claims) (user *security.User, err error) {
-	return p.extractUser(claims, p.extractAndProcessGroups)
+	return extractUser(claims, p.extractAndProcessGroups)
 }
 
 // extractUser returns the User, groups are extracted with the given fn.
-func (p *Plugin) extractUser(claims *security.Claims, fn extractGroupsFn) (user *security.User, err error) {
+func extractUser(claims *security.Claims, fn extractGroupsFn) (user *security.User, err error) {
 
 	tenant := ""
 	if claims.FederatedClaims == nil {
@@ -61,7 +61,7 @@ type extractGroupsFn func(tenant string, directory string, groups []string) ([]s
 
 // extractAndProcessGroups is a implementation of the extractGroupsFn for ExtractUserProcessGroups
 func (p *Plugin) extractAndProcessGroups(tenant string, directory string, groups []string) ([]security.ResourceAccess, error) {
-	// determine if the user is the operator/provider of the service (fi-ts)
+	// determine if the user is the operator/provider of the service
 	tenantIsProvider, err := p.grpr.IsProviderTenant(tenant, directory)
 	if err != nil {
 		return nil, err
