@@ -31,6 +31,10 @@ func NewHTTPError(code int, err error) *HTTPErrorResponse {
 	}
 }
 
+func (h *HTTPErrorResponse) Error() string {
+	return fmt.Sprintf("%s (%d)", h.Message, h.StatusCode)
+}
+
 // NotFound creates a new notfound error with a given error message. Convenience Method.
 func NotFound(err error) *HTTPErrorResponse {
 	return NewHTTPError(http.StatusNotFound, err)
