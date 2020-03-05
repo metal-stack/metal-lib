@@ -1,15 +1,13 @@
 apiVersion: v1
-clusters: []
 contexts:
 - context:
     cluster: ""
-    user: user001
+    user: email@provider.de
   name: cloudctl
-current-context: ""
 kind: Config
 preferences: {}
 users:
-- name: user001
+- name: email@provider.de
   user:
     auth-provider:
       config:

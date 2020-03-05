@@ -63,11 +63,9 @@ func UpdateKubeConfig(kubeConfig string, tokenInfo TokenInfo, userIDExtractor Us
 
 	usersSlice, err := dyno.GetSlice(cfg, "users")
 	if err != nil {
-		return "", err
+		usersSlice = make([]interface{}, 0)
 	}
-	if usersSlice == nil {
-		return "", errors.New("users slice not found")
-	}
+	cfg["users"] = usersSlice
 
 	userName := userIDExtractor(tokenInfo)
 

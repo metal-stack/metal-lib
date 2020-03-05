@@ -18,22 +18,22 @@ func Test_GetCurrentUser(t *testing.T) {
 			filename: "./testdata/config",
 			validate: expectSuccess(
 				TestAuthContext{
-					User:             "IZT0322",
+					User:             "myUserId",
 					Ctx:              cloudContextName,
 					AuthProviderName: "oidc",
 					AuthProviderOidc: true,
-					IDToken:          "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlNzNiYzJkM2IyN2FlODdiNDI4OWYzODk4ZjE3YmI4YmZlOGQ4N2IifQ.eyJpc3MiOiJodHRwczovL2RleC50ZXN0LmZpLXRzLmlvL2RleCIsInN1YiI6IkNrdERUajFKV2xRd016SXlMRTlWUFZWemNsTjJZeXhQVlQxVmMzSkJiR3dzVDFVOVNVUk5MRTlWUFVObGJuUnlZV3dzUkVNOWRHVnpkQzFqZFhOMGIyMWxjaXhFUXoxa2IyMXBiblFTREdGa2RHVnpkREZmWm1sMGN3IiwiYXVkIjpbInRva2VuLWZvcmdlIiwiYXV0aC1nby1jbGkiXSwiZXhwIjoxNTU2NjUwMDAwLCJpYXQiOjE1NTY2MjEyMDAsImF6cCI6ImF1dGgtZ28tY2xpIiwiYXRfaGFzaCI6Ik05eWlRRTlnLVB4eHFhR0diUDl0SGciLCJlbWFpbCI6IklaVDAzMjJAdGVzdC1jdXN0b21lci5kb21pbnQiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6IklaVDAzMjIiLCJmZWRlcmF0ZWRfY2xhaW1zIjp7ImNvbm5lY3Rvcl9pZCI6ImFkdGVzdDFfZml0cyIsInVzZXJfaWQiOiJDTj1JWlQwMzIyLE9VPVVzclN2YyxPVT1Vc3JBbGwsT1U9SURNLE9VPUNlbnRyYWwsREM9dGVzdC1jdXN0b21lcixEQz1kb21pbnQifX0.KDHf2PF21tBFiNTyaMTQzJrs7JDJt8v4P5t5YOz3jLS1V3G6EueVgSY-bpl1VN16AmWyZ14Xj6fG7GZCxQGVW1NwHDZAi6IaOJmSLcjukj-jzwK6SjuRd8TIwuB5PepqUHGwG9AU6HoDQ5cLLuCYzn-CRUt-HB0uu6QBeznnmRT4VevbxHubxQFdui-ElReq-9R3KzoE-j6EPIoA2WQzA-PFeOvgZCBtYRC2tmTibObUaS7F1cz0cH0PnrpqkJ1_Lg91amcv-bUXRF1yWthKFNIQ9N9L7JqcCUYYVS2V2GG3pTo7ljoPfSBDybXe00BQjAM-EbrDeaplKl8ypOIdZg",
+					IDToken:          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
 				}),
 		},
 		{
 			filename: "./testdata/config-bare",
 			validate: expectSuccess(
 				TestAuthContext{
-					User:             "IZT0322",
+					User:             "myUserId",
 					Ctx:              cloudContextName,
 					AuthProviderName: "oidc",
 					AuthProviderOidc: true,
-					IDToken:          "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlNzNiYzJkM2IyN2FlODdiNDI4OWYzODk4ZjE3YmI4YmZlOGQ4N2IifQ.eyJpc3MiOiJodHRwczovL2RleC50ZXN0LmZpLXRzLmlvL2RleCIsInN1YiI6IkNrdERUajFKV2xRd016SXlMRTlWUFZWemNsTjJZeXhQVlQxVmMzSkJiR3dzVDFVOVNVUk5MRTlWUFVObGJuUnlZV3dzUkVNOWRHVnpkQzFqZFhOMGIyMWxjaXhFUXoxa2IyMXBiblFTREdGa2RHVnpkREZmWm1sMGN3IiwiYXVkIjpbInRva2VuLWZvcmdlIiwiYXV0aC1nby1jbGkiXSwiZXhwIjoxNTU2NjUwMDAwLCJpYXQiOjE1NTY2MjEyMDAsImF6cCI6ImF1dGgtZ28tY2xpIiwiYXRfaGFzaCI6Ik05eWlRRTlnLVB4eHFhR0diUDl0SGciLCJlbWFpbCI6IklaVDAzMjJAdGVzdC1jdXN0b21lci5kb21pbnQiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6IklaVDAzMjIiLCJmZWRlcmF0ZWRfY2xhaW1zIjp7ImNvbm5lY3Rvcl9pZCI6ImFkdGVzdDFfZml0cyIsInVzZXJfaWQiOiJDTj1JWlQwMzIyLE9VPVVzclN2YyxPVT1Vc3JBbGwsT1U9SURNLE9VPUNlbnRyYWwsREM9dGVzdC1jdXN0b21lcixEQz1kb21pbnQifX0.KDHf2PF21tBFiNTyaMTQzJrs7JDJt8v4P5t5YOz3jLS1V3G6EueVgSY-bpl1VN16AmWyZ14Xj6fG7GZCxQGVW1NwHDZAi6IaOJmSLcjukj-jzwK6SjuRd8TIwuB5PepqUHGwG9AU6HoDQ5cLLuCYzn-CRUt-HB0uu6QBeznnmRT4VevbxHubxQFdui-ElReq-9R3KzoE-j6EPIoA2WQzA-PFeOvgZCBtYRC2tmTibObUaS7F1cz0cH0PnrpqkJ1_Lg91amcv-bUXRF1yWthKFNIQ9N9L7JqcCUYYVS2V2GG3pTo7ljoPfSBDybXe00BQjAM-EbrDeaplKl8ypOIdZg",
+					IDToken:          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
 				}),
 		},
 		{
@@ -149,7 +149,7 @@ var demoToken = TokenInfo{
 		Iss:   "the_issuer",
 		Email: "email@provider.de",
 		Sub:   "the_sub",
-		Name:  "iz00001",
+		Name:  "user001",
 	},
 	IDToken:      "abcd4711",
 	RefreshToken: "refresh234",
@@ -166,7 +166,7 @@ var demoToken2 = TokenInfo{
 		Iss:   "the_issuer",
 		Email: "other-email@other-provider.de",
 		Sub:   "the_sub",
-		Name:  "iz00002",
+		Name:  "user002",
 	},
 	IDToken:      "cdefg",
 	RefreshToken: "refresh987",
@@ -278,6 +278,19 @@ func TestUpdateUserExistingConfig(t *testing.T) {
 	}
 
 	diffFiles(t, "./testdata/UEUexpectedConfig", tmpfile.Name())
+}
+
+func TestUpdateIncompleteConfig(t *testing.T) {
+
+	tmpfile := writeTemplate(t, "./testdata/configIncomplete")
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	_, err := UpdateKubeConfig(tmpfile.Name(), demoToken, ExtractEMail)
+	if err != nil {
+		t.Fatalf("error updating config: %v", err)
+	}
+
+	diffFiles(t, "./testdata/configIncompleteExpected", tmpfile.Name())
 }
 
 func TestUpdateExistingMetalctlConfig(t *testing.T) {
