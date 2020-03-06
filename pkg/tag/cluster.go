@@ -11,6 +11,6 @@ const (
 	ClusterProject = "cluster.metal-stack.io/project"
 	// ClusterTenant tag to store the tenant of the cluster
 	ClusterTenant = "cluster.metal-stack.io/tenant"
-	// ClusterServiceFQN tag to identify a services running in the cluster
+	// ClusterServiceFQN tag to identify a service running in the cluster
 	ClusterServiceFQN = "cluster.metal-stack.io/id/namespace/service"
 )
