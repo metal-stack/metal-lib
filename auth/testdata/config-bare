@@ -2,18 +2,18 @@ apiVersion: v1
 clusters:
 contexts:
 - context:
-    user: IZT0322
+    user: myUserId
   name: cloudctl
 kind: Config
 preferences: {}
 users:
-- name: IZT0322
+- name: myUserId
   user:
     auth-provider:
       config:
-        client-id: auth-go-cli
-        client-secret: AuGx99dsxS1hcHAtc9VfcmV1
-        id-token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlNzNiYzJkM2IyN2FlODdiNDI4OWYzODk4ZjE3YmI4YmZlOGQ4N2IifQ.eyJpc3MiOiJodHRwczovL2RleC50ZXN0LmZpLXRzLmlvL2RleCIsInN1YiI6IkNrdERUajFKV2xRd016SXlMRTlWUFZWemNsTjJZeXhQVlQxVmMzSkJiR3dzVDFVOVNVUk5MRTlWUFVObGJuUnlZV3dzUkVNOWRHVnpkQzFqZFhOMGIyMWxjaXhFUXoxa2IyMXBiblFTREdGa2RHVnpkREZmWm1sMGN3IiwiYXVkIjpbInRva2VuLWZvcmdlIiwiYXV0aC1nby1jbGkiXSwiZXhwIjoxNTU2NjUwMDAwLCJpYXQiOjE1NTY2MjEyMDAsImF6cCI6ImF1dGgtZ28tY2xpIiwiYXRfaGFzaCI6Ik05eWlRRTlnLVB4eHFhR0diUDl0SGciLCJlbWFpbCI6IklaVDAzMjJAdGVzdC1jdXN0b21lci5kb21pbnQiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6IklaVDAzMjIiLCJmZWRlcmF0ZWRfY2xhaW1zIjp7ImNvbm5lY3Rvcl9pZCI6ImFkdGVzdDFfZml0cyIsInVzZXJfaWQiOiJDTj1JWlQwMzIyLE9VPVVzclN2YyxPVT1Vc3JBbGwsT1U9SURNLE9VPUNlbnRyYWwsREM9dGVzdC1jdXN0b21lcixEQz1kb21pbnQifX0.KDHf2PF21tBFiNTyaMTQzJrs7JDJt8v4P5t5YOz3jLS1V3G6EueVgSY-bpl1VN16AmWyZ14Xj6fG7GZCxQGVW1NwHDZAi6IaOJmSLcjukj-jzwK6SjuRd8TIwuB5PepqUHGwG9AU6HoDQ5cLLuCYzn-CRUt-HB0uu6QBeznnmRT4VevbxHubxQFdui-ElReq-9R3KzoE-j6EPIoA2WQzA-PFeOvgZCBtYRC2tmTibObUaS7F1cz0cH0PnrpqkJ1_Lg91amcv-bUXRF1yWthKFNIQ9N9L7JqcCUYYVS2V2GG3pTo7ljoPfSBDybXe00BQjAM-EbrDeaplKl8ypOIdZg
+        client-id: cli-id
+        client-secret: SomeRandomString
+        id-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
         idp-certificate-authority: ""
         idp-issuer-url: https://dex.test.metal-stack.io/dex
         refresh-token: Chl4aHFmNWkzcTRiZGRrd2RmcDRvNHNjc3hqEhlldXFvem9mN2QycHFieGF0Zms3eGhrendm

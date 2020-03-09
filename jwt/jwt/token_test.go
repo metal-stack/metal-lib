@@ -50,7 +50,7 @@ func TestGenerateFullToken(t *testing.T) {
 	cl := jwt.Claims{
 		Issuer:   "https://dex.test.metal-stack.io/dex",
 		Subject:  "achim",
-		Audience: jwt.Audience{"token-forge", "auth-go-cli"},
+		Audience: jwt.Audience{"cli-id1", "cli-id2"},
 		Expiry:   jwt.NewNumericDate(time.Unix(1557410799, 0)),
 		IssuedAt: jwt.NewNumericDate(time.Unix(1557381999, 0)),
 	}
