@@ -38,6 +38,7 @@ type Receiver func(interface{}) error
 // A Consumer wraps the base configuration for the nsq connection
 type Consumer struct {
 	lookupds []string
+	nsqds    []string
 	config   *nsq.Config
 	log      *zap.Logger
 	logLevel nsq.LogLevel
@@ -88,6 +89,13 @@ func LogLevel(v Level) Option {
 
 		c.logLevel = l
 
+		return c
+	}
+}
+
+func NSQDs(nsqds ...string) Option {
+	return func(c *Consumer) *Consumer {
+		c.nsqds = nsqds
 		return c
 	}
 }
@@ -262,6 +270,9 @@ func (cr *ConsumerRegistration) Consume(paramProto interface{}, recv Receiver, c
 	cr.c.AddConcurrentHandlers(nsq.HandlerFunc(tw.handleWithTimeout), concurrent)
 	cr.connected = true
 
+	if cr.consumer.nsqds != nil {
+		return cr.c.ConnectToNSQDs(cr.consumer.nsqds)
+	}
 	return cr.c.ConnectToNSQLookupds(cr.consumer.lookupds)
 }
 
