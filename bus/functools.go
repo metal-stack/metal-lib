@@ -62,7 +62,7 @@ func (e *Endpoints) Function(name string, fn interface{}) (*Function, error) {
 	if err := e.publisher.CreateTopic(name); err != nil {
 		return nil, fmt.Errorf("cannot create topic: %q: %w", name, err)
 	}
-	reg, err := e.consumer.Register(name, "function#ephemeral")
+	reg, err := e.consumer.Register(name, "function")
 	if err != nil {
 		return nil, fmt.Errorf("cannot register consumer for function %q: %w", name, err)
 	}
