@@ -100,12 +100,20 @@ func NSQDs(nsqds ...string) Option {
 	}
 }
 
+func MaxInFlight(num int) Option {
+	return func(c *Consumer) *Consumer {
+		c.config.MaxInFlight = num
+		return c
+	}
+}
+
 // NewConsumer returns a consumer and stores the addresses of the lookupd's.
 func NewConsumer(log *zap.Logger, tlsCfg *TLSConfig, lookupds ...string) (*Consumer, error) {
 	cfg := CreateNSQConfig(tlsCfg)
 	cfg.LookupdPollInterval = time.Second * 5
 	cfg.HeartbeatInterval = time.Second * 5
 	cfg.DefaultRequeueDelay = time.Second * 5
+	cfg.MaxInFlight = 10
 
 	return &Consumer{
 		config:   cfg,
