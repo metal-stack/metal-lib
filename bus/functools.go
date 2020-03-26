@@ -21,7 +21,10 @@ func NewEndpoints(consumer *Consumer, publisher Publisher) *Endpoints {
 	}
 }
 
-// DirectEndpoints returns endpoints which call the target function directly.
+// DirectEndpoints returns endpoints which call the target function directly. You do not need
+// a running nsq for this. This can be used with unit tests. It should not be used in production
+// code because the invocation of functions will not be persistent and will be delegated to the
+// current running process by forking a gorouting to call the receiving function.
 func DirectEndpoints() *Endpoints {
 	return &Endpoints{}
 }
@@ -36,9 +39,19 @@ type Function struct {
 	name      string
 }
 
-// Function creates a Function from the with the given endpoints. The name of the function will be a
+// Function creates a Function from the the given endpoints. The name of the function will be a
 // distributed selector for the given go function. So every function which is registered with the same
 // name can receive the invocation inside the cluster.
+// The function must be a normal go function with one parameter and one result of type error:
+//   ep := NewEndpoints(...)
+//   f, err := ep.Function("hello", func (s string) error {
+//      fmt.Printf("Hello %s\n", s)
+//      return nil
+//   })
+//   f.Must("world"); // prints "Hello world"
+// The target function can receive structs or pointer to structs. Please notice that when using
+// `DirectEndpoints` the parameters are not marshalled/unmarshalled via JSON, so using addresses
+// can have side effects.
 func (e *Endpoints) Function(name string, fn interface{}) (*Function, error) {
 	fntype := reflect.TypeOf(fn)
 	if fntype.Kind() != reflect.Func {

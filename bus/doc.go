@@ -2,8 +2,12 @@
   Package bus implements a thin wrapper around nsq so that you can create publishers for topics and
   consumers for channels.
 
+  Publisher/Consumer
+
   `Consumer` and `Publisher` are thin wrappers around the basic concept of
   nsq with small additions.
+
+  Functions
 
   A `Function` abstracts an asynchronous function which will be called by marshalling the
   parameters as JSON and invoke the corresponding function with nsq. You can start many services
