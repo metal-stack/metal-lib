@@ -56,7 +56,7 @@ func (e *Endpoints) Function(name string, fn interface{}) (*Function, error) {
 	}
 
 	if e.consumer == nil || e.publisher == nil {
-		// someone wants a sync function
+		// someone wants a local function
 		return &Function{name: name, fn: reflect.ValueOf(fn)}, nil
 	}
 	if err := e.publisher.CreateTopic(name); err != nil {
@@ -110,13 +110,17 @@ func (f *Function) receive(par interface{}) error {
 // communication problem with nsq.
 func (f *Function) Must(arg interface{}) error {
 	if f.endpoints == nil {
-		//sync function
-		for {
-			if err := f.receive(arg); err == nil {
-				return nil
+		go func(arg interface{}) {
+			// local function. this is not the "normal" use case so here we do a
+			// simple fork of a goroutine
+			for {
+				if err := f.receive(arg); err == nil {
+					return
+				}
+				time.Sleep(time.Millisecond * 100)
 			}
-			time.Sleep(time.Millisecond * 100)
-		}
+		}(arg)
+		return nil
 	}
 	return f.endpoints.publisher.Publish(f.name, arg)
 }
