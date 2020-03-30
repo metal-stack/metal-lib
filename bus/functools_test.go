@@ -2,6 +2,9 @@ package bus
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/exec"
 	"sync"
 	"testing"
 )
@@ -60,12 +63,150 @@ func TestFunctionHelloWorld(t *testing.T) {
 	}
 
 	value := "Hello world"
-	err = f.Must(value)
+	err = f(value)
 	wg.Wait()
 
 	if err != nil {
 		t.Fatalf("function must succeed, %v", err)
 	}
+
+	if res != value {
+		t.Errorf("result is %q, but should be %q", res, value)
+	}
+}
+
+func TestUniqueFunctionHelloWorld(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := ""
+	e := NewEndpoints(consumer, publisher)
+	f, _, err := e.Unique("uniquehelloworld", func(arg string) error {
+		res = arg
+		wg.Done()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("cannot create function, %v", err)
+	}
+
+	value := "Hello world"
+	err = f(value)
+	wg.Wait()
+
+	if err != nil {
+		t.Fatalf("function must succeed, %v", err)
+	}
+
+	if res != value {
+		t.Errorf("result is %q, but should be %q", res, value)
+	}
+}
+
+func TestTwoProcessesFunctionHelloWorld(t *testing.T) {
+	value := "Hello world"
+	e := NewEndpoints(consumer, publisher)
+	if _, pub := os.LookupEnv("PUBLISH"); pub {
+		// this unit-test was forked in another process. here we only publish a value
+		f, err := e.Function("distributed-hello", nil)
+		if err != nil {
+			t.Errorf("cannot create function, %v", err)
+		}
+		err = f(value)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	go func() {
+		// fork this unit-test in another process and set two env-variables, so the
+		// other process can publish a value but does not start nsqd again
+		executable, _ := os.Executable()
+		args := []string{"-test.timeout=10s", "-test.run=^(TestTwoProcessesFunctionHelloWorld)$"}
+		cmd := exec.Command(executable, args...)
+		cmd.Env = append([]string{"PUBLISH=1", "NO_NSQD_START=1"}, os.Environ()...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatalf("error occured: %s", string(out))
+		}
+	}()
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := ""
+	_, err := e.Function("distributed-hello", func(arg string) error {
+		res = arg
+		wg.Done()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("cannot create function, %v", err)
+	}
+
+	wg.Wait()
+
+	if res != value {
+		t.Errorf("result is %q, but should be %q", res, value)
+	}
+}
+
+func TestUniqueTargetFunctionWithResponse(t *testing.T) {
+	// create two functions, one with a unique name and send this name to the well-known
+	// service. the service then calls this unique-function name with the response
+	value := "Hello world"
+	e := NewEndpoints(consumer, publisher)
+	if _, pub := os.LookupEnv("CONSUME"); pub {
+		// this unit-test was forked in another process. here we only publish a value
+		var wg sync.WaitGroup
+		wg.Add(1)
+		_, err := e.Function("hello-service", func(arg string) error {
+			result, err := e.Function(arg, nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = result(value)
+			wg.Done()
+			return err
+		})
+		if err != nil {
+			t.Errorf("cannot create function, %v", err)
+		}
+		wg.Wait()
+		return
+	}
+	go func() {
+		// fork this unit-test in another process and set two env-variables, so the
+		// other process can publish a value but does not start nsqd again
+		executable, _ := os.Executable()
+		args := []string{"-test.timeout=10s", "-test.run=^(TestUniqueTargetFunctionWithResponse)$"}
+		cmd := exec.Command(executable, args...)
+		cmd.Env = append([]string{"CONSUME=1", "NO_NSQD_START=1"}, os.Environ()...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatalf("error occured: %s", string(out))
+		}
+	}()
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := ""
+	_, cbname, err := e.Unique("hello-result", func(arg string) error {
+		res = arg
+		wg.Done()
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("cannot create function, %v", err)
+	}
+	srv, err := e.Function("hello-service", nil)
+	if err != nil {
+		t.Fatalf("cannot create function, %v", err)
+	}
+	if err = srv(cbname); err != nil {
+		t.Fatal(err)
+	}
+
+	wg.Wait()
 
 	if res != value {
 		t.Errorf("result is %q, but should be %q", res, value)
@@ -94,7 +235,7 @@ func TestFunctionReplay(t *testing.T) {
 	}
 
 	value := "Hello world"
-	err = f.Must(value)
+	err = f(value)
 	wg.Wait()
 
 	if err != nil {
@@ -126,7 +267,7 @@ func TestFunctionWithStruct(t *testing.T) {
 	}
 
 	value := "Hello world"
-	err = f.Must(testStruct{Name: value})
+	err = f(testStruct{Name: value})
 	wg.Wait()
 
 	if err != nil {
@@ -154,7 +295,7 @@ func TestDirectFunctionWithStruct(t *testing.T) {
 	}
 
 	value := "Hello world"
-	err = f.Must(&testStruct{Name: value})
+	err = f(&testStruct{Name: value})
 	wg.Wait()
 
 	if err != nil {
@@ -182,7 +323,7 @@ func TestDirectFunctionWithDifferentParameters(t *testing.T) {
 	}
 
 	value := "Hello world"
-	err = f.Must(testStruct{Name: value})
+	err = f(testStruct{Name: value})
 	wg.Wait()
 
 	if err != nil {
@@ -216,7 +357,7 @@ func TestDirectFunctionReplay(t *testing.T) {
 	}
 
 	value := "Hello world"
-	err = f.Must(value)
+	err = f(value)
 	wg.Wait()
 
 	if err != nil {

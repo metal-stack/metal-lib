@@ -16,20 +16,24 @@ var (
 )
 
 func startupNSQD() error {
-	opts := nsqd.NewOptions()
-	opts.TCPAddress = tcpAddress
-	opts.HTTPAddress = httpAddress
-	opts.DataPath = "/tmp/"
-	nsqd, err := nsqd.New(opts)
-	if err != nil {
-		return err
-	}
-	go func() {
-		err = nsqd.Main()
+	_, disable := os.LookupEnv("NO_NSQD_START")
+	if !disable {
+		opts := nsqd.NewOptions()
+		opts.TCPAddress = tcpAddress
+		opts.HTTPAddress = httpAddress
+		opts.DataPath = "/tmp/"
+		nsqd, err := nsqd.New(opts)
 		if err != nil {
-			panic(err)
+			return err
 		}
-	}()
+		go func() {
+			err = nsqd.Main()
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+	var err error
 	consumer, err = NewConsumer(zapup.MustRootLogger(), nil)
 	if err != nil {
 		return err
