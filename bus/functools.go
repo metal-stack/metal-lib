@@ -96,6 +96,13 @@ func (e *Endpoints) Function(name string, fn interface{}) (*Function, error) {
 	return cb, nil
 }
 
+// receive will be called when the target function has to be invoked. we check
+// here if the given value and the target parameter type "match" in a form
+// that the caller can mix value and pointer types. If the target function
+// receives a value type, a value will be passed to it. If it needs a pointer
+// a pointer will be passed if there is one; if the function is invoked with a
+// value type, this value will be copied so we can pass a pointer to the target
+// function.
 func (f *Function) receive(par interface{}) error {
 	v := reflect.ValueOf(par)
 	vkind := reflect.TypeOf(par).Kind()
@@ -104,8 +111,11 @@ func (f *Function) receive(par interface{}) error {
 	parms := []reflect.Value{v}
 	if vkind != pkind {
 		if pkind == reflect.Ptr {
-			// function wants a ptr
-			parms = []reflect.Value{v.Addr()}
+			// function wants a ptr but we got a value
+			// --> copy value and pass pointer to this copy
+			nv := reflect.New(reflect.TypeOf(par))
+			nv.Elem().Set(v)
+			parms = []reflect.Value{nv}
 		} else if vkind == reflect.Ptr {
 			// function wants value
 			parms = []reflect.Value{v.Elem()}
@@ -125,7 +135,9 @@ func (f *Function) Must(arg interface{}) error {
 	if f.endpoints == nil {
 		go func(arg interface{}) {
 			// local function. this is not the "normal" use case so here we do a
-			// simple fork of a goroutine
+			// simple fork of a goroutine. it is up to the target function to
+			// return a nil value. if no nil value is returned ever, this goroutine
+			// will never end!
 			for {
 				if err := f.receive(arg); err == nil {
 					return

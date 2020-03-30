@@ -165,3 +165,65 @@ func TestDirectFunctionWithStruct(t *testing.T) {
 		t.Errorf("result is %q, but should be %q", res, value)
 	}
 }
+
+func TestDirectFunctionWithDifferentParameters(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := ""
+	e := DirectEndpoints()
+	f, err := e.Function("direct-hellostructpointer", func(arg *testStruct) error {
+		res = arg.Name
+		wg.Done()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("cannot create function, %v", err)
+	}
+
+	value := "Hello world"
+	err = f.Must(testStruct{Name: value})
+	wg.Wait()
+
+	if err != nil {
+		t.Fatalf("function must succeed, %v", err)
+	}
+
+	if res != value {
+		t.Errorf("result is %q, but should be %q", res, value)
+	}
+}
+
+func TestDirectFunctionReplay(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := ""
+	num := 0
+	retries := 1
+	e := DirectEndpoints()
+	f, err := e.Function("helloworld-replay-direct", func(arg string) error {
+		if num < retries {
+			num += 1
+			return fmt.Errorf("not on the first run: %d", num)
+		}
+		res = fmt.Sprintf("%s: %d", arg, num)
+		wg.Done()
+		return nil
+	})
+	if err != nil {
+		t.Errorf("cannot create function, %v", err)
+	}
+
+	value := "Hello world"
+	err = f.Must(value)
+	wg.Wait()
+
+	if err != nil {
+		t.Fatalf("function must succeed, %v", err)
+	}
+
+	if res != fmt.Sprintf("%s: %d", value, retries) {
+		t.Errorf("result is %q, but should be %q", res, value)
+	}
+}
