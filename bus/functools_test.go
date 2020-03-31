@@ -221,7 +221,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 	}
 }
 
-func TestFunctionReplay(t *testing.T) {
+func TestFunctionRetry(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
