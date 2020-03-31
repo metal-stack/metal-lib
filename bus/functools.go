@@ -59,22 +59,32 @@ type Func func(interface{}) error
 // `DirectEndpoints` the parameters are not marshalled/unmarshalled via JSON, so using addresses
 // can have side effects.
 func (e *Endpoints) Function(name string, fn interface{}) (Func, error) {
-	return e.function(name, "function", fn, true)
+	return e.function(name, "function", fn)
+}
+
+// Client returns a new function client for the function with the registered name.
+func (e *Endpoints) Client(name string) (Func, error) {
+	return e.function(name, "function", nil)
 }
 
 // Unique usese an unique, ephemeral topic so the topic will be deregisted when there is no
 // consumer any more for this function. Use this function to create a unique receiver, so function
 // invocations will not be distributed and the topic only exists as long as the registration
 // process is active. The name of this unique function is returned so it can be used with the
-// `Target` function to invoke it.
+// `Function` function to invoke it.
+// You **must** supply a fn parameter, because a Unique function creates a new unique name
+// which must dispatch to exact one receiver. If `fn` is nil, an error is returned.
 func (e *Endpoints) Unique(name string, fn interface{}) (Func, string, error) {
+	if fn == nil {
+		return nil, "", fmt.Errorf("unique function without func is not allowed")
+	}
 	id := uuid.New().String()
 	topic := name + "-" + id + "#ephemeral"
-	f, err := e.function(topic, "function", fn, true)
+	f, err := e.function(topic, "function", fn)
 	return f, topic, err
 }
 
-func (e *Endpoints) function(name, chanName string, fn interface{}, dopublish bool) (Func, error) {
+func (e *Endpoints) function(name, chanName string, fn interface{}) (Func, error) {
 	if fn != nil {
 		fntype := reflect.TypeOf(fn)
 		if fntype.Kind() != reflect.Func {

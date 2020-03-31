@@ -75,6 +75,14 @@ func TestFunctionHelloWorld(t *testing.T) {
 	}
 }
 
+func TestUniqueFunctionWithoutFunc(t *testing.T) {
+	ep := DirectEndpoints()
+	_, _, err := ep.Unique("blubber", nil)
+	if err == nil {
+		t.Errorf("a unique function needs also a go func")
+	}
+}
+
 func TestUniqueFunctionHelloWorld(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -160,7 +168,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		_, err := e.Function("hello-service", func(arg string) error {
-			result, err := e.Function(arg, nil)
+			result, err := e.Client(arg)
 			if err != nil {
 				log.Fatal(err)
 			}
