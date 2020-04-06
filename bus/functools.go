@@ -9,6 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// the number of parallel receivers. in a later version we can make this configurable.
+	numParallelReceivers = 5
+)
+
 // Endpoints couples a consumer and a publisher to a single entity.
 type Endpoints struct {
 	consumer  *Consumer
@@ -29,7 +34,7 @@ func NewEndpoints(consumer *Consumer, publisher Publisher) *Endpoints {
 // DirectEndpoints returns endpoints which call the target function directly. You do not need
 // a running nsq for this. This can be used with unit tests. It should not be used in production
 // code because the invocation of functions will not be persistent and will be delegated to the
-// current running process by forking a gorouting to call the receiving function.
+// current running process by forking a goroutine to call the receiving function.
 func DirectEndpoints() *Endpoints {
 	return &Endpoints{}
 }
@@ -67,10 +72,10 @@ func (e *Endpoints) Client(name string) (Func, error) {
 	return e.function(name, "function", nil)
 }
 
-// Unique usese an unique, ephemeral topic so the topic will be deregisted when there is no
+// Unique uses an unique, ephemeral topic so the topic will be deregisted when there is no
 // consumer any more for this function. Use this function to create a unique receiver, so function
 // invocations will not be distributed and the topic only exists as long as the registration
-// process is active. The name of this unique function is returned so it can be used with the
+// process is active. The computed unique name of this function is returned so it can be used with the
 // `Function` function to invoke it.
 // You **must** supply a fn parameter, because a Unique function creates a new unique name
 // which must dispatch to exact one receiver. If `fn` is nil, an error is returned.
@@ -126,7 +131,7 @@ func (e *Endpoints) function(name, chanName string, fn interface{}) (Func, error
 			partype = partype.Elem()
 		}
 		pvalue := reflect.New(partype).Elem()
-		if err = reg.Consume(pvalue.Interface(), cb.receive, 5); err != nil {
+		if err = reg.Consume(pvalue.Interface(), cb.receive, numParallelReceivers); err != nil {
 			return nil, fmt.Errorf("cannot consume: %w", err)
 		}
 	}

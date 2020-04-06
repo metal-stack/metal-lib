@@ -163,7 +163,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 	// service. the service then calls this unique-function name with the response
 	value := "Hello world"
 	e := NewEndpoints(consumer, publisher)
-	if _, pub := os.LookupEnv("CONSUME"); pub {
+	if _, pub := os.LookupEnv("PRODUCER"); pub {
 		// this unit-test was forked in another process. here we only publish a value
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -188,7 +188,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 		executable, _ := os.Executable()
 		args := []string{"-test.timeout=10s", "-test.run=^(TestUniqueTargetFunctionWithResponse)$"}
 		cmd := exec.Command(executable, args...)
-		cmd.Env = append([]string{"CONSUME=1", "NO_NSQD_START=1"}, os.Environ()...)
+		cmd.Env = append([]string{"PRODUCER=1", "NO_NSQD_START=1"}, os.Environ()...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Fatalf("error occured: %s", string(out))
@@ -343,7 +343,7 @@ func TestDirectFunctionWithDifferentParameters(t *testing.T) {
 	}
 }
 
-func TestDirectFunctionReplay(t *testing.T) {
+func TestDirectFunctionRetry(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -351,7 +351,7 @@ func TestDirectFunctionReplay(t *testing.T) {
 	num := 0
 	retries := 1
 	e := DirectEndpoints()
-	f, err := e.Function("helloworld-replay-direct", func(arg string) error {
+	f, err := e.Function("helloworld-retry-direct", func(arg string) error {
 		if num < retries {
 			num += 1
 			return fmt.Errorf("not on the first run: %d", num)
