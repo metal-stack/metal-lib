@@ -229,7 +229,7 @@ func TestFunctionRetry(t *testing.T) {
 	num := 0
 	retries := 1
 	e := NewEndpoints(consumer, publisher)
-	f, err := e.Function("helloworld-replay", func(arg string) error {
+	f, err := e.Function("helloworld-retry", func(arg string) error {
 		if num < retries {
 			num += 1
 			return fmt.Errorf("not on the first run: %d", num)
