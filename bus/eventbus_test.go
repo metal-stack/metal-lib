@@ -2,16 +2,17 @@ package bus
 
 import (
 	"fmt"
+	"net"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/metal-stack/metal-lib/zapup"
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
-	"net"
-	"reflect"
-	"testing"
-	"time"
 )
 
 // tests if the handler returns prematurely with specific error if a timeout occurs
@@ -181,16 +182,7 @@ type Msg struct {
 
 func TestNewPublisher(t *testing.T) {
 
-	cfg := &PublisherConfig{
-		TCPAddress:   "localhost:4150",
-		HTTPEndpoint: "localhost:4151",
-	}
-	p, err := NewPublisher(zapup.MustRootLogger(), cfg)
-	if err != nil {
-		t.Errorf("unexpected error, %v", err)
-	}
-
-	err = p.CreateTopic("topic42")
+	err := publisher.CreateTopic("topic42")
 
 	if _, ok := err.(net.Error); ok {
 		// network error, no nsq running, skip roundtrip tests
@@ -201,23 +193,18 @@ func TestNewPublisher(t *testing.T) {
 		t.Errorf("unexpected error, %v", err)
 	}
 
-	c, err := NewConsumer(zapup.MustRootLogger(), nil, "localhost:4161")
-	if err != nil {
-		t.Error(err)
-	}
-
 	msg := Msg{
 		Name: "mymsg",
 		Num:  42,
 	}
-	err = p.Publish("topic42", msg)
+	err = publisher.Publish("topic42", msg)
 	if err != nil {
 		t.Error(err)
 	}
 
 	ch := make(chan int)
 
-	err = c.MustRegister("topic", "node42").Consume(Msg{}, func(m interface{}) error {
+	err = consumer.MustRegister("topic42", "node42").Consume(Msg{}, func(m interface{}) error {
 		fmt.Printf("received %v\n", m)
 		ch <- 1
 		return nil

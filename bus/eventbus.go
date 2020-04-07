@@ -38,6 +38,7 @@ type Receiver func(interface{}) error
 // A Consumer wraps the base configuration for the nsq connection
 type Consumer struct {
 	lookupds []string
+	nsqds    []string
 	config   *nsq.Config
 	log      *zap.Logger
 	logLevel nsq.LogLevel
@@ -92,12 +93,27 @@ func LogLevel(v Level) Option {
 	}
 }
 
+func NSQDs(nsqds ...string) Option {
+	return func(c *Consumer) *Consumer {
+		c.nsqds = nsqds
+		return c
+	}
+}
+
+func MaxInFlight(num int) Option {
+	return func(c *Consumer) *Consumer {
+		c.config.MaxInFlight = num
+		return c
+	}
+}
+
 // NewConsumer returns a consumer and stores the addresses of the lookupd's.
 func NewConsumer(log *zap.Logger, tlsCfg *TLSConfig, lookupds ...string) (*Consumer, error) {
 	cfg := CreateNSQConfig(tlsCfg)
 	cfg.LookupdPollInterval = time.Second * 5
 	cfg.HeartbeatInterval = time.Second * 5
 	cfg.DefaultRequeueDelay = time.Second * 5
+	cfg.MaxInFlight = 10
 
 	return &Consumer{
 		config:   cfg,
@@ -262,6 +278,9 @@ func (cr *ConsumerRegistration) Consume(paramProto interface{}, recv Receiver, c
 	cr.c.AddConcurrentHandlers(nsq.HandlerFunc(tw.handleWithTimeout), concurrent)
 	cr.connected = true
 
+	if cr.consumer.nsqds != nil {
+		return cr.c.ConnectToNSQDs(cr.consumer.nsqds)
+	}
 	return cr.c.ConnectToNSQLookupds(cr.consumer.lookupds)
 }
 
