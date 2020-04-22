@@ -284,11 +284,34 @@ func (cr *ConsumerRegistration) Consume(paramProto interface{}, recv Receiver, c
 	return cr.c.ConnectToNSQLookupds(cr.consumer.lookupds)
 }
 
+// Close disconnects from all nsqd's or all nsq-lookupd's.
+func (cr *ConsumerRegistration) Close() error {
+	if cr.c != nil {
+		cr.c.Stop()
+	}
+	if cr.consumer.nsqds != nil {
+		for _, nsq := range cr.consumer.nsqds {
+			if err := cr.c.DisconnectFromNSQD(nsq); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	}
+	for _, lkd := range cr.consumer.lookupds {
+		if err := cr.c.DisconnectFromNSQLookupd(lkd); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // A Publisher is used for event publishing to topics. The fields
 // Publish and CreateTopics can be overwritten to mock this publisher.
 type Publisher interface {
 	Publish(topic string, data interface{}) error
 	CreateTopic(topic string) error
+	Stop()
 }
 
 type nsqPublisher struct {
@@ -355,6 +378,13 @@ func (p *nsqPublisher) CreateTopic(topic string) error {
 
 	_ = resp.Body.Close()
 	return nil
+}
+
+// Stop stops the publisher
+func (p *nsqPublisher) Stop() {
+	if p.producer != nil {
+		p.producer.Stop()
+	}
 }
 
 // understands the nsq log message and writes it in the zap.logger
