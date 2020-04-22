@@ -56,11 +56,13 @@ type Func func(interface{}) error
 // name can receive the invocation inside the cluster.
 // The function must be a normal go function with one parameter and one result of type error:
 //   ep := NewEndpoints(...)
-//   f, err := ep.Function("hello", func (s string) error {
+//   fn, f, err := ep.Function("hello", func (s string) error {
 //      fmt.Printf("Hello %s\n", s)
 //      return nil
 //   })
 //   f("world"); // prints "Hello world"
+//   ...
+//   fn.Close()
 // The target function can receive structs or pointer to structs. Please notice that when using
 // `DirectEndpoints` the parameters are not marshalled/unmarshalled via JSON, so using addresses
 // can have side effects.
