@@ -43,9 +43,10 @@ func DirectEndpoints() *Endpoints {
 // nsq so multiple instances of the same function can run in different processes. Only one of them
 // will be invoked.
 type Function struct {
-	endpoints *Endpoints
-	fn        reflect.Value
-	name      string
+	endpoints    *Endpoints
+	registration *ConsumerRegistration
+	fn           reflect.Value
+	name         string
 }
 
 type Func func(interface{}) error
@@ -63,12 +64,12 @@ type Func func(interface{}) error
 // The target function can receive structs or pointer to structs. Please notice that when using
 // `DirectEndpoints` the parameters are not marshalled/unmarshalled via JSON, so using addresses
 // can have side effects.
-func (e *Endpoints) Function(name string, fn interface{}) (Func, error) {
+func (e *Endpoints) Function(name string, fn interface{}) (*Function, Func, error) {
 	return e.function(name, "function", fn)
 }
 
 // Client returns a new function client for the function with the registered name.
-func (e *Endpoints) Client(name string) (Func, error) {
+func (e *Endpoints) Client(name string) (*Function, Func, error) {
 	return e.function(name, "function", nil)
 }
 
@@ -79,41 +80,41 @@ func (e *Endpoints) Client(name string) (Func, error) {
 // `Function` function to invoke it.
 // You **must** supply a fn parameter, because a Unique function creates a new unique name
 // which must dispatch to exact one receiver. If `fn` is nil, an error is returned.
-func (e *Endpoints) Unique(name string, fn interface{}) (Func, string, error) {
+func (e *Endpoints) Unique(name string, fn interface{}) (*Function, Func, string, error) {
 	if fn == nil {
-		return nil, "", fmt.Errorf("unique function without func is not allowed")
+		return nil, nil, "", fmt.Errorf("unique function without func is not allowed")
 	}
 	id := uuid.New().String()
 	topic := name + "-" + id + "#ephemeral"
-	f, err := e.function(topic, "function", fn)
-	return f, topic, err
+	fnc, f, err := e.function(topic, "function#ephemeral", fn)
+	return fnc, f, topic, err
 }
 
-func (e *Endpoints) function(name, chanName string, fn interface{}) (Func, error) {
+func (e *Endpoints) function(name, chanName string, fn interface{}) (*Function, Func, error) {
 	if fn != nil {
 		fntype := reflect.TypeOf(fn)
 		if fntype.Kind() != reflect.Func {
-			return nil, fmt.Errorf("the function parameter must be a function")
+			return nil, nil, fmt.Errorf("the function parameter must be a function")
 		}
 		if fntype.NumIn() != 1 {
-			return nil, fmt.Errorf("the number of parameters in the function must be one")
+			return nil, nil, fmt.Errorf("the number of parameters in the function must be one")
 		}
 		if fntype.NumOut() != 1 {
-			return nil, fmt.Errorf("the function must return exactly one value of type error")
+			return nil, nil, fmt.Errorf("the function must return exactly one value of type error")
 		}
 		errtype := reflect.TypeOf(errors.New(""))
 		if !errtype.AssignableTo(fntype.Out(0)) {
-			return nil, fmt.Errorf("the return type is not of type 'error'")
+			return nil, nil, fmt.Errorf("the return type is not of type 'error'")
 		}
 	}
 	if e.consumer == nil && e.publisher == nil {
 		// someone wants a local function
 		f := &Function{name: name, fn: reflect.ValueOf(fn)}
-		return f.invoker(), nil
+		return f, f.invoker(), nil
 	}
 	if e.publisher != nil {
 		if err := e.publisher.CreateTopic(name); err != nil {
-			return nil, fmt.Errorf("cannot create topic: %q: %w", name, err)
+			return nil, nil, fmt.Errorf("cannot create topic: %q: %w", name, err)
 		}
 	}
 	cb := &Function{
@@ -124,18 +125,26 @@ func (e *Endpoints) function(name, chanName string, fn interface{}) (Func, error
 	if e.consumer != nil && fn != nil {
 		reg, err := e.consumer.Register(name, chanName)
 		if err != nil {
-			return nil, fmt.Errorf("cannot register consumer for function %q: %w", name, err)
+			return nil, nil, fmt.Errorf("cannot register consumer for function %q: %w", name, err)
 		}
+		cb.registration = reg
 		partype := reflect.TypeOf(fn).In(0)
 		for partype.Kind() == reflect.Ptr {
 			partype = partype.Elem()
 		}
 		pvalue := reflect.New(partype).Elem()
 		if err = reg.Consume(pvalue.Interface(), cb.receive, numParallelReceivers); err != nil {
-			return nil, fmt.Errorf("cannot consume: %w", err)
+			return nil, nil, fmt.Errorf("cannot consume: %w", err)
 		}
 	}
-	return cb.invoker(), nil
+	return cb, cb.invoker(), nil
+}
+
+func (f *Function) Close() error {
+	if f.registration != nil {
+		return f.registration.Close()
+	}
+	return nil
 }
 
 // receive will be called when the target function has to be invoked. we check

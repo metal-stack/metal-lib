@@ -11,7 +11,7 @@ import (
 
 func TestFunctionWithWrongParams(t *testing.T) {
 	e := NewEndpoints(consumer, publisher)
-	_, err := e.Function("helloworld", func(arg1, arg2 string) error {
+	_, _, err := e.Function("helloworld", func(arg1, arg2 string) error {
 		return nil
 	})
 	if err == nil {
@@ -21,7 +21,7 @@ func TestFunctionWithWrongParams(t *testing.T) {
 
 func TestFunctionWithWrongResults(t *testing.T) {
 	e := NewEndpoints(consumer, publisher)
-	_, err := e.Function("helloworld", func(arg1 string) (string, error) {
+	_, _, err := e.Function("helloworld", func(arg1 string) (string, error) {
 		return "", nil
 	})
 	if err == nil {
@@ -31,7 +31,7 @@ func TestFunctionWithWrongResults(t *testing.T) {
 
 func TestFunctionWithWrongResult(t *testing.T) {
 	e := NewEndpoints(consumer, publisher)
-	_, err := e.Function("helloworld", func(arg1 string) string {
+	_, _, err := e.Function("helloworld", func(arg1 string) string {
 		return ""
 	})
 	if err == nil {
@@ -41,7 +41,7 @@ func TestFunctionWithWrongResult(t *testing.T) {
 
 func TestFunctionWithWrongFunc(t *testing.T) {
 	e := NewEndpoints(consumer, publisher)
-	_, err := e.Function("helloworld", struct{}{})
+	_, _, err := e.Function("helloworld", struct{}{})
 	if err == nil {
 		t.Errorf("function creation should fail: must get a function as parameter")
 	}
@@ -53,7 +53,7 @@ func TestFunctionHelloWorld(t *testing.T) {
 
 	res := ""
 	e := NewEndpoints(consumer, publisher)
-	f, err := e.Function("helloworld", func(arg string) error {
+	_, f, err := e.Function("helloworld", func(arg string) error {
 		res = arg
 		wg.Done()
 		return nil
@@ -77,7 +77,7 @@ func TestFunctionHelloWorld(t *testing.T) {
 
 func TestUniqueFunctionWithoutFunc(t *testing.T) {
 	ep := DirectEndpoints()
-	_, _, err := ep.Unique("blubber", nil)
+	_, _, _, err := ep.Unique("blubber", nil)
 	if err == nil {
 		t.Errorf("a unique function needs also a go func")
 	}
@@ -89,7 +89,7 @@ func TestUniqueFunctionHelloWorld(t *testing.T) {
 
 	res := ""
 	e := NewEndpoints(consumer, publisher)
-	f, _, err := e.Unique("uniquehelloworld", func(arg string) error {
+	_, f, _, err := e.Unique("uniquehelloworld", func(arg string) error {
 		res = arg
 		wg.Done()
 		return nil
@@ -116,7 +116,7 @@ func TestTwoProcessesFunctionHelloWorld(t *testing.T) {
 	e := NewEndpoints(consumer, publisher)
 	if _, pub := os.LookupEnv("PUBLISH"); pub {
 		// this unit-test was forked in another process. here we only publish a value
-		f, err := e.Function("distributed-hello", nil)
+		_, f, err := e.Function("distributed-hello", nil)
 		if err != nil {
 			t.Errorf("cannot create function, %v", err)
 		}
@@ -142,7 +142,7 @@ func TestTwoProcessesFunctionHelloWorld(t *testing.T) {
 	wg.Add(1)
 
 	res := ""
-	_, err := e.Function("distributed-hello", func(arg string) error {
+	_, _, err := e.Function("distributed-hello", func(arg string) error {
 		res = arg
 		wg.Done()
 		return nil
@@ -167,8 +167,8 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 		// this unit-test was forked in another process. here we only publish a value
 		var wg sync.WaitGroup
 		wg.Add(1)
-		_, err := e.Function("hello-service", func(arg string) error {
-			result, err := e.Client(arg)
+		_, _, err := e.Function("hello-service", func(arg string) error {
+			_, result, err := e.Client(arg)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -198,7 +198,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 	wg.Add(1)
 
 	res := ""
-	_, cbname, err := e.Unique("hello-result", func(arg string) error {
+	_, _, cbname, err := e.Unique("hello-result", func(arg string) error {
 		res = arg
 		wg.Done()
 		return nil
@@ -206,7 +206,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create function, %v", err)
 	}
-	srv, err := e.Function("hello-service", nil)
+	_, srv, err := e.Function("hello-service", nil)
 	if err != nil {
 		t.Fatalf("cannot create function, %v", err)
 	}
@@ -229,7 +229,7 @@ func TestFunctionRetry(t *testing.T) {
 	num := 0
 	retries := 1
 	e := NewEndpoints(consumer, publisher)
-	f, err := e.Function("helloworld-retry", func(arg string) error {
+	_, f, err := e.Function("helloworld-retry", func(arg string) error {
 		if num < retries {
 			num += 1
 			return fmt.Errorf("not on the first run: %d", num)
@@ -265,7 +265,7 @@ func TestFunctionWithStruct(t *testing.T) {
 
 	res := ""
 	e := NewEndpoints(consumer, publisher)
-	f, err := e.Function("hellostruct", func(arg *testStruct) error {
+	_, f, err := e.Function("hellostruct", func(arg *testStruct) error {
 		res = arg.Name
 		wg.Done()
 		return nil
@@ -293,7 +293,7 @@ func TestDirectFunctionWithStruct(t *testing.T) {
 
 	res := ""
 	e := DirectEndpoints()
-	f, err := e.Function("direct-hellostruct", func(arg *testStruct) error {
+	_, f, err := e.Function("direct-hellostruct", func(arg *testStruct) error {
 		res = arg.Name
 		wg.Done()
 		return nil
@@ -321,7 +321,7 @@ func TestDirectFunctionWithDifferentParameters(t *testing.T) {
 
 	res := ""
 	e := DirectEndpoints()
-	f, err := e.Function("direct-hellostructpointer", func(arg *testStruct) error {
+	_, f, err := e.Function("direct-hellostructpointer", func(arg *testStruct) error {
 		res = arg.Name
 		wg.Done()
 		return nil
@@ -351,7 +351,7 @@ func TestDirectFunctionRetry(t *testing.T) {
 	num := 0
 	retries := 1
 	e := DirectEndpoints()
-	f, err := e.Function("helloworld-retry-direct", func(arg string) error {
+	_, f, err := e.Function("helloworld-retry-direct", func(arg string) error {
 		if num < retries {
 			num += 1
 			return fmt.Errorf("not on the first run: %d", num)
