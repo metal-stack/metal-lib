@@ -26,6 +26,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const cloudContext = "cloudctl"
+
 // Config for parametrization
 type Config struct {
 	// url of the oidc endpoint
@@ -484,19 +486,38 @@ func openBrowser(url string) error {
 	return nil
 }
 
+//KubeConfgiHandlerOption func for specifying options
+type KubeConfgiHandlerOption func(c *updateKubeConfig)
+
+//WithContextName sets the context-name
+func WithContextName(contextName string) KubeConfgiHandlerOption {
+	return func(c *updateKubeConfig) {
+		c.contextName = contextName
+	}
+}
+
 // NewUpdateKubeConfigHandler writes the TokenInfo to file and prints a message to the given writer, may be nil
-func NewUpdateKubeConfigHandler(kubeConfig string, writer io.Writer) TokenHandlerFunc {
-	u := updateKubeConfig{
+func NewUpdateKubeConfigHandler(kubeConfig string, writer io.Writer, opts ...KubeConfgiHandlerOption) TokenHandlerFunc {
+	u := &updateKubeConfig{
 		kubeConfig:      kubeConfig,
+		contextName:     cloudContext,
 		userIDExtractor: ExtractName,
 		writer:          writer,
 	}
+
+	for _, opt := range opts {
+		opt(u)
+	}
+
 	return u.updateKubeConfigFunc
 }
 
 type updateKubeConfig struct {
 	// path to kubeconfig where the credentials should be written
-	kubeConfig      string
+	kubeConfig string
+	// name of the context to update
+	contextName string
+	// fn to extract User
 	userIDExtractor UserIDExtractor
 	//optional writer to print out messages
 	writer io.Writer
@@ -504,7 +525,7 @@ type updateKubeConfig struct {
 
 func (u *updateKubeConfig) updateKubeConfigFunc(tokenInfo TokenInfo) error {
 
-	filename, err := UpdateKubeConfig(u.kubeConfig, tokenInfo, u.userIDExtractor)
+	filename, err := UpdateKubeConfigContext(u.kubeConfig, tokenInfo, u.userIDExtractor, u.contextName)
 	if err != nil {
 		return err
 	}

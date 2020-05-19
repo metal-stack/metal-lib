@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"math/rand"
@@ -11,49 +12,82 @@ import (
 	"testing"
 )
 
+const testCloudContextName = "cloudctl"
+const testCloudContextNameDev = "cloudctl-dev"
+const testCloudContextNameProd = "cloudctl-prod"
+
 func Test_GetCurrentUser(t *testing.T) {
 
 	tests := []test{
 		{
-			filename: "./testdata/config",
+			filename:    "./testdata/config",
+			contextName: testCloudContextName,
 			validate: expectSuccess(
 				TestAuthContext{
 					User:             "myUserId",
-					Ctx:              cloudContextName,
+					Ctx:              testCloudContextName,
 					AuthProviderName: "oidc",
 					AuthProviderOidc: true,
 					IDToken:          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
 				}),
 		},
 		{
-			filename: "./testdata/config-bare",
+			filename:    "./testdata/config-bare",
+			contextName: testCloudContextName,
 			validate: expectSuccess(
 				TestAuthContext{
 					User:             "myUserId",
-					Ctx:              cloudContextName,
+					Ctx:              testCloudContextName,
 					AuthProviderName: "oidc",
 					AuthProviderOidc: true,
 					IDToken:          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
 				}),
 		},
 		{
-			filename: "./testdata/config-no-oidc",
-			validate: expectError("missing key: auth-provider (path element idx: 1)"),
+			filename:    "./testdata/config-bare-with-suffix",
+			contextName: testCloudContextNameDev,
+			validate: expectSuccess(
+				TestAuthContext{
+					User:             "myUserIdDev",
+					Ctx:              testCloudContextNameDev,
+					AuthProviderName: "oidc",
+					AuthProviderOidc: true,
+					IDToken:          "Dev-ID-Token",
+				}),
 		},
 		{
-			filename: "./testdata/config-notexists",
-			validate: expectError("error loading kube-config: stat ./testdata/config-notexists: no such file or directory"),
+			filename:    "./testdata/config-bare-with-suffix",
+			contextName: testCloudContextNameProd,
+			validate: expectSuccess(
+				TestAuthContext{
+					User:             "myUserId",
+					Ctx:              testCloudContextNameProd,
+					AuthProviderName: "oidc",
+					AuthProviderOidc: true,
+					IDToken:          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+				}),
 		},
 		{
-			filename: "./testdata/config-empty",
-			validate: expectError("error loading kube-config - config is empty"),
+			filename:    "./testdata/config-no-oidc",
+			contextName: testCloudContextName,
+			validate:    expectError("missing key: auth-provider (path element idx: 1)"),
+		},
+		{
+			filename:    "./testdata/config-notexists",
+			contextName: testCloudContextName,
+			validate:    expectError("error loading kube-config: stat ./testdata/config-notexists: no such file or directory"),
+		},
+		{
+			filename:    "./testdata/config-empty",
+			contextName: testCloudContextName,
+			validate:    expectError("error loading kube-config - config is empty"),
 		},
 	}
 
 	for _, currentTest := range tests {
 		t.Run(currentTest.filename, func(t *testing.T) {
 
-			authCtx, err := CurrentAuthContext(currentTest.filename)
+			authCtx, err := GetAuthContext(currentTest.filename, currentTest.contextName)
 			validateErr := currentTest.validate(t, authCtx, err)
 			if validateErr != nil {
 				t.Errorf("test failed with unexpected error: %v", validateErr)
@@ -65,27 +99,17 @@ func Test_GetCurrentUser(t *testing.T) {
 type TestAuthContext AuthContext
 
 func (tac *TestAuthContext) compare(t *testing.T, authCtx AuthContext) {
-
-	if authCtx.User != tac.User {
-		t.Errorf("expected user %s", tac.User)
-	}
-	if authCtx.Ctx != tac.Ctx {
-		t.Errorf("expected ctx %s", tac.Ctx)
-	}
-	if authCtx.AuthProviderName != tac.AuthProviderName {
-		t.Errorf("expected authProviderName %s", tac.AuthProviderName)
-	}
-	if authCtx.AuthProviderOidc != tac.AuthProviderOidc {
-		t.Errorf("expected oidc %t", tac.AuthProviderOidc)
-	}
-	if authCtx.IDToken != tac.IDToken {
-		t.Errorf("expected idtoken %s", tac.IDToken)
-	}
+	assert.Equal(t, tac.User, authCtx.User)
+	assert.Equal(t, tac.Ctx, authCtx.Ctx)
+	assert.Equal(t, tac.AuthProviderName, authCtx.AuthProviderName)
+	assert.Equal(t, tac.AuthProviderOidc, authCtx.AuthProviderOidc)
+	assert.Equal(t, tac.IDToken, authCtx.IDToken)
 }
 
 type test struct {
-	filename string
-	validate validateFn
+	contextName string
+	filename    string
+	validate    validateFn
 }
 
 type validateFn func(t *testing.T, ctx AuthContext, err error) error
@@ -204,7 +228,7 @@ func TestUpdateUserNewFile(t *testing.T) {
 	asserter.Equal(authContext.User, demoToken.TokenClaims.Email, "User")
 	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")
 	asserter.Equal(authContext.AuthProviderName, "oidc", "AuthProvider")
-	asserter.Equal(authContext.Ctx, cloudContextName, "Context")
+	asserter.Equal(authContext.Ctx, testCloudContextName, "Context")
 	asserter.Equal(authContext.ClientID, demoToken.ClientID, "ClientID")
 	asserter.Equal(authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")
 	asserter.Equal(authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
@@ -248,7 +272,7 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 	asserter.Equal(authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
 	asserter.Equal(authContext.IssuerCA, demoToken.IssuerCA, "IssuerCA")
 	asserter.Equal(authContext.AuthProviderName, "oidc", "AuthProvider")
-	asserter.Equal(authContext.Ctx, cloudContextName, "Context")
+	asserter.Equal(authContext.Ctx, testCloudContextName, "Context")
 }
 
 func TestLoadExistingConfigWithOIDC(t *testing.T) {
@@ -264,7 +288,7 @@ func TestLoadExistingConfigWithOIDC(t *testing.T) {
 	require.Equal(t, authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
 	require.Equal(t, authContext.IssuerCA, demoToken.IssuerCA, "IssuerCA")
 	require.Equal(t, authContext.AuthProviderName, "oidc", "AuthProvider")
-	require.Equal(t, authContext.Ctx, cloudContextName, "Context")
+	require.Equal(t, authContext.Ctx, testCloudContextName, "Context")
 }
 
 func TestUpdateUserExistingConfig(t *testing.T) {
@@ -293,7 +317,7 @@ func TestUpdateIncompleteConfig(t *testing.T) {
 	diffFiles(t, "./testdata/configIncompleteExpected", tmpfile.Name())
 }
 
-func TestUpdateExistingMetalctlConfig(t *testing.T) {
+func TestUpdateExistingCloudctlConfig(t *testing.T) {
 
 	tmpfile := writeTemplate(t, "./testdata/UEMCgivenConfig")
 	defer os.Remove(tmpfile.Name()) // clean up
@@ -311,6 +335,26 @@ func TestUpdateExistingMetalctlConfig(t *testing.T) {
 	}
 
 	diffFiles(t, "./testdata/UEMCexpectedConfig", tmpfile.Name())
+}
+
+func TestUpdateExistingProdConfig(t *testing.T) {
+
+	tmpfile := writeTemplate(t, "./testdata/UEMCgivenProdConfig")
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	_, err := UpdateKubeConfigContext(tmpfile.Name(), demoToken2, ExtractEMail, testCloudContextNameProd)
+	if err != nil {
+		t.Fatalf("error updating config: %v", err)
+	}
+
+	diffFiles(t, "./testdata/UEMCexpectedProdConfig", tmpfile.Name())
+
+	_, err = UpdateKubeConfigContext(tmpfile.Name(), demoToken2, ExtractEMail, testCloudContextNameProd)
+	if err != nil {
+		t.Fatalf("error updating config: %v", err)
+	}
+
+	diffFiles(t, "./testdata/UEMCexpectedProdConfig", tmpfile.Name())
 }
 
 func TestManipulateEncodeKubeconfig(t *testing.T) {
@@ -399,9 +443,9 @@ func TestAuthContextFromEnv(t *testing.T) {
 	os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
 	defer os.Setenv(RecommendedConfigPathEnvVar, "")
 
-	authCtx, err := CurrentAuthContext("")
+	authCtx, err := GetAuthContext("", testCloudContextName)
 	require.Nil(t, err)
-	require.Equal(t, cloudContextName, authCtx.Ctx)
+	require.Equal(t, testCloudContextName, authCtx.Ctx)
 	require.Equal(t, "email@provider.de", authCtx.User)
 }
 

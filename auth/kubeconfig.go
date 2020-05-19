@@ -22,7 +22,6 @@ import (
 //
 
 const (
-	cloudContextName = "cloudctl"
 	oidcAuthProvider = "oidc"
 )
 
@@ -37,15 +36,27 @@ func ExtractEMail(tokenInfo TokenInfo) string {
 	return tokenInfo.TokenClaims.Email
 }
 
-// UpdateKubeConfig saves the given tokenInfo in the kubeConfig. The given path to kubeconfig is preferred,
+// UpdateKubeConfig saves the given tokenInfo in the given kubeConfig. The given path to kubeconfig is preferred,
 // otherwise the location of the kubeconfig is determined from env KUBECONFIG or default location.
 //
 // we modify/append a user with auth-provider from given tokenInfo.
-// we modify/append a context with name metalctl that references the user.
+// we modify/append a context with name cloudctl that references the user.
 //
 // returns filename the config got written to or error if any
 //
+// Deprecated: use UpdateKubeConfigContext instead
 func UpdateKubeConfig(kubeConfig string, tokenInfo TokenInfo, userIDExtractor UserIDExtractor) (string, error) {
+	return UpdateKubeConfigContext(kubeConfig, tokenInfo, userIDExtractor, cloudContext)
+}
+
+// UpdateKubeConfig saves the given tokenInfo in the given kubeConfig. The given path to kubeconfig is preferred,
+// otherwise the location of the kubeconfig is determined from env KUBECONFIG or default location.
+//
+// we modify/append a user with auth-provider from given tokenInfo.
+// we modify/append the given context that references the user.
+//
+// returns filename the config got written to or error if any
+func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtractor UserIDExtractor, contextName string) (string, error) {
 
 	if userIDExtractor == nil {
 		return "", errors.New("userIdExtractor must not be nil")
@@ -83,7 +94,7 @@ func UpdateKubeConfig(kubeConfig string, tokenInfo TokenInfo, userIDExtractor Us
 		return "", err
 	}
 
-	err = AddContext(cfg, cloudContextName, "", userName)
+	err = AddContext(cfg, contextName, "", userName)
 	if err != nil {
 		return "", err
 	}
@@ -296,11 +307,16 @@ func findMapListMap(cfg map[interface{}]interface{}, listKey string, matchKey st
 	return nil, 0, errors.Errorf("no %s, %s=%s found", listKey, matchKey, matchValue)
 }
 
-// determines the current context and user
+// returns the AuthContext for the default contextName
+// Deprecated: use GetAuthContext instead
 func CurrentAuthContext(kubeConfig string) (AuthContext, error) {
+	return GetAuthContext(kubeConfig, cloudContext)
+}
+
+// GetAuthContext returns the AuthContext for the given contextName from the given kubeConfig
+func GetAuthContext(kubeConfig string, contextName string) (AuthContext, error) {
 
 	empty := AuthContext{}
-
 	cfg, _, _, err := LoadKubeConfig(kubeConfig)
 	if err != nil {
 		return empty, err
@@ -308,17 +324,17 @@ func CurrentAuthContext(kubeConfig string) (AuthContext, error) {
 
 	// get context "metalctl" to determine user
 
-	cloudContext, _, err := findMapListMap(cfg, "contexts", "name", cloudContextName)
+	context, _, err := findMapListMap(cfg, "contexts", "name", contextName)
 	if err != nil {
 		return empty, err
 	}
-	if cloudContext == nil {
-		return empty, errors.Errorf("cannot determine user from kube-config, context '%s' does not exist", cloudContextName)
+	if context == nil {
+		return empty, errors.Errorf("cannot determine user from kube-config, context '%s' does not exist", contextName)
 	}
-	empty.Ctx = cloudContextName
+	empty.Ctx = contextName
 
 	// determine username from context
-	contextMap, err := dyno.GetMapS(cloudContext, "context")
+	contextMap, err := dyno.GetMapS(context, "context")
 	if err != nil {
 		return empty, err
 	}
@@ -366,7 +382,7 @@ func CurrentAuthContext(kubeConfig string) (AuthContext, error) {
 		}
 
 		return AuthContext{
-			Ctx:              cloudContextName,
+			Ctx:              contextName,
 			User:             userName,
 			AuthProviderName: authProviderName,
 			AuthProviderOidc: isOidc,
