@@ -486,18 +486,18 @@ func openBrowser(url string) error {
 	return nil
 }
 
-//KubeConfgiHandlerOption func for specifying options
-type KubeConfgiHandlerOption func(c *updateKubeConfig)
+// KubeConfigHandlerOption func for specifying options
+type KubeConfigHandlerOption func(c *updateKubeConfig)
 
-//WithContextName sets the context-name
-func WithContextName(contextName string) KubeConfgiHandlerOption {
+// WithContextName sets the context-name
+func WithContextName(contextName string) KubeConfigHandlerOption {
 	return func(c *updateKubeConfig) {
 		c.contextName = contextName
 	}
 }
 
 // NewUpdateKubeConfigHandler writes the TokenInfo to file and prints a message to the given writer, may be nil
-func NewUpdateKubeConfigHandler(kubeConfig string, writer io.Writer, opts ...KubeConfgiHandlerOption) TokenHandlerFunc {
+func NewUpdateKubeConfigHandler(kubeConfig string, writer io.Writer, opts ...KubeConfigHandlerOption) TokenHandlerFunc {
 	u := &updateKubeConfig{
 		kubeConfig:      kubeConfig,
 		contextName:     cloudContext,
