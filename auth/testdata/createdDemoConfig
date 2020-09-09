@@ -1,22 +1,22 @@
 apiVersion: v1
 clusters: []
 contexts:
-- context:
-    cluster: ""
-    user: email@provider.de
-  name: cloudctl
+  - context:
+      cluster: ""
+      user: email@provider.de
+    name: cloudctl
 current-context: ""
 kind: Config
 preferences: {}
 users:
-- name: email@provider.de
-  user:
-    auth-provider:
-      config:
-        client-id: clientId_abcd
-        client-secret: clientSecret_123123
-        id-token: abcd4711
-        idp-certificate-authority: /my/ca
-        idp-issuer-url: the_issuer
-        refresh-token: refresh234
-      name: oidc
+  - name: email@provider.de
+    user:
+      auth-provider:
+        config:
+          client-id: clientId_abcd
+          client-secret: clientSecret_123123
+          id-token: abcd4711
+          idp-certificate-authority: /my/ca
+          idp-issuer-url: the_issuer
+          refresh-token: refresh234
+        name: oidc
