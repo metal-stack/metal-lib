@@ -7,6 +7,8 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/emicklei/go-restful-openapi/v2 v2.2.1
 	github.com/emicklei/go-restful/v3 v3.3.1
+	github.com/go-openapi/runtime v0.19.21
+	github.com/go-openapi/strfmt v0.19.5
 	github.com/google/go-cmp v0.5.2
 	github.com/google/uuid v1.1.2
 	github.com/icza/dyno v0.0.0-20200205103839-49cb13720835

@@ -3,6 +3,8 @@ package httperrors
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/go-openapi/strfmt"
 )
 
 // HTTPErrorResponse is returned in case of functional errors.
@@ -113,4 +115,8 @@ func UnknownError(err error) *HTTPErrorResponse {
 // UnconventionalError creates a new error with a given error message for a response that did not follow the internal error convention. Convenience Method.
 func UnconventionalError(err error) *HTTPErrorResponse {
 	return NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unexpected error: client response does not follow internal error convention: %v", err.Error()))
+}
+
+func (h *HTTPErrorResponse) Validate(formats strfmt.Registry) error {
+	return nil
 }
