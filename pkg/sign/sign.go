@@ -12,7 +12,7 @@ import (
 	"encoding/pem"
 )
 
-// Sign signs data with an RSA Private Key
+// Sign signs data with an RSA Private Key and; returns the base64 encoded signature
 func Sign(privateKey *rsa.PrivateKey, data []byte) (string, error) {
 	signatureBytes, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, SHA256(data))
 	if err != nil {
@@ -60,4 +60,24 @@ func DecodeCertificate(bytes []byte) (*x509.Certificate, error) {
 		return nil, errors.New("could not decode the PEM-encoded certificate")
 	}
 	return x509.ParseCertificate(block.Bytes)
+}
+
+// DecodePrivateKey takes a byte slice, decodes it from the PEM format, converts it to an rsa.PrivateKey
+// object, and returns it. In case an error occurs, it returns the error.
+func DecodePrivateKey(bytes []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(bytes)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return nil, errors.New("could not decode the PEM-encoded RSA private key")
+	}
+	return x509.ParsePKCS1PrivateKey(block.Bytes)
+}
+
+// DecodePublicKey takes a byte slice, decodes it from the PEM format, converts it to an rsa.PublicKey
+func DecodePublicKey(pemBytes []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, errors.New("could not decode the PEM-encoded RSA public key")
+	}
+
+	return x509.ParsePKCS1PublicKey(block.Bytes)
 }
