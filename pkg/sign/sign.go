@@ -12,7 +12,7 @@ import (
 	"encoding/pem"
 )
 
-// Sign signs data with an RSA Private Key and; returns the base64 encoded signature
+// Sign signs data with an RSA Private Key and returns the base64 encoded signature
 func Sign(privateKey *rsa.PrivateKey, data []byte) (string, error) {
 	signatureBytes, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, SHA256(data))
 	if err != nil {
