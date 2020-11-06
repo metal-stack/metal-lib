@@ -13,4 +13,6 @@ const (
 	ClusterTenant = "cluster.metal-stack.io/tenant"
 	// ClusterServiceFQN tag to identify a service running in the cluster
 	ClusterServiceFQN = "cluster.metal-stack.io/id/namespace/service"
+	// ClusterEgress tag to identify egress ips used for a cluster
+	ClusterEgress = "cluster.metal-stack.io/id/egress"
 )
