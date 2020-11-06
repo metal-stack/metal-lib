@@ -2,11 +2,14 @@ package sign
 
 import (
 	"crypto"
+	"errors"
 
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 )
 
 // Sign signs data with an RSA Private Key
@@ -37,4 +40,24 @@ func VerifySignature(pubKey *rsa.PublicKey, sig string, data []byte) (bool, erro
 func SHA256(in []byte) []byte {
 	h := sha256.Sum256(in)
 	return h[:]
+}
+
+// ExtractPubKey extracts the RSA PublicKey of the given x509.Certificate.
+func ExtractPubKey(cert *x509.Certificate) (*rsa.PublicKey, error) {
+	switch cert.PublicKey.(type) {
+	case *rsa.PublicKey:
+		return cert.PublicKey.(*rsa.PublicKey), nil
+	default:
+		return nil, errors.New("certificate contains no rsa public key")
+	}
+}
+
+// DecodeCertificate takes a byte slice, decodes it from the PEM format, converts it to an x509.Certificate
+// object, and returns it. In case an error occurs, it returns the error.
+func DecodeCertificate(bytes []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(bytes)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, errors.New("could not decode the PEM-encoded certificate")
+	}
+	return x509.ParseCertificate(block.Bytes)
 }
