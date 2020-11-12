@@ -35,6 +35,10 @@ func (h *HTTPErrorResponse) Error() string {
 	return fmt.Sprintf("%s (%d)", h.Message, h.StatusCode)
 }
 
+func (h *HTTPErrorResponse) UnmarshalText(text []byte) error {
+	return fmt.Errorf("endpoint returned plaintext response unexpectedly:\n%s", string(text))
+}
+
 // NotFound creates a new notfound error with a given error message. Convenience Method.
 func NotFound(err error) *HTTPErrorResponse {
 	return NewHTTPError(http.StatusNotFound, err)
