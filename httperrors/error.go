@@ -1,6 +1,7 @@
 package httperrors
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -36,7 +37,24 @@ func (h *HTTPErrorResponse) Error() string {
 }
 
 func (h *HTTPErrorResponse) UnmarshalText(text []byte) error {
-	return fmt.Errorf("endpoint returned plaintext response unexpectedly:\n%s", string(text))
+	v := struct {
+		StatusCode int    `json:"statuscode"`
+		Message    string `json:"message"`
+	}{}
+
+	err := json.Unmarshal(text, &v)
+	if err != nil {
+		return fmt.Errorf("endpoint did not return a json response:\n%s", string(text))
+	}
+
+	h.Message = v.Message
+	h.StatusCode = v.StatusCode
+
+	return nil
+}
+
+func (h *HTTPErrorResponse) MarshalText() ([]byte, error) {
+	return json.Marshal(*h)
 }
 
 // NotFound creates a new notfound error with a given error message. Convenience Method.
