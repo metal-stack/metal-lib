@@ -6,4 +6,6 @@ const (
 	NetworkDefault = "network.metal-stack.io/default"
 	// NetworkDefaultExternal indicates a network that can serve as a default for IP allocations
 	NetworkDefaultExternal = "network.metal-stack.io/default-external"
+	// NetworkPartitionStorage indicates a network that can serve as a storage network in a partition
+	NetworkPartitionStorage = "network.metal-stack.io/partition-storage"
 )
