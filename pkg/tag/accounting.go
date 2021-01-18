@@ -1,8 +1,8 @@
 package tag
 
 const (
-	// AccountingID tag to store an accounting ID
-	AccountingID = "accounting.metal-stack.io/id"
+	// AccountingProductID tag to store an accounting product ID
+	AccountingProductID = "accounting.metal-stack.io/productid"
 	// AccountingContractID tag to store an accounting contract ID
 	AccountingContractID = "accounting.metal-stack.io/contractid"
 	// AccountingDebtor tag to store an accounting debtor
