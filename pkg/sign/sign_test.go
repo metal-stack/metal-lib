@@ -77,7 +77,7 @@ func TestSignAndVerify(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			signature, err := Sign(tt.args.privateKey, tt.args.dataSigning)
 			if err != nil {
-				t.Errorf("signing failed: %w", err)
+				t.Errorf("signing failed: %v", err)
 				return
 			}
 

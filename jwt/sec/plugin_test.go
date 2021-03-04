@@ -1,9 +1,11 @@
 package sec
 
 import (
+	"errors"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"reflect"
 	"testing"
 )
@@ -184,6 +186,227 @@ func TestExtractUserProcessGroups(t *testing.T) {
 	}
 }
 
+func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
+	type args struct {
+		plugin       *Plugin
+		issuerConfig *security.IssuerConfig
+		claims       *security.GenericOIDCClaims
+	}
+	tests := []struct {
+		name               string
+		args               args
+		wantUser           *security.User
+		wantGroupsOnBehalf []testGroupsOnBehalf
+		wantErr            error
+	}{
+		{
+			name: "Minimal no directory type",
+			args: args{
+				issuerConfig: &security.IssuerConfig{
+					Annotations: map[string]string{
+						OidcDirectory: "xx",
+					},
+					Tenant:   "tn",
+					Issuer:   "https://issuer.example.com",
+					ClientID: "client123",
+				},
+				claims: &security.GenericOIDCClaims{
+					Claims: jwt.Claims{
+						Audience: jwt.Audience{"audience"},
+					},
+					Roles: []string{},
+					EMail: "hans@demo.de",
+					Name:  "hans",
+				},
+			},
+			wantErr: errors.New("invalid directoryType xx"),
+		},
+		{
+			name: "Minimal ldap",
+			args: args{
+				issuerConfig: &security.IssuerConfig{
+					Annotations: map[string]string{
+						OidcDirectory: "ldap",
+					},
+					Tenant:   "tnnt",
+					Issuer:   "https://issuer.example.com",
+					ClientID: "client123",
+				},
+				claims: &security.GenericOIDCClaims{
+					Claims: jwt.Claims{
+						Audience: jwt.Audience{"audience"},
+					},
+					Roles: []string{"tnnt_kaas-all-all-admin"},
+					EMail: "hans@demo.de",
+					Name:  "hans",
+				},
+			},
+			wantUser: &security.User{
+				EMail: "hans@demo.de",
+				Name:  "hans",
+				Groups: []security.ResourceAccess{
+					security.ResourceAccess("kaas-all-all-admin"),
+				},
+				Tenant: "tnnt",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Minimal ad",
+			args: args{
+				issuerConfig: &security.IssuerConfig{
+					Annotations: map[string]string{
+						OidcDirectory: "ad",
+					},
+					Tenant:   "Tn",
+					Issuer:   "https://issuer.example.com",
+					ClientID: "client123",
+				},
+				claims: &security.GenericOIDCClaims{
+					Claims: jwt.Claims{
+						Audience: jwt.Audience{"audience"},
+					},
+					Roles: []string{"TnRg_Srv_Appkaas-all-all-admin_Full"},
+					EMail: "hans@demo.de",
+					Name:  "hans",
+				},
+			},
+			wantUser: &security.User{
+				EMail: "hans@demo.de",
+				Name:  "hans",
+				Groups: []security.ResourceAccess{
+					security.ResourceAccess("kaas-all-all-admin"),
+				},
+				Tenant: "Tn",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "LDAP",
+			args: args{
+				issuerConfig: &security.IssuerConfig{
+					Annotations: map[string]string{
+						OidcDirectory: "ldap",
+					},
+					Tenant:   "tnnt",
+					Issuer:   "https://issuer.example.com",
+					ClientID: "client123",
+				},
+				claims: &security.GenericOIDCClaims{
+					Claims: jwt.Claims{
+						Audience: jwt.Audience{"audience"},
+					},
+					Roles: []string{
+						"tnnt_k8s-all-all-group1",
+						"tnnt_maas-all-all-maasgroup1",
+						"tnnt_kaas-ddd#all-all-kaasgroup1",
+						"other_kaas-all-all-group1",
+						"other_kaas-ddd#all-all-group1",
+						"malfrmd-kaas-all-all",
+						"malfrmd_kaas-all-all",
+						"malformed",
+					},
+					EMail: "hans@demo.de",
+					Name:  "hans",
+				},
+			},
+			wantUser: &security.User{
+				EMail: "hans@demo.de",
+				Name:  "hans",
+				Groups: []security.ResourceAccess{
+					security.ResourceAccess("k8s-all-all-group1"),
+					security.ResourceAccess("maas-all-all-maasgroup1"),
+					security.ResourceAccess("kaas-ddd#all-all-kaasgroup1"),
+				},
+				Tenant: "tnnt",
+			},
+			wantGroupsOnBehalf: []testGroupsOnBehalf{
+				{
+					tenant: "ddd",
+					groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-kaasgroup1")},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "ActiveDirectory",
+			args: args{
+				plugin: NewPlugin(grp.MustNewGrpr(grp.Config{ProviderTenant: "Tn"})),
+				issuerConfig: &security.IssuerConfig{
+					Annotations: map[string]string{
+						OidcDirectory: "ad",
+					},
+					Tenant:   "Tn",
+					Issuer:   "https://issuer.example.com",
+					ClientID: "client123",
+				},
+				claims: &security.GenericOIDCClaims{
+					Claims: jwt.Claims{
+						Audience: jwt.Audience{"audience"},
+					},
+					Roles: []string{
+						"TnRg_Srv_Appk8s-ddd#all-all-group1_Full",
+						"TnRg_Srv_Appmaas-all-all-maasgroup1_Full",
+						"TnRg_Srv_Appkaas-ddd#all-all-kaasgroup1_Full",
+						"DxRg_Srv_Appmaas-all-all-maasgroup2_Full",
+						"DxRg_Srv_Appmaas-ddd#all-all-maasgroup2_Full",
+						"FxRg_Srv_Appmaas-all-all-maasgroup3_Full",
+						"other_Srv_Appkaas-all-all-group1_Edit",
+						"malfrmd-kaas-all-all",
+						"malfrmd_kaas-all-all",
+						"malformed",
+					},
+					EMail: "hans@demo.de",
+					Name:  "hans",
+				},
+			},
+			wantUser: &security.User{
+				EMail: "hans@demo.de",
+				Name:  "hans",
+				Groups: []security.ResourceAccess{
+					security.ResourceAccess("k8s-ddd#all-all-group1"),
+					security.ResourceAccess("maas-all-all-maasgroup1"),
+					security.ResourceAccess("kaas-ddd#all-all-kaasgroup1"),
+				},
+				Tenant: "Tn",
+			},
+			wantGroupsOnBehalf: []testGroupsOnBehalf{
+				{
+					tenant: "ddd",
+					groups: []security.ResourceAccess{security.ResourceAccess("k8s-all-all-group1"), security.ResourceAccess("kaas-all-all-kaasgroup1")},
+				},
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			plg := plugin
+			if tt.args.plugin != nil {
+				plg = tt.args.plugin
+			}
+			gotUser, err := plg.GenericOIDCExtractUserProcessGroups(tt.args.issuerConfig, tt.args.claims)
+			if !reflect.DeepEqual(err, tt.wantErr) {
+				t.Errorf("ExtractUserProcessGroups() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(gotUser, tt.wantUser) {
+				t.Errorf("ExtractUserProcessGroups() gotUser = %v, want %v", gotUser, tt.wantUser)
+			}
+
+			for i := range tt.wantGroupsOnBehalf {
+				gob := tt.wantGroupsOnBehalf[i]
+				if gotGroupsOnBehalf := plugin.GroupsOnBehalf(gotUser, gob.tenant); !reflect.DeepEqual(gotGroupsOnBehalf, gob.groups) {
+					t.Errorf("groupsOnBehalf() = %v, want %v", gotGroupsOnBehalf, gob.groups)
+				}
+			}
+		})
+	}
+}
+
 func TestHasOneOfGroups(t *testing.T) {
 	type args struct {
 		user   *security.User
@@ -291,15 +514,18 @@ func TestHasOneOfGroups(t *testing.T) {
 }
 
 func TestHasGroupExpression(t *testing.T) {
+	type expr struct {
+		expr grp.GroupExpression
+		want bool
+	}
 	type args struct {
 		user       *security.User
 		tenant     string
-		expression grp.GroupExpression
+		expression []expr
 	}
 	var tests = []struct {
 		name string
 		args args
-		want bool
 	}{
 		{
 			name: "all",
@@ -316,14 +542,45 @@ func TestHasGroupExpression(t *testing.T) {
 					Tenant: "tnnt",
 				},
 				tenant: "tnnt",
-				expression: grp.GroupExpression{
-					AppPrefix:   "kaas",
-					ClusterName: "mycluster",
-					Namespace:   "mynamespace",
-					Role:        "*",
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace",
+							Role:        "*",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster2",
+							Namespace:   "mynamespace2",
+							Role:        "*",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace",
+							Role:        "cadm",
+						},
+						want: false,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "maas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace",
+							Role:        "cadm",
+						},
+						want: false,
+					},
 				},
 			},
-			want: true,
 		},
 		{
 			name: "explicit",
@@ -332,6 +589,8 @@ func TestHasGroupExpression(t *testing.T) {
 					EMail: "",
 					Name:  "",
 					Groups: []security.ResourceAccess{
+						security.ResourceAccess("kaas_mycluster2-mynamespace-view"), // illegal gets skipped
+						security.ResourceAccess("kaas_mycluster2-mynamespace"),      // illegal gets skipped
 						security.ResourceAccess("kaas-mycluster-mynamespace-view"),
 						security.ResourceAccess("kaas-ddd#all-all-view"),
 						security.ResourceAccess("kaas-kkk#all-all-admin"),
@@ -339,42 +598,141 @@ func TestHasGroupExpression(t *testing.T) {
 					Tenant: "tnnt",
 				},
 				tenant: "tnnt",
-				expression: grp.GroupExpression{
-					AppPrefix:   "kaas",
-					ClusterName: "mycluster",
-					Namespace:   "mynamespace",
-					Role:        "*",
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace",
+							Role:        "view",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "*",
+							Namespace:   "mynamespace",
+							Role:        "view",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "*",
+							Role:        "view",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace",
+							Role:        "*",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster2",
+							Namespace:   "mynamespace",
+							Role:        "*",
+						},
+						want: false,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace2",
+							Role:        "*",
+						},
+						want: false,
+					},
 				},
 			},
-			want: true,
 		},
 		{
-			name: "explicit, no match",
+			name: "default tenant from token",
+			args: args{
+				user: &security.User{
+					EMail: "",
+					Name:  "",
+					Groups: []security.ResourceAccess{
+						security.ResourceAccess("kaas-mycluster-mynamespace-view"),
+						security.ResourceAccess("kaas-xyz#mycluster2-mynamespace-view"),
+					},
+					Tenant: "tnnt",
+				},
+				tenant: "", // no tenant given
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster",
+							Namespace:   "mynamespace",
+							Role:        "*",
+						},
+						want: true,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster2",
+							Namespace:   "mynamespace",
+							Role:        "*",
+						},
+						want: false,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster2",
+							Namespace:   "*",
+							Role:        "*",
+						},
+						want: false,
+					},
+				},
+			},
+		},
+		{
+			name: "on behalf",
 			args: args{
 				user: &security.User{
 					EMail: "",
 					Name:  "",
 					Groups: []security.ResourceAccess{
 						security.ResourceAccess("kaas-mycluster-mynamespace2-view"),
-						security.ResourceAccess("kaas-mycluster2-mynamespace-view"),
+						security.ResourceAccess("kaas-xyz#mycluster2-mynamespace-view"),
 					},
 					Tenant: "tnnt",
 				},
-				tenant: "tnnt",
-				expression: grp.GroupExpression{
-					AppPrefix:   "kaas",
-					ClusterName: "mycluster",
-					Namespace:   "mynamespace",
-					Role:        "*",
+				tenant: "xyz",
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							ClusterName: "mycluster2",
+							Namespace:   "mynamespace",
+							Role:        "*",
+						},
+						want: true,
+					},
 				},
 			},
-			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := plugin.HasGroupExpression(tt.args.user, tt.args.tenant, tt.args.expression); got != tt.want {
-				t.Errorf("HasGroupExpression() = %v, want %v", got, tt.want)
+			for _, exp := range tt.args.expression {
+				if got := plugin.HasGroupExpression(tt.args.user, tt.args.tenant, exp.expr); got != exp.want {
+					t.Errorf("HasGroupExpression(%v) = %v, want %v", exp.expr, got, exp.want)
+				}
 			}
 		})
 	}

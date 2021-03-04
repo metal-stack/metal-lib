@@ -28,6 +28,9 @@ import (
 
 const cloudContext = "cloudctl"
 
+var DexScopes = []string{"groups", "openid", "profile", "email", "federated:id"}
+var GenericScopes = []string{"groups", "openid", "profile", "email"}
+
 // Config for parametrization
 type Config struct {
 	// url of the oidc endpoint
@@ -38,6 +41,9 @@ type Config struct {
 	// client identification
 	ClientID     string `required:"true"`
 	ClientSecret string `required:"true"`
+
+	// requested scopes
+	Scopes []string
 
 	TLSCert string
 	TLSKey  string
@@ -95,7 +101,10 @@ type app struct {
 // logs to console if it is configured
 func (a *app) Consolef(format string, args ...interface{}) {
 	if a.config.Console != nil {
-		fmt.Fprintf(a.config.Console, format, args...)
+		_, err := fmt.Fprintf(a.config.Console, format, args...)
+		if err != nil {
+			_, _ = fmt.Fprintf(a.config.Console, "error writing log %v", err)
+		}
 	}
 }
 
@@ -329,11 +338,13 @@ func (a *app) oauth2Config(scopes []string) *oauth2.Config {
 }
 
 func (a *app) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var scopes []string
 
 	var authCodeURL string
 
-	scopes = append(scopes, "groups", "openid", "profile", "email", "federated:id")
+	var scopes = a.config.Scopes
+	if scopes == nil {
+		scopes = DexScopes
+	}
 
 	if a.config.RequestRefreshToken {
 		if a.offlineAsScope {

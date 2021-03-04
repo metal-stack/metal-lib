@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"fmt"
+	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
@@ -14,7 +15,7 @@ func TestGenerateSimpleToken(t *testing.T) {
 
 	alg := jose.RS256
 
-	publicKey, privateKey, err := CreateWebkeyPair(alg, "sig")
+	publicKey, privateKey, err := security.CreateWebkeyPair(alg, "sig", 0)
 	assert.NoError(t, err, "error creating keypair")
 
 	cl := jwt.Claims{
@@ -25,7 +26,7 @@ func TestGenerateSimpleToken(t *testing.T) {
 		Audience:  jwt.Audience{"leela", "fry"},
 	}
 
-	signer := MustMakeSigner(alg, privateKey)
+	signer := security.MustMakeSigner(alg, privateKey)
 
 	token, err := CreateToken(signer, cl)
 	assert.NoError(t, err, "error creating token")
@@ -44,7 +45,7 @@ func TestGenerateFullToken(t *testing.T) {
 
 	alg := jose.RS256
 
-	publicKey, privateKey, err := CreateWebkeyPair(alg, "sig")
+	publicKey, privateKey, err := security.CreateWebkeyPair(alg, "sig", 0)
 	assert.NoError(t, err, "error creating keypair")
 
 	cl := jwt.Claims{
@@ -74,7 +75,7 @@ func TestGenerateFullToken(t *testing.T) {
 		FederatedClaims: fed,
 	}
 
-	signer := MustMakeSigner(alg, privateKey)
+	signer := security.MustMakeSigner(alg, privateKey)
 
 	token, err := CreateToken(signer, cl, privateClaims)
 	assert.NoError(t, err, "error creating token")
@@ -85,9 +86,16 @@ func TestGenerateFullToken(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Println(string(bytes))
 
-	parsedClaims := &jwt.Claims{}
 	webToken, err := jwt.ParseSigned(token)
 	assert.NoError(t, err)
-	err = webToken.Claims(publicKey, parsedClaims)
+
+	parsedClaims := &jwt.Claims{}
+	extendedClaims := &ExtendedClaims{}
+	err = webToken.Claims(publicKey, parsedClaims, extendedClaims)
 	assert.NoError(t, err, "error parsing claims")
+	assert.Equal(t, "achim", parsedClaims.Subject)
+	assert.Equal(t, "achim.admin@tenant.de", extendedClaims.EMail)
+	assert.Equal(t, "tenant_ldap_openldap", extendedClaims.FederatedClaims["connector_id"])
+	assert.Equal(t, "cn=achim.admin,ou=People,dc=tenant,dc=de", extendedClaims.FederatedClaims["user_id"])
+	assert.Equal(t, 6, len(extendedClaims.Groups))
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/go-cmp/cmp"
-	token "github.com/metal-stack/metal-lib/jwt/jwt"
+	libjwt "github.com/metal-stack/metal-lib/jwt/jwt"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/require"
 	"reflect"
@@ -22,7 +22,7 @@ func TestParseTokenUnvalidated(t *testing.T) {
 	issuedAt := time.Unix(issAtUnix, 0)
 	expAtUnix := int64(1557410799)
 	expiredAt := time.Unix(expAtUnix, 0)
-	token, err := token.GenerateToken("tnnt", grps, issuedAt, expiredAt)
+	token, err := libjwt.GenerateToken("tnnt", grps, issuedAt, expiredAt)
 	require.NoError(t, err)
 
 	type args struct {
@@ -98,7 +98,12 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 	issuedAt := time.Unix(issAtUnix, 0)
 	expAtUnix := int64(1557410799)
 	expiredAt := time.Unix(expAtUnix, 0)
-	token, err := token.GenerateToken("tnnt", grps, issuedAt, expiredAt)
+
+	oldToken, err := libjwt.GenerateToken("tnnt", grps, issuedAt, expiredAt)
+	require.NoError(t, err)
+
+	newTokenCfg := security.DefaultTokenCfg()
+	newToken, _, _, err := security.CreateTokenAndKeys(newTokenCfg)
 	require.NoError(t, err)
 
 	type args struct {
@@ -112,9 +117,9 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name: "",
+			name: "old oldToken",
 			args: args{
-				token: token,
+				token: oldToken,
 			},
 			wantUser: &security.User{
 				EMail:  "achim.admin@tenant.de",
@@ -143,6 +148,35 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "new Token",
+			args: args{
+				token: newToken,
+			},
+			wantUser: &security.User{
+				EMail:  newTokenCfg.Email,
+				Name:   newTokenCfg.Name,
+				Groups: []security.ResourceAccess{security.ResourceAccess("Tn_k8s-all-all-cadm")},
+				Tenant: "",
+			},
+			wantClaims: &security.Claims{
+				StandardClaims: jwt.StandardClaims{
+					Audience:  "",
+					ExpiresAt: newTokenCfg.ExpiresAt.Unix(),
+					Id:        newTokenCfg.Id,
+					IssuedAt:  newTokenCfg.IssuedAt.Unix(),
+					Issuer:    newTokenCfg.IssuerUrl,
+					NotBefore: newTokenCfg.IssuedAt.Unix(),
+					Subject:   newTokenCfg.Subject,
+				},
+				Audience: []interface{}{newTokenCfg.Audience[0]},
+				Groups:   nil,
+				Roles:    []string{"Tn_k8s-all-all-cadm"},
+				EMail:    newTokenCfg.Email,
+				Name:     newTokenCfg.Name,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,7 +186,8 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(gotUser, tt.wantUser) {
-				t.Errorf("ParseTokenUnvalidatedUnfiltered() gotUser = %v, want %v", gotUser, tt.wantUser)
+				diff := cmp.Diff(tt.wantUser, gotUser)
+				t.Errorf("ParseTokenUnvalidatedUnfiltered() gotUser = %v, want %v, diff %s", gotUser, tt.wantUser, diff)
 			}
 			if !reflect.DeepEqual(gotClaims, tt.wantClaims) {
 				fmt.Println(cmp.Diff(gotClaims, tt.wantClaims))

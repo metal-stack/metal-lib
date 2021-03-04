@@ -38,8 +38,12 @@ func TestHTTPErrorResponse_UnmarshalText(t *testing.T) {
 			h := &HTTPErrorResponse{}
 			err := h.UnmarshalText(tt.text)
 			if tt.wantErr != nil {
-				if tt.wantErr.Error() != err.Error() {
-					t.Errorf("HTTPErrorResponse.UnmarshalText() want = %s, got = %s", err.Error(), tt.wantErr.Error())
+				var errText string
+				if err != nil {
+					errText = err.Error()
+				}
+				if tt.wantErr.Error() != errText {
+					t.Errorf("HTTPErrorResponse.UnmarshalText() want = %s, got = %s", errText, tt.wantErr.Error())
 				}
 				return
 			}
