@@ -61,3 +61,51 @@ func GenerateToken(tenant string, grps []string, issuedAt, expiresAt time.Time) 
 
 	return token, err
 }
+
+// DexTokenGenerator provides MustCreateTokenAndKeys as the dex-variant-impl of the security.TokenProvider to create tokens for testing.
+type DexTokenGenerator struct {
+	FederatedClaims map[string]string
+}
+
+// MustCreateTokenAndKeys creates a keyset and token, panics on error
+func (d *DexTokenGenerator) MustCreateTokenAndKeys(cfg *security.TokenCfg) (token string, pubKey jose.JSONWebKey, privKey jose.JSONWebKey) {
+	token, pubKey, privKey, err := d.CreateTokenAndKeys(cfg)
+	if err != nil {
+		panic(err)
+	}
+	return token, pubKey, privKey
+}
+
+// CreateTokenAndKeys creates a keyset and token
+func (d *DexTokenGenerator) CreateTokenAndKeys(cfg *security.TokenCfg) (token string, pubKey jose.JSONWebKey, privKey jose.JSONWebKey, err error) {
+	pubKey, privKey, err = security.CreateWebkeyPair(cfg.Alg, "sig", cfg.KeyBitlength)
+	if err != nil {
+		return "", jose.JSONWebKey{}, jose.JSONWebKey{}, err
+	}
+
+	cl := jwt.Claims{
+		Issuer:    cfg.IssuerUrl,
+		Subject:   cfg.Subject,
+		Audience:  cfg.Audience,
+		Expiry:    jwt.NewNumericDate(cfg.ExpiresAt),
+		NotBefore: jwt.NewNumericDate(cfg.IssuedAt),
+		IssuedAt:  jwt.NewNumericDate(cfg.IssuedAt),
+		ID:        cfg.Id,
+	}
+
+	pcl := ExtendedClaims{
+		Name:            cfg.Name,
+		EMail:           cfg.Email,
+		Groups:          cfg.Roles,
+		FederatedClaims: d.FederatedClaims,
+	}
+
+	signer := security.MustMakeSigner(cfg.Alg, privKey)
+
+	token, err = CreateToken(signer, cl, pcl)
+	if err != nil {
+		return "", jose.JSONWebKey{}, jose.JSONWebKey{}, err
+	}
+
+	return token, pubKey, privKey, nil
+}
