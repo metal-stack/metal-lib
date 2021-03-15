@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const OidcDirectory = "oidc.metal-stack.io/directory"
+
 type Plugin struct {
 	grpr *grp.Grpr
 }
@@ -15,6 +17,37 @@ func NewPlugin(grpr *grp.Grpr) *Plugin {
 	return &Plugin{
 		grpr: grpr,
 	}
+}
+
+// ExtractUserProcessGroups is a implementation of security-extensionpoint
+// Groups will reformatted [app]-[]-[]-[role], e.g. "maas-all-all-admin", "kaas-all-all-kaasadmin", "k8s-all-all-admin".
+// All groups without or with another tenant-prefix are filtered.
+func (p *Plugin) GenericOIDCExtractUserProcessGroups(ic *security.IssuerConfig, claims *security.GenericOIDCClaims) (user *security.User, err error) {
+	if ic == nil {
+		return nil, errors.New("issuerConfig must not be nil")
+	}
+	return genericOidcExtractUser(ic, claims, p.extractAndProcessGroups)
+}
+
+// extractUser returns the User, groups are extracted with the given fn.
+func genericOidcExtractUser(ic *security.IssuerConfig, claims *security.GenericOIDCClaims, fn extractGroupsFn) (user *security.User, err error) {
+
+	var directory string
+	if ic.Annotations != nil {
+		directory = ic.Annotations[OidcDirectory]
+	}
+	grps, err := fn(ic.Tenant, directory, claims.Roles)
+	if err != nil {
+		return nil, err
+	}
+
+	usr := security.User{
+		Name:   claims.Name,
+		EMail:  claims.EMail,
+		Groups: grps,
+		Tenant: ic.Tenant,
+	}
+	return &usr, nil
 }
 
 // ExtractUserProcessGroups is a implementation of security-extensionpoint
