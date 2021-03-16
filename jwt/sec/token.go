@@ -67,10 +67,12 @@ func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *security.Cl
 	}
 
 	user := &security.User{
-		Name:   parsedClaims.Name,
-		EMail:  parsedClaims.EMail,
-		Groups: res,
-		Tenant: tenant,
+		Issuer:  parsedClaims.Issuer,
+		Subject: parsedClaims.Subject,
+		Name:    parsedClaims.Name,
+		EMail:   parsedClaims.EMail,
+		Groups:  res,
+		Tenant:  tenant,
 	}
 
 	if err != nil {

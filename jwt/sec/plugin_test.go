@@ -2,6 +2,7 @@ package sec
 
 import (
 	"errors"
+	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/assert"
@@ -214,9 +215,10 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 					Claims: jwt.Claims{
 						Audience: jwt.Audience{"audience"},
 					},
-					Roles: []string{},
-					EMail: "hans@demo.de",
-					Name:  "hans",
+					Roles:             []string{},
+					EMail:             "hans@demo.de",
+					Name:              "Hans Meiser",
+					PreferredUsername: "xyz4711",
 				},
 			},
 			wantErr: errors.New("invalid directoryType xx"),
@@ -236,14 +238,15 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 					Claims: jwt.Claims{
 						Audience: jwt.Audience{"audience"},
 					},
-					Roles: []string{"tnnt_kaas-all-all-admin"},
-					EMail: "hans@demo.de",
-					Name:  "hans",
+					Roles:             []string{"tnnt_kaas-all-all-admin"},
+					EMail:             "hans@demo.de",
+					Name:              "Hans Meiser",
+					PreferredUsername: "xyz4711",
 				},
 			},
 			wantUser: &security.User{
 				EMail: "hans@demo.de",
-				Name:  "hans",
+				Name:  "xyz4711",
 				Groups: []security.ResourceAccess{
 					security.ResourceAccess("kaas-all-all-admin"),
 				},
@@ -266,14 +269,15 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 					Claims: jwt.Claims{
 						Audience: jwt.Audience{"audience"},
 					},
-					Roles: []string{"TnRg_Srv_Appkaas-all-all-admin_Full"},
-					EMail: "hans@demo.de",
-					Name:  "hans",
+					Roles:             []string{"TnRg_Srv_Appkaas-all-all-admin_Full"},
+					EMail:             "hans@demo.de",
+					Name:              "Hans Meiser",
+					PreferredUsername: "xyz4711",
 				},
 			},
 			wantUser: &security.User{
 				EMail: "hans@demo.de",
-				Name:  "hans",
+				Name:  "xyz4711",
 				Groups: []security.ResourceAccess{
 					security.ResourceAccess("kaas-all-all-admin"),
 				},
@@ -306,13 +310,14 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 						"malfrmd_kaas-all-all",
 						"malformed",
 					},
-					EMail: "hans@demo.de",
-					Name:  "hans",
+					EMail:             "hans@demo.de",
+					Name:              "Hans Meiser",
+					PreferredUsername: "xyz4711",
 				},
 			},
 			wantUser: &security.User{
 				EMail: "hans@demo.de",
-				Name:  "hans",
+				Name:  "xyz4711",
 				Groups: []security.ResourceAccess{
 					security.ResourceAccess("k8s-all-all-group1"),
 					security.ResourceAccess("maas-all-all-maasgroup1"),
@@ -356,13 +361,14 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 						"malfrmd_kaas-all-all",
 						"malformed",
 					},
-					EMail: "hans@demo.de",
-					Name:  "hans",
+					EMail:             "hans@demo.de",
+					Name:              "Hans Meiser",
+					PreferredUsername: "xyz4711",
 				},
 			},
 			wantUser: &security.User{
 				EMail: "hans@demo.de",
-				Name:  "hans",
+				Name:  "xyz4711",
 				Groups: []security.ResourceAccess{
 					security.ResourceAccess("k8s-ddd#all-all-group1"),
 					security.ResourceAccess("maas-all-all-maasgroup1"),
@@ -394,7 +400,8 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(gotUser, tt.wantUser) {
-				t.Errorf("ExtractUserProcessGroups() gotUser = %v, want %v", gotUser, tt.wantUser)
+				diff := cmp.Diff(tt.wantUser, gotUser)
+				t.Errorf("ExtractUserProcessGroups() gotUser = %v, want %v, diff %s", gotUser, tt.wantUser, diff)
 			}
 
 			for i := range tt.wantGroupsOnBehalf {

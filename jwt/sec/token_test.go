@@ -122,10 +122,12 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				token: oldToken,
 			},
 			wantUser: &security.User{
-				EMail:  "achim.admin@tenant.de",
-				Name:   "achim",
-				Groups: grpsRA,
-				Tenant: "tnnt",
+				Issuer:  "https://dex.test.metal-stack.io/dex",
+				Subject: "achim",
+				EMail:   "achim.admin@tenant.de",
+				Name:    "achim",
+				Groups:  grpsRA,
+				Tenant:  "tnnt",
 			},
 			wantClaims: &security.Claims{
 				StandardClaims: jwt.StandardClaims{
@@ -154,10 +156,12 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				token: newToken,
 			},
 			wantUser: &security.User{
-				EMail:  newTokenCfg.Email,
-				Name:   newTokenCfg.Name,
-				Groups: []security.ResourceAccess{security.ResourceAccess("Tn_k8s-all-all-cadm")},
-				Tenant: "",
+				Issuer:  newTokenCfg.IssuerUrl,
+				Subject: newTokenCfg.Subject,
+				EMail:   newTokenCfg.Email,
+				Name:    newTokenCfg.Name,
+				Groups:  []security.ResourceAccess{security.ResourceAccess("Tn_k8s-all-all-cadm")},
+				Tenant:  "",
 			},
 			wantClaims: &security.Claims{
 				StandardClaims: jwt.StandardClaims{

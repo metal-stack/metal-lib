@@ -29,7 +29,7 @@ import (
 const cloudContext = "cloudctl"
 
 var DexScopes = []string{"groups", "openid", "profile", "email", "federated:id"}
-var GenericScopes = []string{"groups", "openid", "profile", "email"}
+var GenericScopes = []string{"openid", "profile", "email"}
 
 // Config for parametrization
 type Config struct {
