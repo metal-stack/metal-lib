@@ -16,6 +16,46 @@ const testCloudContextName = "cloudctl"
 const testCloudContextNameDev = "cloudctl-dev"
 const testCloudContextNameProd = "cloudctl-prod"
 
+func Test_ExtractUsername(t *testing.T) {
+	type tst struct {
+		t    TokenInfo
+		want string
+	}
+	tests := []tst{
+		{
+			t: TokenInfo{
+				TokenClaims: claim{
+					Name: "Erich",
+				},
+				IssuerConfig: IssuerConfig{},
+			},
+			want: "Erich",
+		},
+		{
+			t: TokenInfo{
+				TokenClaims: claim{
+					Name:              "Erich",
+					PreferredUsername: "xyz123",
+				},
+				IssuerConfig: IssuerConfig{},
+			},
+			want: "xyz123",
+		},
+		{
+			t: TokenInfo{
+				TokenClaims: claim{
+					PreferredUsername: "xyz123",
+				},
+				IssuerConfig: IssuerConfig{},
+			},
+			want: "xyz123",
+		},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, ExtractName(tt.t))
+	}
+}
+
 func Test_GetCurrentUser(t *testing.T) {
 
 	tests := []test{
@@ -170,10 +210,11 @@ var demoToken = TokenInfo{
 		IssuerCA:     "/my/ca",
 	},
 	TokenClaims: claim{
-		Iss:   "the_issuer",
-		Email: "email@provider.de",
-		Sub:   "the_sub",
-		Name:  "user001",
+		Iss:               "the_issuer",
+		Email:             "email@provider.de",
+		Sub:               "the_sub",
+		Name:              "Ernst Mail",
+		PreferredUsername: "user001",
 	},
 	IDToken:      "abcd4711",
 	RefreshToken: "refresh234",
@@ -265,7 +306,7 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 		t.Fatalf("error reading back user: %v", err)
 	}
 
-	asserter.Equal(authContext.User, demoToken.TokenClaims.Name, "User")
+	asserter.Equal(authContext.User, demoToken.TokenClaims.Username(), "User")
 	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")
 	asserter.Equal(authContext.ClientID, demoToken.ClientID, "ClientID")
 	asserter.Equal(authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")

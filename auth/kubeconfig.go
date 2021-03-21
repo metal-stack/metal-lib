@@ -29,7 +29,7 @@ const (
 type UserIDExtractor func(tokenInfo TokenInfo) string
 
 func ExtractName(tokenInfo TokenInfo) string {
-	return tokenInfo.TokenClaims.Name
+	return tokenInfo.TokenClaims.Username()
 }
 
 func ExtractEMail(tokenInfo TokenInfo) string {

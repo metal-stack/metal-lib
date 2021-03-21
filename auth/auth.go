@@ -109,15 +109,24 @@ func (a *app) Consolef(format string, args ...interface{}) {
 }
 
 type claim struct {
-	Iss           string      `json:"iss"`
-	Sub           string      `json:"sub"`
-	Aud           interface{} `json:"aud"` // since it depends on the scopes if aud is a string or []string
-	Exp           int         `json:"exp"`
-	Iat           int         `json:"iat"`
-	AtHash        string      `json:"at_hash"`
-	Email         string      `json:"email"`
-	EmailVerified bool        `json:"email_verified"`
-	Name          string      `json:"name"`
+	Iss               string      `json:"iss"`
+	Sub               string      `json:"sub"`
+	Aud               interface{} `json:"aud"` // since it depends on the scopes if aud is a string or []string
+	Exp               int         `json:"exp"`
+	Iat               int         `json:"iat"`
+	AtHash            string      `json:"at_hash"`
+	Email             string      `json:"email"`
+	EmailVerified     bool        `json:"email_verified"`
+	Name              string      `json:"name"`
+	PreferredUsername string      `json:"preferred_username"`
+}
+
+// Username returns the username, taken from preferredUsername or name.
+func (c claim) Username() string {
+	if c.PreferredUsername != "" {
+		return c.PreferredUsername
+	}
+	return c.Name
 }
 
 // OIDCFlow validates the given config and starts the OIDC-Flow "response_type=code"
@@ -461,7 +470,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	renderToken(w, rawIDToken, token.RefreshToken, buff.Bytes(), a.config.SuccessMessage, a.config.Debug)
 
-	a.config.Log.Debug("Login Succeeded", zap.String("username", claims.Name))
+	a.config.Log.Debug("Login Succeeded", zap.String("username", claims.Username()))
 	a.config.Log.Debug("Login-Data", zap.String("token", rawIDToken), zap.String("Refresh Token", token.RefreshToken), zap.String("Claims", string(rawClaims)))
 
 	go func() {
