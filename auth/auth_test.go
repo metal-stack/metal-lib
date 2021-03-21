@@ -52,7 +52,7 @@ func Test_NewUpdateKubeConfigHandler(t *testing.T) {
 	tokenInfo := TokenInfo{
 		IDToken:      "123",
 		RefreshToken: "456",
-		TokenClaims:  claim{},
+		TokenClaims:  Claims{},
 		IssuerConfig: IssuerConfig{},
 	}
 
@@ -79,7 +79,7 @@ func Test_NewUpdateKubeConfigHandlerWithContext(t *testing.T) {
 	tokenInfo := TokenInfo{
 		IDToken:      "123",
 		RefreshToken: "456",
-		TokenClaims:  claim{},
+		TokenClaims:  Claims{},
 		IssuerConfig: IssuerConfig{},
 	}
 

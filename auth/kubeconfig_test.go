@@ -24,8 +24,10 @@ func Test_ExtractUsername(t *testing.T) {
 	tests := []tst{
 		{
 			t: TokenInfo{
-				TokenClaims: claim{
-					Name: "Erich",
+				TokenClaims: Claims{
+					Name:              "Erich",
+					PreferredUsername: "",
+					Roles:             nil,
 				},
 				IssuerConfig: IssuerConfig{},
 			},
@@ -33,7 +35,7 @@ func Test_ExtractUsername(t *testing.T) {
 		},
 		{
 			t: TokenInfo{
-				TokenClaims: claim{
+				TokenClaims: Claims{
 					Name:              "Erich",
 					PreferredUsername: "xyz123",
 				},
@@ -43,7 +45,7 @@ func Test_ExtractUsername(t *testing.T) {
 		},
 		{
 			t: TokenInfo{
-				TokenClaims: claim{
+				TokenClaims: Claims{
 					PreferredUsername: "xyz123",
 				},
 				IssuerConfig: IssuerConfig{},
@@ -209,12 +211,13 @@ var demoToken = TokenInfo{
 		IssuerURL:    "the_issuer",
 		IssuerCA:     "/my/ca",
 	},
-	TokenClaims: claim{
-		Iss:               "the_issuer",
-		Email:             "email@provider.de",
-		Sub:               "the_sub",
-		Name:              "Ernst Mail",
-		PreferredUsername: "user001",
+	TokenClaims: Claims{
+		Issuer:            "the_issuer",
+		Subject:           "the_sub",
+		EMail:             "email@provider.de",
+		Name:              "user001",
+		PreferredUsername: "",
+		Roles:             nil,
 	},
 	IDToken:      "abcd4711",
 	RefreshToken: "refresh234",
@@ -227,11 +230,11 @@ var demoToken2 = TokenInfo{
 		IssuerURL:    "the_issuer",
 		IssuerCA:     "/my/ca",
 	},
-	TokenClaims: claim{
-		Iss:   "the_issuer",
-		Email: "other-email@other-provider.de",
-		Sub:   "the_sub",
-		Name:  "user002",
+	TokenClaims: Claims{
+		Issuer:  "the_issuer",
+		Subject: "the_sub",
+		EMail:   "other-email@other-provider.de",
+		Name:    "user002",
 	},
 	IDToken:      "cdefg",
 	RefreshToken: "refresh987",
@@ -266,7 +269,7 @@ func TestUpdateUserNewFile(t *testing.T) {
 		t.Fatalf("error reading back user: %v", err)
 	}
 
-	asserter.Equal(authContext.User, demoToken.TokenClaims.Email, "User")
+	asserter.Equal(authContext.User, demoToken.TokenClaims.EMail, "User")
 	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")
 	asserter.Equal(authContext.AuthProviderName, "oidc", "AuthProvider")
 	asserter.Equal(authContext.Ctx, testCloudContextName, "Context")
@@ -322,7 +325,7 @@ func TestLoadExistingConfigWithOIDC(t *testing.T) {
 
 	require.NoError(t, err)
 
-	require.Equal(t, authContext.User, demoToken.TokenClaims.Email, "User")
+	require.Equal(t, authContext.User, demoToken.TokenClaims.EMail, "User")
 	require.Equal(t, authContext.IDToken, demoToken.IDToken, "IDToken")
 	require.Equal(t, authContext.ClientID, demoToken.ClientID, "ClientID")
 	require.Equal(t, authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")

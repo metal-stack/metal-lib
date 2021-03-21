@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/auth"
 	libjwt "github.com/metal-stack/metal-lib/jwt/jwt"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/require"
@@ -113,7 +114,7 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 		name       string
 		args       args
 		wantUser   *security.User
-		wantClaims *security.Claims
+		wantClaims *auth.Claims
 		wantErr    bool
 	}{
 		{
@@ -129,24 +130,22 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				Groups:  grpsRA,
 				Tenant:  "tnnt",
 			},
-			wantClaims: &security.Claims{
-				StandardClaims: jwt.StandardClaims{
-					Audience:  "",
-					ExpiresAt: expAtUnix,
-					Id:        "",
-					IssuedAt:  issAtUnix,
-					Issuer:    "https://dex.test.metal-stack.io/dex",
-					NotBefore: 0,
-					Subject:   "achim",
-				},
-				Audience: []interface{}{"theAudience"},
-				Groups:   []string{"tnnt_kaas-all-all-admin", "tnnt_maas-all-all-admin", "tnnt_k8s-test-all-clusteradmin", "tnnt_k8s-qa$poc-all-clusteradmin", "tnnt_k8s-ddd#ddd$poc-all-clusteradmin", "tnnt_k8s-prod$poc-all-clusteradmin"},
-				EMail:    "achim.admin@tenant.de",
-				Name:     "achim",
+			wantClaims: &auth.Claims{
+				ExpiresAt: expAtUnix,
+				Id:        "",
+				IssuedAt:  issAtUnix,
+				Issuer:    "https://dex.test.metal-stack.io/dex",
+				NotBefore: 0,
+				Subject:   "achim",
+				Audience:  []interface{}{string("theAudience")},
+				Groups:    []string{"tnnt_kaas-all-all-admin", "tnnt_maas-all-all-admin", "tnnt_k8s-test-all-clusteradmin", "tnnt_k8s-qa$poc-all-clusteradmin", "tnnt_k8s-ddd#ddd$poc-all-clusteradmin", "tnnt_k8s-prod$poc-all-clusteradmin"},
+				EMail:     "achim.admin@tenant.de",
+				Name:      "achim",
 				FederatedClaims: map[string]string{
 					"connector_id": "tnnt_ldap_openldap",
 					"user_id":      "cn=achim.admin,ou=People,dc=tenant,dc=de",
 				},
+				Roles: nil,
 			},
 			wantErr: false,
 		},
@@ -163,21 +162,18 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				Groups:  []security.ResourceAccess{security.ResourceAccess("Tn_k8s-all-all-cadm")},
 				Tenant:  "",
 			},
-			wantClaims: &security.Claims{
-				StandardClaims: jwt.StandardClaims{
-					Audience:  "",
-					ExpiresAt: newTokenCfg.ExpiresAt.Unix(),
-					Id:        newTokenCfg.Id,
-					IssuedAt:  newTokenCfg.IssuedAt.Unix(),
-					Issuer:    newTokenCfg.IssuerUrl,
-					NotBefore: newTokenCfg.IssuedAt.Unix(),
-					Subject:   newTokenCfg.Subject,
-				},
-				Audience: []interface{}{newTokenCfg.Audience[0]},
-				Groups:   nil,
-				Roles:    []string{"Tn_k8s-all-all-cadm"},
-				EMail:    newTokenCfg.Email,
-				Name:     newTokenCfg.Name,
+			wantClaims: &auth.Claims{
+				ExpiresAt: newTokenCfg.ExpiresAt.Unix(),
+				Id:        newTokenCfg.Id,
+				IssuedAt:  newTokenCfg.IssuedAt.Unix(),
+				Issuer:    newTokenCfg.IssuerUrl,
+				NotBefore: newTokenCfg.IssuedAt.Unix(),
+				Subject:   newTokenCfg.Subject,
+				Audience:  []interface{}{newTokenCfg.Audience[0]},
+				Groups:    nil,
+				EMail:     newTokenCfg.Email,
+				Name:      newTokenCfg.Name,
+				Roles:     []string{"Tn_k8s-all-all-cadm"},
 			},
 			wantErr: false,
 		},
