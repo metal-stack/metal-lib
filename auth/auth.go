@@ -29,7 +29,7 @@ import (
 const cloudContext = "cloudctl"
 
 var DexScopes = []string{"groups", "openid", "profile", "email", "federated:id"}
-var GenericScopes = []string{"groups", "openid", "profile", "email"}
+var GenericScopes = []string{"openid", "profile", "email"}
 
 // Config for parametrization
 type Config struct {
@@ -70,7 +70,7 @@ type TokenHandlerFunc func(tokenInfo TokenInfo) error
 type TokenInfo struct {
 	IDToken      string
 	RefreshToken string
-	TokenClaims  claim
+	TokenClaims  Claims
 
 	IssuerConfig
 }
@@ -108,16 +108,30 @@ func (a *app) Consolef(format string, args ...interface{}) {
 	}
 }
 
-type claim struct {
-	Iss           string      `json:"iss"`
-	Sub           string      `json:"sub"`
-	Aud           interface{} `json:"aud"` // since it depends on the scopes if aud is a string or []string
-	Exp           int         `json:"exp"`
-	Iat           int         `json:"iat"`
-	AtHash        string      `json:"at_hash"`
-	Email         string      `json:"email"`
-	EmailVerified bool        `json:"email_verified"`
-	Name          string      `json:"name"`
+type Claims struct {
+	Id              string            `json:"jti,omitempty"`
+	ExpiresAt       int64             `json:"exp,omitempty"`
+	IssuedAt        int64             `json:"iat,omitempty"`
+	NotBefore       int64             `json:"nbf,omitempty"`
+	Issuer          string            `json:"iss,omitempty"`
+	Subject         string            `json:"sub,omitempty"`
+	Audience        interface{}       `json:"aud,omitempty"`
+	Groups          []string          `json:"groups"`
+	EMail           string            `json:"email"`
+	Name            string            `json:"name"`
+	FederatedClaims map[string]string `json:"federated_claims"`
+
+	PreferredUsername string `json:"preferred_username"`
+	// added for parsing of "new" style tokens
+	Roles []string `json:"roles"`
+}
+
+// Username returns the username, taken from preferredUsername or name.
+func (c Claims) Username() string {
+	if c.PreferredUsername != "" {
+		return c.PreferredUsername
+	}
+	return c.Name
 }
 
 // OIDCFlow validates the given config and starts the OIDC-Flow "response_type=code"
@@ -211,7 +225,7 @@ func oidcFlow(appModel *app) error {
 	}
 
 	if len(s.ScopesSupported) == 0 {
-		// scopes_supported is a "RECOMMENDED" discovery claim, not a required
+		// scopes_supported is a "RECOMMENDED" discovery Claims, not a required
 		// one. If missing, assume that the provider follows the spec and has
 		// an "offline_access" scope.
 		appModel.offlineAsScope = true
@@ -431,7 +445,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to indent json: %v", err), http.StatusInternalServerError)
 		return
 	}
-	var claims claim
+	var claims Claims
 	err = json.Unmarshal(rawClaims, &claims)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to read claims: %v", err), http.StatusInternalServerError)
@@ -461,7 +475,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	renderToken(w, rawIDToken, token.RefreshToken, buff.Bytes(), a.config.SuccessMessage, a.config.Debug)
 
-	a.config.Log.Debug("Login Succeeded", zap.String("username", claims.Name))
+	a.config.Log.Debug("Login Succeeded", zap.String("username", claims.Username()))
 	a.config.Log.Debug("Login-Data", zap.String("token", rawIDToken), zap.String("Refresh Token", token.RefreshToken), zap.String("Claims", string(rawClaims)))
 
 	go func() {

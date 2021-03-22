@@ -29,11 +29,11 @@ const (
 type UserIDExtractor func(tokenInfo TokenInfo) string
 
 func ExtractName(tokenInfo TokenInfo) string {
-	return tokenInfo.TokenClaims.Name
+	return tokenInfo.TokenClaims.Username()
 }
 
 func ExtractEMail(tokenInfo TokenInfo) string {
-	return tokenInfo.TokenClaims.Email
+	return tokenInfo.TokenClaims.EMail
 }
 
 // UpdateKubeConfig saves the given tokenInfo in the given kubeConfig. The given path to kubeconfig is preferred,
@@ -85,7 +85,7 @@ func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtra
 		"client-secret":             tokenInfo.ClientSecret,
 		"id-token":                  tokenInfo.IDToken,
 		"refresh-token":             tokenInfo.RefreshToken,
-		"idp-issuer-url":            tokenInfo.TokenClaims.Iss,
+		"idp-issuer-url":            tokenInfo.TokenClaims.Issuer,
 		"idp-certificate-authority": tokenInfo.IssuerCA,
 	}
 

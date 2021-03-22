@@ -2,6 +2,7 @@ package sec
 
 import (
 	"fmt"
+	"github.com/metal-stack/metal-lib/auth"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -32,9 +33,9 @@ func (p *Plugin) ParseTokenUnvalidated(token string) (*security.User, *security.
 // ParseTokenUnvalidated extracts information from the given jwt token without validating it.
 // FederatedClaims are optional and
 // ResourceAccess are constructed from Roles and Groups claims.
-func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *security.Claims, error) {
+func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *auth.Claims, error) {
 
-	parsedClaims := &security.Claims{}
+	parsedClaims := &auth.Claims{}
 	webToken, err := jwt.ParseSigned(token)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing token: %s", err)
@@ -67,10 +68,12 @@ func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *security.Cl
 	}
 
 	user := &security.User{
-		Name:   parsedClaims.Name,
-		EMail:  parsedClaims.EMail,
-		Groups: res,
-		Tenant: tenant,
+		Issuer:  parsedClaims.Issuer,
+		Subject: parsedClaims.Subject,
+		Name:    parsedClaims.Username(),
+		EMail:   parsedClaims.EMail,
+		Groups:  res,
+		Tenant:  tenant,
 	}
 
 	if err != nil {

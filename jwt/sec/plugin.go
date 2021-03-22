@@ -42,7 +42,7 @@ func genericOidcExtractUser(ic *security.IssuerConfig, claims *security.GenericO
 	}
 
 	usr := security.User{
-		Name:   claims.Name,
+		Name:   claims.PreferredUsername,
 		EMail:  claims.EMail,
 		Groups: grps,
 		Tenant: ic.Tenant,
