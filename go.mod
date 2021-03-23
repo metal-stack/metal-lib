@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/icza/dyno v0.0.0-20200205103839-49cb13720835
 	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/metal-stack/security v0.5.2
+	github.com/metal-stack/security v0.5.3
 	github.com/metal-stack/v v1.0.2
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect

@@ -107,6 +107,11 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 	newToken, _, _, err := security.CreateTokenAndKeys(newTokenCfg)
 	require.NoError(t, err)
 
+	newTokenCfgNameOnly := security.DefaultTokenCfg()
+	newTokenCfgNameOnly.PreferredName = ""
+	newTokenNameOnly, _, _, err := security.CreateTokenAndKeys(newTokenCfgNameOnly)
+	require.NoError(t, err)
+
 	type args struct {
 		token string
 	}
@@ -158,22 +163,52 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				Issuer:  newTokenCfg.IssuerUrl,
 				Subject: newTokenCfg.Subject,
 				EMail:   newTokenCfg.Email,
-				Name:    newTokenCfg.Name,
+				Name:    newTokenCfg.PreferredName,
 				Groups:  []security.ResourceAccess{security.ResourceAccess("Tn_k8s-all-all-cadm")},
 				Tenant:  "",
 			},
 			wantClaims: &auth.Claims{
-				ExpiresAt: newTokenCfg.ExpiresAt.Unix(),
-				Id:        newTokenCfg.Id,
-				IssuedAt:  newTokenCfg.IssuedAt.Unix(),
-				Issuer:    newTokenCfg.IssuerUrl,
-				NotBefore: newTokenCfg.IssuedAt.Unix(),
-				Subject:   newTokenCfg.Subject,
-				Audience:  []interface{}{newTokenCfg.Audience[0]},
-				Groups:    nil,
-				EMail:     newTokenCfg.Email,
-				Name:      newTokenCfg.Name,
-				Roles:     []string{"Tn_k8s-all-all-cadm"},
+				ExpiresAt:         newTokenCfg.ExpiresAt.Unix(),
+				Id:                newTokenCfg.Id,
+				IssuedAt:          newTokenCfg.IssuedAt.Unix(),
+				Issuer:            newTokenCfg.IssuerUrl,
+				NotBefore:         newTokenCfg.IssuedAt.Unix(),
+				Subject:           newTokenCfg.Subject,
+				Audience:          []interface{}{newTokenCfg.Audience[0]},
+				Groups:            nil,
+				EMail:             newTokenCfg.Email,
+				Name:              newTokenCfg.Name,
+				PreferredUsername: newTokenCfg.PreferredName,
+				Roles:             []string{"Tn_k8s-all-all-cadm"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "new Token, name only",
+			args: args{
+				token: newTokenNameOnly,
+			},
+			wantUser: &security.User{
+				Issuer:  newTokenCfgNameOnly.IssuerUrl,
+				Subject: newTokenCfgNameOnly.Subject,
+				EMail:   newTokenCfgNameOnly.Email,
+				Name:    newTokenCfgNameOnly.Name,
+				Groups:  []security.ResourceAccess{security.ResourceAccess("Tn_k8s-all-all-cadm")},
+				Tenant:  "",
+			},
+			wantClaims: &auth.Claims{
+				ExpiresAt:         newTokenCfgNameOnly.ExpiresAt.Unix(),
+				Id:                newTokenCfgNameOnly.Id,
+				IssuedAt:          newTokenCfgNameOnly.IssuedAt.Unix(),
+				Issuer:            newTokenCfgNameOnly.IssuerUrl,
+				NotBefore:         newTokenCfgNameOnly.IssuedAt.Unix(),
+				Subject:           newTokenCfgNameOnly.Subject,
+				Audience:          []interface{}{newTokenCfgNameOnly.Audience[0]},
+				Groups:            nil,
+				EMail:             newTokenCfgNameOnly.Email,
+				Name:              newTokenCfgNameOnly.Name,
+				PreferredUsername: "",
+				Roles:             []string{"Tn_k8s-all-all-cadm"},
 			},
 			wantErr: false,
 		},
