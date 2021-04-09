@@ -12,3 +12,14 @@ const (
 	// AccountingNetworkTrafficInternal tag to indicate internal network traffic
 	AccountingNetworkTrafficInternal = "accounting.metal-stack.io/network-traffic-internal"
 )
+
+// AccountingTags returns all accounting tags
+func AccountingTags() []string {
+	return []string{
+		AccountingProductID,
+		AccountingContractID,
+		AccountingDebtor,
+		AccountingNetworkTrafficExternal,
+		AccountingNetworkTrafficInternal,
+	}
+}
