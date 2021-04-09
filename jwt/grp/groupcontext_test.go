@@ -77,55 +77,55 @@ type ExpectedGroupTest struct {
 var validGroupTests = []ExpectedGroupTest{
 	{
 		groupString:         "kaas-clustername-namespace-admin",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "clustername", ClusterTenant: "", Namespace: "namespace", Role: "admin"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "clustername", OnBehalfTenant: "", SecondScope: "namespace", Role: "admin"},
 		prefixedGroupString: "oidc:namespace-admin",
 		fullGroupString:     "kaas-clustername-namespace-admin",
 	},
 	{
 		groupString:         "kaas-ddd#clustername-namespace-admin",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "clustername", ClusterTenant: "ddd", Namespace: "namespace", Role: "admin"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "clustername", OnBehalfTenant: "ddd", SecondScope: "namespace", Role: "admin"},
 		prefixedGroupString: "oidc:namespace-admin",
 		fullGroupString:     "kaas-ddd#clustername-namespace-admin",
 	},
 	{
 		groupString:         "kaas-ddd#all-all-admin",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "all", ClusterTenant: "ddd", Namespace: "all", Role: "admin"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "all", OnBehalfTenant: "ddd", SecondScope: "all", Role: "admin"},
 		prefixedGroupString: "oidc:all-admin",
 		fullGroupString:     "kaas-ddd#all-all-admin",
 	},
 	{
 		groupString:         "kaas-cluster-namespace-role",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "kaas-ddd#cluster-namespace-role",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "ddd", Namespace: "namespace", Role: "role"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "ddd", SecondScope: "namespace", Role: "role"},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-ddd#cluster-namespace-role",
 	},
 	{
 		groupString:         "kaas-ddd#cluster--role",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "ddd", Namespace: "", Role: "role"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "ddd", SecondScope: "", Role: "role"},
 		prefixedGroupString: "oidc:-role",
 		fullGroupString:     "kaas-ddd#cluster--role",
 	},
 	{
 		groupString:         "kaas-cluster-namespace-role",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "kaas-cluster-namespace-role",
-		result:              &Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"},
+		result:              &Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "KAAS-cluster-NameSpace-ROLE",
-		result:              &Group{AppPrefix: "KAAS", ClusterName: "cluster", ClusterTenant: "", Namespace: "NameSpace", Role: "ROLE"},
+		result:              &Group{AppPrefix: "KAAS", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "NameSpace", Role: "ROLE"},
 		prefixedGroupString: "oidc:NameSpace-ROLE",
 		fullGroupString:     "KAAS-cluster-NameSpace-ROLE",
 	},
@@ -206,49 +206,49 @@ type ExpectedGroupContextTest struct {
 var validGroupADTests = []ExpectedGroupContextTest{
 	{
 		groupString:         "TnPg_Srv_Appkaas-clustername-namespace-admin_full",
-		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", ClusterName: "clustername", ClusterTenant: "", Namespace: "namespace", Role: "admin"}},
+		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", FirstScope: "clustername", OnBehalfTenant: "", SecondScope: "namespace", Role: "admin"}},
 		prefixedGroupString: "oidc:namespace-admin",
 		fullGroupString:     "kaas-clustername-namespace-admin",
 	},
 	{
 		groupString:         "TnPg_Srv_Appkaas-ddd#clustername-namespace-admin_full",
-		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", ClusterName: "clustername", ClusterTenant: "ddd", Namespace: "namespace", Role: "admin"}},
+		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", FirstScope: "clustername", OnBehalfTenant: "ddd", SecondScope: "namespace", Role: "admin"}},
 		prefixedGroupString: "oidc:namespace-admin",
 		fullGroupString:     "kaas-ddd#clustername-namespace-admin",
 	},
 	{
 		groupString:         "TnPg_Srv_Appkaas-cluster-namespace-role_Edit",
-		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "TnPg_Srv_Appkaas-ddd#cluster-namespace-role_Full",
-		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "ddd", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "ddd", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-ddd#cluster-namespace-role",
 	},
 	{
 		groupString:         "TnPg_Srv_Appkaas-ddd#cluster--role_Mod",
-		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "ddd", Namespace: "", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "ddd", SecondScope: "", Role: "role"}},
 		prefixedGroupString: "oidc:-role",
 		fullGroupString:     "kaas-ddd#cluster--role",
 	},
 	{
 		groupString:         "TnPg_Srv_Appkaas-cluster-namespace-role_Edit",
-		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tn", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "DpRg_Srv_Appkaas-cluster-namespace-role_Edit",
-		result:              &GroupContext{TenantPrefix: "dp", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "dp", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "DpRg_Srv_Appkaas-clu$ter-namespace-role_Edit",
-		result:              &GroupContext{TenantPrefix: "dp", Group: Group{AppPrefix: "kaas", ClusterName: "clu$ter", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "dp", Group: Group{AppPrefix: "kaas", FirstScope: "clu$ter", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-clu$ter-namespace-role",
 	},
@@ -296,49 +296,49 @@ func TestParseUXInvalid(t *testing.T) {
 var validGroupUXTests = []ExpectedGroupContextTest{
 	{
 		groupString:         "tnnt_kaas-clustername-namespace-admin",
-		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", ClusterName: "clustername", ClusterTenant: "", Namespace: "namespace", Role: "admin"}},
+		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", FirstScope: "clustername", OnBehalfTenant: "", SecondScope: "namespace", Role: "admin"}},
 		prefixedGroupString: "oidc:namespace-admin",
 		fullGroupString:     "kaas-clustername-namespace-admin",
 	},
 	{
 		groupString:         "tnnt_kaas-ddd#clustername-namespace-admin",
-		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", ClusterName: "clustername", ClusterTenant: "ddd", Namespace: "namespace", Role: "admin"}},
+		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", FirstScope: "clustername", OnBehalfTenant: "ddd", SecondScope: "namespace", Role: "admin"}},
 		prefixedGroupString: "oidc:namespace-admin",
 		fullGroupString:     "kaas-ddd#clustername-namespace-admin",
 	},
 	{
 		groupString:         "tnnt_kaas-cluster-namespace-role",
-		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "tnnt_kaas-ddd#cluster-namespace-role",
-		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "ddd", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "ddd", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-ddd#cluster-namespace-role",
 	},
 	{
 		groupString:         "tnnt_kaas-ddd#cluster--role",
-		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "ddd", Namespace: "", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "ddd", SecondScope: "", Role: "role"}},
 		prefixedGroupString: "oidc:-role",
 		fullGroupString:     "kaas-ddd#cluster--role",
 	},
 	{
 		groupString:         "tnnt_kaas-cluster-namespace-role",
-		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "tnnt", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "ddd_kaas-cluster-namespace-role",
-		result:              &GroupContext{TenantPrefix: "ddd", Group: Group{AppPrefix: "kaas", ClusterName: "cluster", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "ddd", Group: Group{AppPrefix: "kaas", FirstScope: "cluster", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-cluster-namespace-role",
 	},
 	{
 		groupString:         "ddd_kaas-clu$ter-namespace-role",
-		result:              &GroupContext{TenantPrefix: "ddd", Group: Group{AppPrefix: "kaas", ClusterName: "clu$ter", ClusterTenant: "", Namespace: "namespace", Role: "role"}},
+		result:              &GroupContext{TenantPrefix: "ddd", Group: Group{AppPrefix: "kaas", FirstScope: "clu$ter", OnBehalfTenant: "", SecondScope: "namespace", Role: "role"}},
 		prefixedGroupString: "oidc:namespace-role",
 		fullGroupString:     "kaas-clu$ter-namespace-role",
 	},
@@ -471,11 +471,11 @@ func TestFromStringToFullGroupStringRoundtrip(t *testing.T) {
 
 func TestGroup_ToOnBehalfGroupString(t *testing.T) {
 	type fields struct {
-		AppPrefix     string
-		ClusterTenant string
-		ClusterName   string
-		Namespace     string
-		Role          string
+		AppPrefix      string
+		OnBehalfTenant string
+		FirstScope     string
+		SecondScope    string
+		Role           string
 	}
 	tests := []struct {
 		name   string
@@ -484,28 +484,28 @@ func TestGroup_ToOnBehalfGroupString(t *testing.T) {
 	}{
 		{
 			name:   "w/o clustertenant",
-			fields: fields{AppPrefix: "kaas", ClusterTenant: "", ClusterName: "bnk", Namespace: "project1", Role: "admin"},
+			fields: fields{AppPrefix: "kaas", OnBehalfTenant: "", FirstScope: "bnk", SecondScope: "project1", Role: "admin"},
 			want:   "kaas-bnk-project1-admin",
 		},
 		{
 			name:   "clustertenant",
-			fields: fields{AppPrefix: "kaas", ClusterTenant: "ddd", ClusterName: "bnk", Namespace: "project2", Role: "admin"},
+			fields: fields{AppPrefix: "kaas", OnBehalfTenant: "ddd", FirstScope: "bnk", SecondScope: "project2", Role: "admin"},
 			want:   "kaas-bnk-project2-admin",
 		},
 		{
 			name:   "clustertenant spec char",
-			fields: fields{AppPrefix: "kaas", ClusterTenant: "my$tenant", ClusterName: "bnk", Namespace: "project3", Role: "view"},
+			fields: fields{AppPrefix: "kaas", OnBehalfTenant: "my$tenant", FirstScope: "bnk", SecondScope: "project3", Role: "view"},
 			want:   "kaas-bnk-project3-view",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &Group{
-				AppPrefix:     tt.fields.AppPrefix,
-				ClusterTenant: tt.fields.ClusterTenant,
-				ClusterName:   tt.fields.ClusterName,
-				Namespace:     tt.fields.Namespace,
-				Role:          tt.fields.Role,
+				AppPrefix:      tt.fields.AppPrefix,
+				OnBehalfTenant: tt.fields.OnBehalfTenant,
+				FirstScope:     tt.fields.FirstScope,
+				SecondScope:    tt.fields.SecondScope,
+				Role:           tt.fields.Role,
 			}
 			if got := g.ToCanonicalGroupString(); got != tt.want {
 				t.Errorf("ToCanonicalGroupString() = %v, want %v", got, tt.want)

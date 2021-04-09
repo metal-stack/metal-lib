@@ -1,14 +1,18 @@
 package grp
 
-// GroupExpression can be used to find matching groups
+import "strings"
+
+const Any = "*"
+
+// GroupExpression can be used to find matching groups of the schema "[appPrefix]-[firstScope]-[secondScope]-[role]"
 // all fields support "*" as wildcard if they should match everything
 type GroupExpression struct {
 	// Application
 	AppPrefix string
-	// name of the cluster
-	ClusterName string
-	// namespace in the cluster
-	Namespace string
+	// first resource scope
+	FirstScope string
+	// second resource scope
+	SecondScope string
 	// role in the given context
 	Role string
 }
@@ -20,11 +24,11 @@ func (g *GroupExpression) Matches(group Group) bool {
 	if !ok {
 		return false
 	}
-	ok = matchField(group.ClusterName, g.ClusterName, true)
+	ok = matchField(group.FirstScope, g.FirstScope, true)
 	if !ok {
 		return false
 	}
-	ok = matchField(group.Namespace, g.Namespace, true)
+	ok = matchField(group.SecondScope, g.SecondScope, true)
 	if !ok {
 		return false
 	}
@@ -32,19 +36,20 @@ func (g *GroupExpression) Matches(group Group) bool {
 	return ok
 }
 
-// matchFiled does a simple match
-// supportAll activates that if the value is "all", everything matches
+// matchFiled does a simple equal-fold-match of the given value with the given expression.
+// If expression is "*", every value matches.
+// The flag 'supportAll' activates that if the value is "all", everything matches.
 func matchField(value, expression string, supportAll bool) bool {
 
-	if supportAll && value == "all" {
+	if supportAll && strings.EqualFold(value, All) {
 		return true
 	}
 
-	if value == expression {
+	if strings.EqualFold(value, expression) {
 		return true
 	}
 
-	if expression == "*" {
+	if expression == Any {
 		return true
 	}
 

@@ -7,11 +7,11 @@ import (
 
 func TestNewGroup(t *testing.T) {
 	type args struct {
-		app           string
-		clusterTenant string
-		cluster       string
-		namespace     string
-		role          string
+		app            string
+		onBehalfTenant string
+		firstScope     string
+		secondScope    string
+		role           string
 	}
 	tests := []struct {
 		name string
@@ -21,35 +21,35 @@ func TestNewGroup(t *testing.T) {
 		{
 			name: "plain",
 			args: args{
-				app:           "kaas",
-				clusterTenant: "all",
-				cluster:       "mycluster",
-				namespace:     "myns",
-				role:          "myrole",
+				app:            "kaas",
+				onBehalfTenant: "all",
+				firstScope:     "mycluster",
+				secondScope:    "myns",
+				role:           "myrole",
 			},
 			want: &Group{
-				AppPrefix:     "kaas",
-				ClusterTenant: "all",
-				ClusterName:   "mycluster",
-				Namespace:     "myns",
-				Role:          "myrole",
+				AppPrefix:      "kaas",
+				OnBehalfTenant: "all",
+				FirstScope:     "mycluster",
+				SecondScope:    "myns",
+				Role:           "myrole",
 			},
 		},
 		{
 			name: "encode",
 			args: args{
-				app:           "kaas",
-				clusterTenant: "all",
-				cluster:       "my-cluster",
-				namespace:     "my-ns",
-				role:          "myrole",
+				app:            "kaas",
+				onBehalfTenant: "all",
+				firstScope:     "my-cluster",
+				secondScope:    "my-ns",
+				role:           "myrole",
 			},
 			want: &Group{
-				AppPrefix:     "kaas",
-				ClusterTenant: "all",
-				ClusterName:   "my$cluster",
-				Namespace:     "my$ns",
-				Role:          "myrole",
+				AppPrefix:      "kaas",
+				OnBehalfTenant: "all",
+				FirstScope:     "my$cluster",
+				SecondScope:    "my$ns",
+				Role:           "myrole",
 			},
 		},
 	}
@@ -58,7 +58,7 @@ func TestNewGroup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := grpr.NewGroup(tt.args.app, tt.args.clusterTenant, tt.args.cluster, tt.args.namespace, tt.args.role); !reflect.DeepEqual(got, tt.want) {
+			if got := grpr.NewGroup(tt.args.app, tt.args.onBehalfTenant, tt.args.firstScope, tt.args.secondScope, tt.args.role); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewGroup() = %v, want %v", got, tt.want)
 			}
 		})

@@ -2,6 +2,7 @@ package sec
 
 import (
 	"errors"
+	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
@@ -29,11 +30,10 @@ func TestExtractUserProcessGroups(t *testing.T) {
 		claims *security.Claims
 	}
 	tests := []struct {
-		name               string
-		args               args
-		wantUser           *security.User
-		wantGroupsOnBehalf []testGroupsOnBehalf
-		wantErr            bool
+		name     string
+		args     args
+		wantUser *security.User
+		wantErr  bool
 	}{
 		{
 			name: "NoFederatedClaim",
@@ -107,12 +107,6 @@ func TestExtractUserProcessGroups(t *testing.T) {
 				},
 				Tenant: "tnnt",
 			},
-			wantGroupsOnBehalf: []testGroupsOnBehalf{
-				{
-					tenant: "ddd",
-					groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-kaasgroup1")},
-				},
-			},
 			wantErr: false,
 		},
 		{
@@ -150,12 +144,6 @@ func TestExtractUserProcessGroups(t *testing.T) {
 				},
 				Tenant: "Tn",
 			},
-			wantGroupsOnBehalf: []testGroupsOnBehalf{
-				{
-					tenant: "ddd",
-					groups: []security.ResourceAccess{security.ResourceAccess("k8s-all-all-group1"), security.ResourceAccess("kaas-all-all-kaasgroup1")},
-				},
-			},
 			wantErr: false,
 		},
 	}
@@ -175,13 +163,6 @@ func TestExtractUserProcessGroups(t *testing.T) {
 
 			if !reflect.DeepEqual(gotUser, tt.wantUser) {
 				t.Errorf("ExtractUserProcessGroups() gotUser = %v, want %v", gotUser, tt.wantUser)
-			}
-
-			for i := range tt.wantGroupsOnBehalf {
-				gob := tt.wantGroupsOnBehalf[i]
-				if gotGroupsOnBehalf := plugin.GroupsOnBehalf(gotUser, gob.tenant); !reflect.DeepEqual(gotGroupsOnBehalf, gob.groups) {
-					t.Errorf("groupsOnBehalf() = %v, want %v", gotGroupsOnBehalf, gob.groups)
-				}
 			}
 		})
 	}
@@ -350,6 +331,7 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 						Audience: jwt.Audience{"audience"},
 					},
 					Roles: []string{
+						"TnRg_Srv_Appk8s-all#all-all-role_Full",
 						"TnRg_Srv_Appk8s-ddd#all-all-group1_Full",
 						"TnRg_Srv_Appmaas-all-all-maasgroup1_Full",
 						"TnRg_Srv_Appkaas-ddd#all-all-kaasgroup1_Full",
@@ -370,6 +352,7 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 				EMail: "hans@demo.de",
 				Name:  "xyz4711",
 				Groups: []security.ResourceAccess{
+					security.ResourceAccess("k8s-all#all-all-role"),
 					security.ResourceAccess("k8s-ddd#all-all-group1"),
 					security.ResourceAccess("maas-all-all-maasgroup1"),
 					security.ResourceAccess("kaas-ddd#all-all-kaasgroup1"),
@@ -414,128 +397,22 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 	}
 }
 
-func TestHasOneOfGroups(t *testing.T) {
-	type args struct {
-		user   *security.User
-		tenant string
-		groups []security.ResourceAccess
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "not allowed",
-			args: args{
-				user: &security.User{
-					EMail: "",
-					Name:  "",
-					Groups: []security.ResourceAccess{
-						security.ResourceAccess("kaas-all-all-admin"),
-						security.ResourceAccess("kaas-ddd#all-all-view"),
-						security.ResourceAccess("kaas-kkk#all-all-admin")},
-					Tenant: "tnnt",
-				},
-				tenant: "ddd",
-				groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-admin"), security.ResourceAccess("kaas-all-all-edit"), security.ResourceAccess("kaas-all-all-something")},
-			},
-			want: false,
-		},
-		{
-			name: "allowed",
-			args: args{
-				user: &security.User{
-					EMail: "",
-					Name:  "",
-					Groups: []security.ResourceAccess{
-						security.ResourceAccess("kaas-all-all-edit"),
-						security.ResourceAccess("kaas-ddd#all-all-view"),
-						security.ResourceAccess("kaas-kkk#all-all-admin")},
-					Tenant: "tnnt",
-				},
-				tenant: "ddd",
-				groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-view")},
-			},
-			want: true,
-		},
-		{
-			name: "allowed list",
-			args: args{
-				user: &security.User{
-					EMail: "",
-					Name:  "",
-					Groups: []security.ResourceAccess{
-						security.ResourceAccess("kaas-all-all-edit"),
-						security.ResourceAccess("kaas-ddd#all-all-view"),
-						security.ResourceAccess("kaas-kkk#all-all-admin")},
-					Tenant: "tnnt",
-				},
-				tenant: "ddd",
-				groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-admin"), security.ResourceAccess("kaas-all-all-view")},
-			},
-			want: true,
-		},
-		{
-			name: "allowed list",
-			args: args{
-				user: &security.User{
-					EMail: "",
-					Name:  "",
-					Groups: []security.ResourceAccess{
-						security.ResourceAccess("kaas-all-all-edit"),
-						security.ResourceAccess("kaas-ddd#all-all-view"),
-						security.ResourceAccess("kaas-kkk#all-all-admin")},
-					Tenant: "tnnt",
-				},
-				tenant: "kkk",
-				groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-admin")},
-			},
-			want: true,
-		},
-		{
-			name: "DENY: not provider tenant wants to act on behalf of another tenant",
-			args: args{
-				user: &security.User{
-					EMail: "",
-					Name:  "",
-					Groups: []security.ResourceAccess{
-						security.ResourceAccess("kaas-all-all-edit"),
-						security.ResourceAccess("kaas-ddd#all-all-view"),
-						security.ResourceAccess("kaas-kkk#all-all-admin")},
-					Tenant: "tnnt",
-				},
-				tenant: "kkk",
-				groups: []security.ResourceAccess{security.ResourceAccess("kaas-all-all-view")},
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := plugin.HasOneOfGroups(tt.args.user, tt.args.tenant, tt.args.groups...); got != tt.want {
-				t.Errorf("HasOneOfGroups() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestHasGroupExpression(t *testing.T) {
 	type expr struct {
 		expr grp.GroupExpression
 		want bool
 	}
 	type args struct {
-		user       *security.User
-		tenant     string
-		expression []expr
+		user           *security.User
+		resourceTenant string
+		expression     []expr
 	}
 	var tests = []struct {
 		name string
 		args args
 	}{
 		{
-			name: "all",
+			name: "all-all in groups",
 			args: args{
 				user: &security.User{
 					EMail: "",
@@ -548,13 +425,13 @@ func TestHasGroupExpression(t *testing.T) {
 					},
 					Tenant: "tnnt",
 				},
-				tenant: "tnnt",
+				resourceTenant: "tnnt",
 				expression: []expr{
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
 							Role:        "*",
 						},
 						want: true,
@@ -562,27 +439,119 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster2",
-							Namespace:   "mynamespace2",
+							FirstScope:  "mycluster2",
+							SecondScope: "mynamespace2",
 							Role:        "*",
 						},
 						want: true,
 					},
 					{
 						expr: grp.GroupExpression{
+							AppPrefix:   "*",
+							FirstScope:  "*",
+							SecondScope: "*",
+							Role:        "*",
+						},
+						want: true,
+					},
+					{ // cadm not in groups
+						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
 							Role:        "cadm",
 						},
 						want: false,
 					},
-					{
+					{ // maas not in groups
 						expr: grp.GroupExpression{
 							AppPrefix:   "maas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
+							Role:        "admin",
+						},
+						want: false,
+					},
+				},
+			},
+		},
+		{
+			name: "match any tenant",
+			args: args{
+				user: &security.User{
+					EMail: "",
+					Name:  "",
+					Groups: []security.ResourceAccess{
+						security.ResourceAccess("kaas-all-all-edit"),
+						security.ResourceAccess("kaas-ddd#all-all-view"),
+						security.ResourceAccess("kaas-kkk#all-all-admin"),
+						security.ResourceAccess("invalid-grp"),
+					},
+					Tenant: "tnnt",
+				},
+				resourceTenant: "*", // wildcard  matches any tenant
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
+							Role:        "admin",
+						},
+						want: true,
+					},
+					{ // cadm not in groups
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
 							Role:        "cadm",
+						},
+						want: false,
+					},
+					{ // maas not in groups
+						expr: grp.GroupExpression{
+							AppPrefix:   "maas",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
+							Role:        "cadm",
+						},
+						want: false,
+					},
+				},
+			},
+		},
+		{
+			name: "wrong tenant",
+			args: args{
+				user: &security.User{
+					EMail: "",
+					Name:  "",
+					Groups: []security.ResourceAccess{
+						security.ResourceAccess("kaas-all-all-edit"),
+						security.ResourceAccess("kaas-ddd#all-all-view"),
+						security.ResourceAccess("kaas-kkk#all-all-admin"),
+						security.ResourceAccess("invalid-grp"),
+					},
+					Tenant: "tnnt",
+				},
+				resourceTenant: "xyz",
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
+							Role:        "*",
+						},
+						want: false,
+					},
+					{ // match any, but the tenant does not match
+						expr: grp.GroupExpression{
+							AppPrefix:   "*",
+							FirstScope:  "*",
+							SecondScope: "*",
+							Role:        "*",
 						},
 						want: false,
 					},
@@ -604,13 +573,13 @@ func TestHasGroupExpression(t *testing.T) {
 					},
 					Tenant: "tnnt",
 				},
-				tenant: "tnnt",
+				resourceTenant: "tnnt",
 				expression: []expr{
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
 							Role:        "view",
 						},
 						want: true,
@@ -618,8 +587,8 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "*",
-							Namespace:   "mynamespace",
+							FirstScope:  "*",
+							SecondScope: "mynamespace",
 							Role:        "view",
 						},
 						want: true,
@@ -627,8 +596,8 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "*",
+							FirstScope:  "mycluster",
+							SecondScope: "*",
 							Role:        "view",
 						},
 						want: true,
@@ -636,8 +605,8 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
 							Role:        "*",
 						},
 						want: true,
@@ -645,8 +614,8 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster2",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster2",
+							SecondScope: "mynamespace",
 							Role:        "*",
 						},
 						want: false,
@@ -654,8 +623,8 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace2",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace2",
 							Role:        "*",
 						},
 						want: false,
@@ -664,7 +633,7 @@ func TestHasGroupExpression(t *testing.T) {
 			},
 		},
 		{
-			name: "default tenant from token",
+			name: "no resource tenant",
 			args: args{
 				user: &security.User{
 					EMail: "",
@@ -675,22 +644,13 @@ func TestHasGroupExpression(t *testing.T) {
 					},
 					Tenant: "tnnt",
 				},
-				tenant: "", // no tenant given
+				resourceTenant: "", // no tenant given, there is no default
 				expression: []expr{
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster",
-							Namespace:   "mynamespace",
-							Role:        "*",
-						},
-						want: true,
-					},
-					{
-						expr: grp.GroupExpression{
-							AppPrefix:   "kaas",
-							ClusterName: "mycluster2",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster",
+							SecondScope: "mynamespace",
 							Role:        "*",
 						},
 						want: false,
@@ -698,8 +658,17 @@ func TestHasGroupExpression(t *testing.T) {
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster2",
-							Namespace:   "*",
+							FirstScope:  "mycluster2",
+							SecondScope: "mynamespace",
+							Role:        "*",
+						},
+						want: false,
+					},
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							FirstScope:  "mycluster2",
+							SecondScope: "*",
 							Role:        "*",
 						},
 						want: false,
@@ -719,13 +688,13 @@ func TestHasGroupExpression(t *testing.T) {
 					},
 					Tenant: "tnnt",
 				},
-				tenant: "xyz",
+				resourceTenant: "xyz",
 				expression: []expr{
 					{
 						expr: grp.GroupExpression{
 							AppPrefix:   "kaas",
-							ClusterName: "mycluster2",
-							Namespace:   "mynamespace",
+							FirstScope:  "mycluster2",
+							SecondScope: "mynamespace",
 							Role:        "*",
 						},
 						want: true,
@@ -733,15 +702,82 @@ func TestHasGroupExpression(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "on behalf all",
+			args: args{
+				user: &security.User{
+					EMail: "",
+					Name:  "",
+					Groups: []security.ResourceAccess{
+						security.ResourceAccess("kaas-mycluster-mynamespace2-view"),
+						security.ResourceAccess("kaas-all#mycluster2-mynamespace-view"),
+					},
+					Tenant: "tnnt",
+				},
+				resourceTenant: "xyz",
+				expression: []expr{
+					{
+						expr: grp.GroupExpression{
+							AppPrefix:   "kaas",
+							FirstScope:  "mycluster2",
+							SecondScope: "mynamespace",
+							Role:        "*",
+						},
+						want: true,
+					},
+				},
+			},
+		},
+		{
+			name: "encoded group and expression",
+			args: args{
+				user: &security.User{
+					EMail: "",
+					Name:  "",
+					Groups: []security.ResourceAccess{
+						security.ResourceAccess("kaas-my$cluster-my$namespace2-view"),
+						security.ResourceAccess("kaas-all#my$cluster2-my$namespace-admin"),
+					},
+					Tenant: "tnnt",
+				},
+				resourceTenant: "tnnt",
+				expression: []expr{
+					{
+						expr: func() grp.GroupExpression {
+							g, _ := grp.NewGrpr(grp.Config{ProviderTenant: "x"})
+							p := NewPlugin(g)
+							return p.NewGroupExpression("kaas", "my-cluster", "my-namespace2", "view")
+						}(),
+						want: true,
+					},
+					{
+						expr: func() grp.GroupExpression {
+							g, _ := grp.NewGrpr(grp.Config{ProviderTenant: "x"})
+							p := NewPlugin(g)
+							return p.NewGroupExpression("kaas", "my-cluster2", "my-namespace", "edit")
+						}(),
+						want: false,
+					},
+					{ // provider tenant is not checked in this "on behalf" scenario, the match is only on api, group scopes and role
+						expr: func() grp.GroupExpression {
+							g, _ := grp.NewGrpr(grp.Config{ProviderTenant: "x"})
+							p := NewPlugin(g)
+							return p.NewGroupExpression("kaas", "my-cluster2", "my-namespace", "admin")
+						}(),
+						want: true,
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			for _, exp := range tt.args.expression {
-				if got := plugin.HasGroupExpression(tt.args.user, tt.args.tenant, exp.expr); got != exp.want {
+		for _, exp := range tt.args.expression {
+			t.Run(fmt.Sprintf("%s:%v", tt.name, exp.expr), func(t *testing.T) {
+				if got := plugin.HasGroupExpression(tt.args.user, tt.args.resourceTenant, exp.expr); got != exp.want {
 					t.Errorf("HasGroupExpression(%v) = %v, want %v", exp.expr, got, exp.want)
 				}
-			}
-		})
+			})
+		}
 	}
 }
 
