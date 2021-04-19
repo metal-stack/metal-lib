@@ -7,7 +7,7 @@ import (
 
 // Group with Context (Tenant)
 type GroupContext struct {
-	// tenant of the group (example: tnnt of group tnns-all-all-admin)
+	// tenant of the group (example: tnnt of group tnnt_api-all-all-admin)
 	TenantPrefix string
 
 	// group
@@ -16,15 +16,15 @@ type GroupContext struct {
 
 // Group information
 type Group struct {
-	// Application
+	// AppPrefix is id of the Application, e.g. kaas, k8s,... (example: 'app' for group 'app-ddd#dev-all-admin')
 	AppPrefix string
-	// "On behalf"-Tenant, if is not the same as the tenant prefix (example: ddd of group tnnt_ddd#dev-all-admin)
+	// OnBehalfTenant is the id of the tenant of the resource this group grants permissions on (example: 'ddd' for group 'app-ddd#dev-all-admin')
 	OnBehalfTenant string
-	// first scope: for kaas name of the project, for k8s name of the cluster
+	// FirstScope e.g. for app kaas name of the project, for app k8s name of the cluster (example: 'dev' for group 'app-ddd#dev-all-admin')
 	FirstScope string
-	// second scope: for kaas name of the cluster, for k8s namespace in the cluster
+	// SecondScope e.g. for app kaas name of the cluster, for app k8s namespace in the cluster (example: 'all' for group 'app-ddd#dev-all-admin')
 	SecondScope string
-	// role in the given context
+	// Role is the in the given context (example: 'admin' for group 'app-ddd#dev-all-admin')
 	Role string
 }
 
