@@ -6,9 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -127,8 +125,8 @@ func Test_GetCurrentUser(t *testing.T) {
 	}
 
 	for _, currentTest := range tests {
+		currentTest := currentTest
 		t.Run(currentTest.filename, func(t *testing.T) {
-
 			authCtx, err := GetAuthContext(currentTest.filename, currentTest.contextName)
 			validateErr := currentTest.validate(t, authCtx, err)
 			if validateErr != nil {
@@ -198,6 +196,7 @@ func (e *errorData) validateError(t *testing.T, ctx AuthContext, err error) erro
 	}
 
 	if err.Error() != e.errorMessage {
+		//nolint:errorlint
 		return fmt.Errorf("expected error '%s', got '%s'", e.errorMessage, err.Error())
 	}
 
@@ -244,17 +243,17 @@ func TestUpdateUserNewFile(t *testing.T) {
 
 	asserter := require.New(t)
 
-	tmpfileName := filepath.Join(os.TempDir(), fmt.Sprintf("this_file_must_not_exist_%d", rand.Int63()))
+	tmpFile, err := ioutil.TempFile("", "this_file_must_not_exist_*")
+	assert.NoError(t, err)
+	tmpfileName := tmpFile.Name()
 
 	// delete file, just to be sure
 	_ = os.Remove(tmpfileName)
 
 	// "Update" -> create new file
 	ti := demoToken
-	_, err := UpdateKubeConfig(tmpfileName, ti, ExtractEMail)
-	if err != nil {
-		t.Fatalf("error updating kube-config: %v", err)
-	}
+	_, err = UpdateKubeConfig(tmpfileName, ti, ExtractEMail)
+	assert.NoError(t, err)
 
 	defer os.Remove(tmpfileName)
 
@@ -265,9 +264,7 @@ func TestUpdateUserNewFile(t *testing.T) {
 	diffFiles(t, "./testdata/createdDemoConfig", tmpfileName)
 
 	authContext, err := CurrentAuthContext(tmpfileName)
-	if err != nil {
-		t.Fatalf("error reading back user: %v", err)
-	}
+	assert.NoError(t, err)
 
 	asserter.Equal(authContext.User, demoToken.TokenClaims.EMail, "User")
 	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")
@@ -284,17 +281,17 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 
 	asserter := require.New(t)
 
-	tmpfileName := filepath.Join(os.TempDir(), fmt.Sprintf("this_file_must_not_exist_%d", rand.Int63()))
+	tmpFile, err := ioutil.TempFile("", "this_file_must_not_exist_*")
+	assert.NoError(t, err)
+	tmpfileName := tmpFile.Name()
 
 	// delete file, just to be sure
 	_ = os.Remove(tmpfileName)
 
 	// "Update" -> create new file
 	ti := demoToken
-	_, err := UpdateKubeConfig(tmpfileName, ti, ExtractName)
-	if err != nil {
-		t.Fatalf("error updating kube-config: %v", err)
-	}
+	_, err = UpdateKubeConfig(tmpfileName, ti, ExtractName)
+	assert.NoError(t, err)
 
 	defer os.Remove(tmpfileName)
 
@@ -305,9 +302,7 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 	diffFiles(t, "./testdata/createdDemoConfigName", tmpfileName)
 
 	authContext, err := CurrentAuthContext(tmpfileName)
-	if err != nil {
-		t.Fatalf("error reading back user: %v", err)
-	}
+	assert.NoError(t, err)
 
 	asserter.Equal(authContext.User, demoToken.TokenClaims.Username(), "User")
 	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")

@@ -14,17 +14,17 @@ func (p *Plugin) ParseTokenUnvalidated(token string) (*security.User, *security.
 	parsedClaims := &security.Claims{}
 	webToken, err := jwt.ParseSigned(token)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing token: %s", err)
+		return nil, nil, fmt.Errorf("error parsing token: %w", err)
 	}
 
 	err = webToken.UnsafeClaimsWithoutVerification(parsedClaims)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing token claims: %s", err)
+		return nil, nil, fmt.Errorf("error parsing token claims: %w", err)
 	}
 
 	user, err := p.ExtractUserProcessGroups(parsedClaims)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error extracting user: %s", err)
+		return nil, nil, fmt.Errorf("error extracting user: %w", err)
 	}
 
 	return user, parsedClaims, nil
@@ -38,12 +38,12 @@ func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *auth.Claims
 	parsedClaims := &auth.Claims{}
 	webToken, err := jwt.ParseSigned(token)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing token: %s", err)
+		return nil, nil, fmt.Errorf("error parsing token: %w", err)
 	}
 
 	err = webToken.UnsafeClaimsWithoutVerification(parsedClaims)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing token claims: %s", err)
+		return nil, nil, fmt.Errorf("error parsing token claims: %w", err)
 	}
 
 	// check federated claims
@@ -77,7 +77,7 @@ func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *auth.Claims
 	}
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("error extracting user: %s", err)
+		return nil, nil, fmt.Errorf("error extracting user: %w", err)
 	}
 
 	return user, parsedClaims, nil

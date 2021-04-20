@@ -193,6 +193,7 @@ func oidcFlow(appModel *app) error {
 
 	if appModel.client == nil {
 		transport := http.DefaultTransport.(*http.Transport).Clone()
+		/* #nosec */
 		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: appModel.config.SkipTLSVerify} // ignore expired SSL certificates
 
 		appModel.client = &http.Client{
@@ -246,6 +247,7 @@ func oidcFlow(appModel *app) error {
 	appModel.completeChan = make(chan bool)
 
 	// use next free port for callback
+	/* #nosec */
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		panic(err)
@@ -283,7 +285,7 @@ func oidcFlow(appModel *app) error {
 
 	err = srv.Serve(listener)
 	// after Shutdown ErrServerClosed is returned, this is expected and ok
-	if err == http.ErrServerClosed {
+	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
 
@@ -292,7 +294,10 @@ func oidcFlow(appModel *app) error {
 
 // return an HTTP client which trusts the provided root CAs.
 func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
-	tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
+	tlsConfig := tls.Config{
+		RootCAs:    x509.NewCertPool(),
+		MinVersion: tls.VersionTLS12,
+	}
 	rootCABytes, err := ioutil.ReadFile(rootCAs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read root-ca")
@@ -506,7 +511,7 @@ func openBrowser(url string) error {
 	args = append(args, url)
 	err := exec.Command(cmd, args...).Start()
 	if err != nil {
-		return fmt.Errorf("error opening browser cmd:%s args:%s error:%v", cmd, args, err)
+		return fmt.Errorf("error opening browser cmd:%s args:%s error:%w", cmd, args, err)
 	}
 	return nil
 }

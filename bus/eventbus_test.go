@@ -1,6 +1,7 @@
 package bus
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -184,7 +185,8 @@ func TestNewPublisher(t *testing.T) {
 
 	err := publisher.CreateTopic("topic42")
 
-	if _, ok := err.(net.Error); ok {
+	var netErr net.Error
+	if errors.As(err, &netErr) {
 		// network error, no nsq running, skip roundtrip tests
 		t.SkipNow()
 	}
@@ -338,6 +340,7 @@ func TestBridgeNsqLogToCoreLog(t *testing.T) {
 	}
 
 	for _, tst := range tests {
+		tst := tst
 		t.Run(tst.Level.String(), func(t *testing.T) {
 			// record all messages of all levels
 			core, recorded := observer.New(zapcore.DebugLevel)

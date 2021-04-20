@@ -17,7 +17,7 @@ jobs:
     - name: Lint
       uses: golangci/golangci-lint-action@v2
       with:
-        version: v1.39.0
+        args: -p bugs
     - name: Set up Go 1.14
       uses: actions/setup-go@v2
       with:

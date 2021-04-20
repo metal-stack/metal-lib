@@ -57,8 +57,10 @@ func TestNewGroup(t *testing.T) {
 	grpr := MustNewGrpr(Config{ProviderTenant: "tnnt"})
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := grpr.NewGroup(tt.args.app, tt.args.onBehalfTenant, tt.args.firstScope, tt.args.secondScope, tt.args.role); !reflect.DeepEqual(got, tt.want) {
+				//nolint:errorlint
 				t.Errorf("NewGroup() = %v, want %v", got, tt.want)
 			}
 		})

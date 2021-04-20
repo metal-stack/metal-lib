@@ -10,7 +10,7 @@ import (
 
 func TestSignAndVerify(t *testing.T) {
 	// Generate new KeyPair
-	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(err)
 	}
@@ -74,6 +74,7 @@ func TestSignAndVerify(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			signature, err := Sign(tt.args.privateKey, tt.args.dataSigning)
 			if err != nil {
