@@ -119,7 +119,7 @@ func (p *Plugin) extractAndProcessGroups(tenant string, directory string, groups
 			continue
 		}
 		// skip on behalf group if user tenant is not provider tenant
-		if grpCtx.ClusterTenant != "" && !tenantIsProvider {
+		if grpCtx.OnBehalfTenant != "" && !tenantIsProvider {
 			continue
 		}
 
@@ -131,19 +131,60 @@ func (p *Plugin) extractAndProcessGroups(tenant string, directory string, groups
 	return grps, nil
 }
 
-// UserTenantGroups returns the list of user-groups that the user can do for his tenant.
-func (p *Plugin) UserTenantGroups(u *security.User) []security.ResourceAccess {
+// NewGroupExpression creates a new GroupExpression with the given values and ensures that they are properly encoded (i.e. '-' are replaced by '$')
+func (p *Plugin) NewGroupExpression(appPrefix, firstScope, secondScope, role string) grp.GroupExpression {
+	return grp.GroupExpression{
+		AppPrefix:   p.grpr.GroupEncodeName(appPrefix),
+		FirstScope:  p.grpr.GroupEncodeName(firstScope),
+		SecondScope: p.grpr.GroupEncodeName(secondScope),
+		Role:        p.grpr.GroupEncodeName(role),
+	}
+}
 
-	var result []security.ResourceAccess
-	for i := range u.Groups {
-		grpCtx, err := p.grpr.ParseGroupName(string(u.Groups[i]))
-		if err == nil && grpCtx.ClusterTenant == "" {
-			// returns groupname without cluster tenant
-			result = append(result, security.ResourceAccess(grpCtx.ToCanonicalGroupString()))
+// HasGroupExpression checks if the given user has group permissions that fulfil the group-expression
+// which supports "*" as wildcards for resourceTenant and groupExpression
+func (p *Plugin) HasGroupExpression(user *security.User, resourceTenant string, groupExpression grp.GroupExpression) bool {
+
+	// no resource tenant is not ok, there can be no default on this layer
+	if resourceTenant == "" {
+		return false
+	}
+
+	// what we have now is the slice of groups that the user has
+	// (including "on behalf", with concrete cluster-tenant or wildcard "all")
+	// "on behalf"-groups do not have cluster-tenant because it is already evaluated for the concrete tenant to act
+
+	for i := range user.Groups {
+		grpCtx, err := p.grpr.ParseGroupName(string(user.Groups[i]))
+		if err != nil {
+			continue
+		}
+
+		// check if group maches for any of the tenants
+		if resourceTenant == grp.Any {
+			if groupExpression.Matches(*grpCtx) {
+				return true
+			}
+			continue
+		}
+		// resource belongs to own tenant
+		if strings.EqualFold(user.Tenant, resourceTenant) && grpCtx.OnBehalfTenant == "" {
+			if groupExpression.Matches(*grpCtx) {
+				return true
+			}
+			continue
+		}
+		// resource belongs to other tenant, access "on behalf": if group is for resource-tenant or for "all" then check
+		if strings.EqualFold(grpCtx.OnBehalfTenant, resourceTenant) || grpCtx.OnBehalfTenant == grp.All {
+			if groupExpression.Matches(*grpCtx) {
+				return true
+			}
+			continue
 		}
 	}
 
-	return result
+	return false
+
 }
 
 // GroupsOnBehalf returns the list of groups that the user can do an behalf of the other tenant.
@@ -153,78 +194,13 @@ func (p *Plugin) GroupsOnBehalf(u *security.User, tenant string) []security.Reso
 	var result []security.ResourceAccess
 	for i := range u.Groups {
 		grpCtx, err := p.grpr.ParseGroupName(string(u.Groups[i]))
-		if err == nil && grpCtx.ClusterTenant == tenant {
+		if err == nil && grpCtx.OnBehalfTenant == tenant {
 			// returns groupname without cluster tenant
 			result = append(result, security.ResourceAccess(grpCtx.ToCanonicalGroupString()))
 		}
 	}
 
 	return result
-}
-
-// HasOneOfGroups returns, if the given user has one of the the given groups for/"on behalf of" the given tenant.
-// The groups to check are canonical groups without tenant prefix, e.g. "kaas-all-all-admin".
-// The matches are exact matches, so "kaas-all-all-admin" only matches "kaas-all-all-admin",
-// see HasGroupExpression for more flexible queries
-func (p *Plugin) HasOneOfGroups(user *security.User, tenant string, groups ...security.ResourceAccess) bool {
-
-	// default to tenant from token
-	if tenant == "" {
-		tenant = user.Tenant
-	}
-
-	// per default, check the user groups for HIS tenant
-	userGroups := p.UserTenantGroups(user)
-
-	// if this is a "on behalf"-scenario, then we use the "on behalf"-groups for the tenant
-	if tenant != user.Tenant {
-		// user wants to act "on behalf" of another tenant, use the groups that allow access to other tenant
-		userGroups = p.GroupsOnBehalf(user, tenant)
-	}
-
-	acc := accessGroup(userGroups).asSet()
-	for _, cgrp := range groups {
-		if ok := acc[cgrp]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-// HasGroupExpression checks if the given user has group permissions that fulfil the group-expression
-// which supports "*" as wildcards
-func (p *Plugin) HasGroupExpression(user *security.User, tenant string, groupExpression grp.GroupExpression) bool {
-
-	// default to tenant from token
-	if tenant == "" {
-		tenant = user.Tenant
-	}
-
-	// per default, check the user groups for HIS tenant
-	userGroups := p.UserTenantGroups(user)
-
-	// if this is a "on behalf"-scenario, then we use the "on behalf"-groups for the tenant
-	if tenant != user.Tenant {
-		// user wants to act "on behalf" of another tenant, use the groups that allow access to other tenant
-		userGroups = p.GroupsOnBehalf(user, tenant)
-	}
-
-	// what we have now is the slice of groups that the user has
-	// (including "on behalf", with concrete cluster-tenant or wildcard "all")
-	// "on behalf"-groups do not have cluster-tenant because it is already evaluated for the concrete tenant to act
-
-	for _, ug := range userGroups {
-		currentGroup, err := p.grpr.ParseGroupName(string(ug))
-		if err != nil {
-			continue
-		}
-		if groupExpression.Matches(*currentGroup) {
-			return true
-		}
-	}
-
-	return false
-
 }
 
 // TenantsOnBehalf returns the tenants, that the user can act on behalf with one of the given group-permissions.
@@ -245,19 +221,19 @@ func (p *Plugin) TenantsOnBehalf(user *security.User, groups []security.Resource
 			}
 
 			roleok := requestedGroupCtx.Role == grpCtx.Role
-			nsok := requestedGroupCtx.Namespace == grpCtx.Namespace || grpCtx.Namespace == grp.All
-			clusterok := requestedGroupCtx.ClusterName == grpCtx.ClusterName || grpCtx.ClusterName == grp.All
+			nsok := requestedGroupCtx.SecondScope == grpCtx.SecondScope || grpCtx.SecondScope == grp.All
+			clusterok := requestedGroupCtx.FirstScope == grpCtx.FirstScope || grpCtx.FirstScope == grp.All
 
 			if roleok && nsok && clusterok {
 
-				switch grpCtx.ClusterTenant {
+				switch grpCtx.OnBehalfTenant {
 				case grp.All:
 					// return with all==true
 					return []string{}, true, nil
 				case "":
 					tenants[user.Tenant] = true
 				default:
-					tenants[grpCtx.ClusterTenant] = true
+					tenants[grpCtx.OnBehalfTenant] = true
 				}
 			}
 		}
@@ -272,17 +248,6 @@ func keys(set map[string]bool) []string {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-type accessGroup []security.ResourceAccess
-type resourceSet map[security.ResourceAccess]bool
-
-func (ra accessGroup) asSet() resourceSet {
-	groupset := make(resourceSet)
-	for _, g := range ra {
-		groupset[g] = true
-	}
-	return groupset
 }
 
 // ToResourceAccess creates a slice of ResourceAccess for the given groups

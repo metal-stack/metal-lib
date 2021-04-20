@@ -30,7 +30,7 @@ const (
 	innerGroupPartSeparator = "-"
 
 	// separator within the clustername part: k8s-ddd#cluster-namespace-role
-	tenantClusterNameSeparator = "#"
+	onBehalfAndScopeSeparator = "#"
 
 	// ReferencePrefix "App"
 	adReferencePrefix = "App"
@@ -177,19 +177,19 @@ func (g *Grpr) ParseGroupName(groupname string) (*Group, error) {
 
 	var clusterTenant string
 	clusterName := innerSplit[1]
-	if strings.Contains(clusterName, tenantClusterNameSeparator) {
-		cn := strings.Split(clusterName, tenantClusterNameSeparator)
+	if strings.Contains(clusterName, onBehalfAndScopeSeparator) {
+		cn := strings.Split(clusterName, onBehalfAndScopeSeparator)
 
 		clusterTenant = cn[0]
 		clusterName = cn[1]
 	}
 
 	group := &Group{
-		AppPrefix:     innerSplit[0],
-		ClusterTenant: clusterTenant,
-		ClusterName:   clusterName,
-		Namespace:     innerSplit[2],
-		Role:          innerSplit[3],
+		AppPrefix:      innerSplit[0],
+		OnBehalfTenant: clusterTenant,
+		FirstScope:     clusterName,
+		SecondScope:    innerSplit[2],
+		Role:           innerSplit[3],
 	}
 
 	return group, nil
