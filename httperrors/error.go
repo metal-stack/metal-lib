@@ -134,5 +134,6 @@ func UnknownError(err error) *HTTPErrorResponse {
 
 // UnconventionalError creates a new error with a given error message for a response that did not follow the internal error convention. Convenience Method.
 func UnconventionalError(err error) *HTTPErrorResponse {
-	return NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unexpected error: client response does not follow internal error convention: %v", err.Error()))
+	//nolint:errorlint
+	return NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unexpected error: client response does not follow internal error convention: %s", err.Error()))
 }

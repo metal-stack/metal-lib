@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -94,7 +95,8 @@ func UserAuth(ug security.UserGetter) restful.FilterFunction {
 		log := zapup.RequestLogger(req.Request)
 		usr, err := ug.User(req.Request)
 		if err != nil {
-			if hmerr, ok := err.(*security.WrongHMAC); ok {
+			var hmerr *security.WrongHMAC
+			if errors.As(err, &hmerr) {
 				log.Error("cannot get user from request", zap.Error(err), zap.String("got", hmerr.Got), zap.String("want", hmerr.Want))
 			} else {
 				log.Error("cannot get user from request", zap.Error(err))

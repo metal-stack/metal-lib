@@ -141,7 +141,7 @@ func (c *Consumer) MustRegister(topic, channel string) *ConsumerRegistration {
 func (c *Consumer) Register(topic, channel string) (*ConsumerRegistration, error) {
 	q, err := nsq.NewConsumer(topic, channel, c.config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create consumer for topic:%q, channel:%q: %v", topic, channel, err)
+		return nil, fmt.Errorf("cannot create consumer for topic:%q, channel:%q: %w", topic, channel, err)
 	}
 
 	cr := &ConsumerRegistration{
@@ -331,7 +331,7 @@ func NewPublisher(zlog *zap.Logger, publisherCfg *PublisherConfig) (Publisher, e
 	publisherCfg.ConfigureNSQ()
 	p, err := nsq.NewProducer(publisherCfg.TCPAddress, publisherCfg.NSQ)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create producer with nsqd=%q: %v", publisherCfg.TCPAddress, err)
+		return nil, fmt.Errorf("cannot create producer with nsqd=%q: %w", publisherCfg.TCPAddress, err)
 	}
 	pbl := &nsqPublisher{
 		log:          zlog,
@@ -348,7 +348,7 @@ func NewPublisher(zlog *zap.Logger, publisherCfg *PublisherConfig) (Publisher, e
 func (p *nsqPublisher) Publish(topic string, data interface{}) error {
 	b, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("cannot marshal data to json: %v", err)
+		return fmt.Errorf("cannot marshal data to json: %w", err)
 	}
 	return p.producer.Publish(topic, b)
 }
@@ -356,6 +356,7 @@ func (p *nsqPublisher) Publish(topic string, data interface{}) error {
 // CreateTopic needs to be called with an HTTP request since the library does not support creating
 // topics (they are created implicitly)
 func (p *nsqPublisher) CreateTopic(topic string) error {
+	//nolint:noctx
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/topic/create?topic=%s", p.httpEndpoint, topic), nil)
 	if err != nil {
 		return err

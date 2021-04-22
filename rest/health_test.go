@@ -39,6 +39,7 @@ func TestNewHealth(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			ws := NewHealth(tt.args.log, tt.args.basePath, tt.args.h...)
 
@@ -49,6 +50,7 @@ func TestNewHealth(t *testing.T) {
 			container.ServeHTTP(w, createReq)
 
 			resp := w.Result()
+			defer resp.Body.Close()
 			var s status
 			err = json.NewDecoder(resp.Body).Decode(&s)
 			require.NoError(t, err)

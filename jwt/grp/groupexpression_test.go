@@ -312,6 +312,7 @@ func TestGroupExpression_Matches(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			g := tt.fields.groupExpr
 			if got := g.Matches(tt.args.group); got != tt.want {

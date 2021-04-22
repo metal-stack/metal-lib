@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -68,14 +69,12 @@ func renderTemplate(w http.ResponseWriter, tmpl *template.Template, data interfa
 		return
 	}
 
-	switch err := err.(type) {
-	case *template.Error:
+	var templateErr *template.Error
+	if errors.As(err, &templateErr) {
 		// An ExecError guarantees that Execute has not written to the underlying reader.
 		log.Printf("Error rendering template %s: %s", tmpl.Name(), err)
-
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-	default:
-		// An error with the underlying write, such as the connection being
-		// dropped. Ignore for now.
+	} else {
+		log.Printf("Error rendering template %s: %s", tmpl.Name(), err)
 	}
 }

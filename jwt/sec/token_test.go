@@ -70,6 +70,7 @@ func TestParseTokenUnvalidated(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := plugin.ParseTokenUnvalidated(tt.args.token)
 			if (err != nil) != tt.wantErr {
@@ -214,9 +215,11 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotUser, gotClaims, err := ParseTokenUnvalidatedUnfiltered(tt.args.token)
 			if (err != nil) != tt.wantErr {
+				//nolint:errorlint
 				t.Errorf("ParseTokenUnvalidatedUnfiltered() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

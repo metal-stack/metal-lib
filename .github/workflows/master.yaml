@@ -15,13 +15,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v1
     - name: Lint
-      uses: actions-contrib/golangci-lint@master
+      uses: golangci/golangci-lint-action@v2
       with:
-        args: run
+        args: -p bugs
     - name: Set up Go 1.14
       uses: actions/setup-go@v2
       with:
-        go-version: '1.14.x'
+        go-version: '1.16.x'
     - name: Test
       run: |
         make
