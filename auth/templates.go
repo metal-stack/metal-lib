@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	txttpl "text/template"
 )
 
 type tokenTmplData struct {
@@ -70,8 +69,8 @@ func renderTemplate(w http.ResponseWriter, tmpl *template.Template, data interfa
 		return
 	}
 
-	var execErr txttpl.ExecError
-	if errors.As(err, &execErr) {
+	var templateErr *template.Error
+	if errors.As(err, &templateErr) {
 		// An ExecError guarantees that Execute has not written to the underlying reader.
 		log.Printf("Error rendering template %s: %s", tmpl.Name(), err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
