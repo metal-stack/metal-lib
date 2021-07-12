@@ -2,13 +2,13 @@ package auth
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/icza/dyno"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/icza/dyno"
+	"gopkg.in/yaml.v3"
 )
 
 //
@@ -113,7 +113,7 @@ func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtra
 		}
 	}
 
-	err = ioutil.WriteFile(outputFilename, yamlBytes.Bytes(), 0600)
+	err = os.WriteFile(outputFilename, yamlBytes.Bytes(), 0600)
 	if err != nil {
 		return "", err
 	}
@@ -304,7 +304,7 @@ func findMapListMap(cfg map[interface{}]interface{}, listKey string, matchKey st
 		}
 	}
 
-	return nil, 0, errors.Errorf("no %s, %s=%s found", listKey, matchKey, matchValue)
+	return nil, 0, fmt.Errorf("no %s, %s=%s found", listKey, matchKey, matchValue)
 }
 
 // returns the AuthContext for the default contextName
@@ -329,7 +329,7 @@ func GetAuthContext(kubeConfig string, contextName string) (AuthContext, error) 
 		return empty, err
 	}
 	if context == nil {
-		return empty, errors.Errorf("cannot determine user from kube-config, context '%s' does not exist", contextName)
+		return empty, fmt.Errorf("cannot determine user from kube-config, context '%s' does not exist", contextName)
 	}
 	empty.Ctx = contextName
 
@@ -415,7 +415,7 @@ func LoadKubeConfig(kubeConfig string) (content map[interface{}]interface{}, fil
 	if kubeConfig != "" {
 		if _, err = os.Stat(kubeConfig); os.IsNotExist(err) {
 			// no file, use default
-			return nil, "", false, errors.Wrap(err, "error loading kube-config")
+			return nil, "", false, fmt.Errorf("error loading kube-config: %w", err)
 		} else {
 			// read exactly the specified file
 			cfg, err = readFile(kubeConfig)
@@ -433,7 +433,7 @@ func LoadKubeConfig(kubeConfig string) (content map[interface{}]interface{}, fil
 		// try path from env
 		envPaths := fromEnv()
 		if len(envPaths) > 1 {
-			return nil, "", false, errors.Errorf("there are multiple files in env %s, don't know which one to update - please use cmdline-option", RecommendedConfigPathEnvVar)
+			return nil, "", false, fmt.Errorf("there are multiple files in env %s, don't know which one to update - please use cmdline-option", RecommendedConfigPathEnvVar)
 		}
 
 		if len(envPaths) == 1 {
@@ -488,14 +488,14 @@ func readFile(filename string) (map[interface{}]interface{}, error) {
 	// we expect a map top level
 	cfg := make(map[interface{}]interface{})
 
-	yamlFile, err := ioutil.ReadFile(filename)
+	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error reading %s", filename)
+		return nil, fmt.Errorf("error reading %s error: %w", filename, err)
 	}
 
 	err = yaml.Unmarshal(yamlFile, cfg)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error un-marshalling %s", filename)
+		return nil, fmt.Errorf("error un-marshalling %s error: %w", filename, err)
 	}
 
 	return cfg, err

@@ -6,18 +6,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/metal-stack/metal-lib/zapup"
@@ -212,7 +212,7 @@ func oidcFlow(appModel *app) error {
 
 	provider, err := oidc.NewProvider(clientCtx, appModel.config.IssuerURL)
 	if err != nil {
-		return errors.Wrapf(err, "failed to query provider %q", appModel.config.IssuerURL)
+		return fmt.Errorf("failed to query provider %q error: %w", appModel.config.IssuerURL, err)
 	}
 
 	var s struct {
@@ -222,7 +222,7 @@ func oidcFlow(appModel *app) error {
 		ScopesSupported []string `json:"scopes_supported"`
 	}
 	if err := provider.Claims(&s); err != nil {
-		return errors.Wrapf(err, "failed to parse provider scopes_supported")
+		return fmt.Errorf("failed to parse provider scopes_supported: %w", err)
 	}
 
 	if len(s.ScopesSupported) == 0 {
@@ -298,12 +298,12 @@ func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
 		RootCAs:    x509.NewCertPool(),
 		MinVersion: tls.VersionTLS12,
 	}
-	rootCABytes, err := ioutil.ReadFile(rootCAs)
+	rootCABytes, err := os.ReadFile(rootCAs)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read root-ca")
+		return nil, fmt.Errorf("failed to read root-ca: %w", err)
 	}
 	if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
-		return nil, errors.Errorf("no certs found in root CA file %q", rootCAs)
+		return nil, fmt.Errorf("no certs found in root CA file %q", rootCAs)
 	}
 	return &http.Client{
 		Transport: &http.Transport{
@@ -511,7 +511,7 @@ func openBrowser(url string) error {
 	args = append(args, url)
 	err := exec.Command(cmd, args...).Start()
 	if err != nil {
-		return fmt.Errorf("error opening browser cmd:%s args:%s error:%w", cmd, args, err)
+		return fmt.Errorf("error opening browser cmd:%s args:%s error: %w", cmd, args, err)
 	}
 	return nil
 }

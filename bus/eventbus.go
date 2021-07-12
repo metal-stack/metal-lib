@@ -3,7 +3,7 @@ package bus
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"time"
@@ -369,7 +369,7 @@ func (p *nsqPublisher) CreateTopic(topic string) error {
 	}
 
 	if resp.StatusCode >= 300 {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}

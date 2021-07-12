@@ -1,7 +1,7 @@
 package grp
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 	"strings"
 )
 
@@ -18,5 +18,5 @@ func ParseConnectorId(connectorId string) (jwtTenant string, directory string, e
 		return
 	}
 
-	return "", "", errors.Errorf("error parsing connectorId, expected [tenant]_[directory type], got %s", connectorId)
+	return "", "", fmt.Errorf("error parsing connectorId, expected [tenant]_[directory type], got %s", connectorId)
 }

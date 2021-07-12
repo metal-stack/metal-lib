@@ -2,15 +2,16 @@ package sec
 
 import (
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/auth"
 	libjwt "github.com/metal-stack/metal-lib/jwt/jwt"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/require"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func TestParseTokenUnvalidated(t *testing.T) {

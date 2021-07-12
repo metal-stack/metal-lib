@@ -2,11 +2,11 @@ package auth
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const testCloudContextName123 = "ctx123"
@@ -56,7 +56,7 @@ func Test_NewUpdateKubeConfigHandler(t *testing.T) {
 		IssuerConfig: IssuerConfig{},
 	}
 
-	file, err := ioutil.TempFile("", "prefix")
+	file, err := os.CreateTemp("", "prefix")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func Test_NewUpdateKubeConfigHandlerWithContext(t *testing.T) {
 		IssuerConfig: IssuerConfig{},
 	}
 
-	file, err := ioutil.TempFile("", "prefix")
+	file, err := os.CreateTemp("", "prefix")
 	if err != nil {
 		log.Fatal(err)
 	}
