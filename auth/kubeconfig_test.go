@@ -2,12 +2,12 @@ package auth
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 const testCloudContextName = "cloudctl"
@@ -243,7 +243,7 @@ func TestUpdateUserNewFile(t *testing.T) {
 
 	asserter := require.New(t)
 
-	tmpFile, err := ioutil.TempFile("", "this_file_must_not_exist_*")
+	tmpFile, err := os.CreateTemp("", "this_file_must_not_exist_*")
 	assert.NoError(t, err)
 	tmpfileName := tmpFile.Name()
 
@@ -281,7 +281,7 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 
 	asserter := require.New(t)
 
-	tmpFile, err := ioutil.TempFile("", "this_file_must_not_exist_*")
+	tmpFile, err := os.CreateTemp("", "this_file_must_not_exist_*")
 	assert.NoError(t, err)
 	tmpfileName := tmpFile.Name()
 
@@ -430,7 +430,7 @@ func TestManipulateEncodeKubeconfig(t *testing.T) {
 	buf, err := EncodeKubeconfig(cfg)
 	require.NoError(t, err)
 
-	want, err := ioutil.ReadFile("./testdata/UEUManipulatedExpectedConfig")
+	want, err := os.ReadFile("./testdata/UEUManipulatedExpectedConfig")
 	require.NoError(t, err)
 
 	require.Empty(t, cmp.Diff(want, buf.Bytes()))
@@ -454,7 +454,7 @@ func TestReduceAndEncodeKubeconfig(t *testing.T) {
 	buf, err := EncodeKubeconfig(resultCfg)
 	require.NoError(t, err)
 
-	want, err := ioutil.ReadFile("./testdata/UEUReducedExpectedConfig")
+	want, err := os.ReadFile("./testdata/UEUReducedExpectedConfig")
 	require.NoError(t, err)
 
 	require.Empty(t, cmp.Diff(want, buf.Bytes()))
@@ -532,13 +532,13 @@ func TestKubeconfigFromEnvMultiplePaths(t *testing.T) {
 }
 
 func writeTemplate(t *testing.T, templateName string) (f *os.File) {
-	tmpfile, err := ioutil.TempFile("", "test-template")
+	tmpfile, err := os.CreateTemp("", "test-template")
 	if err != nil {
 		t.Fatalf("error creating empty template: %v", err)
 	}
 
 	var template []byte
-	template, err = ioutil.ReadFile(templateName)
+	template, err = os.ReadFile(templateName)
 	if err != nil {
 		t.Fatalf("error reading template: %v", err)
 	}
@@ -559,13 +559,13 @@ func diffFiles(t *testing.T, expectedFileName string, gotFileName string) {
 	var err error
 
 	var gotBytes []byte
-	gotBytes, err = ioutil.ReadFile(gotFileName)
+	gotBytes, err = os.ReadFile(gotFileName)
 	if err != nil {
 		t.Fatalf("error reading created file: %v", err)
 	}
 
 	var expectedBytes []byte
-	expectedBytes, err = ioutil.ReadFile(expectedFileName)
+	expectedBytes, err = os.ReadFile(expectedFileName)
 	if err != nil {
 		t.Fatalf("error reading expected data file: %v", err)
 	}

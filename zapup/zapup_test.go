@@ -1,7 +1,7 @@
 package zapup
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -31,7 +31,7 @@ func TestMustRootLoggerPanics(t *testing.T) {
 
 func TestEncodingApplies(t *testing.T) {
 
-	temp, err := ioutil.TempFile("", "zapup-encoding-test")
+	temp, err := os.CreateTemp("", "zapup-encoding-test")
 	require.NoError(t, err, "Unexpected error constructing logger.")
 	defer os.Remove(temp.Name())
 
@@ -61,7 +61,7 @@ func TestEncodingApplies(t *testing.T) {
 		require.NoError(t, err)
 
 		z.Info("Hello, world!")
-		bytes, e := ioutil.ReadAll(temp)
+		bytes, e := io.ReadAll(temp)
 		require.NoError(t, e, "Couldn't read log contents from temp file.")
 
 		assert.Contains(t, string(bytes), test.partial, "Unexpected log.")
@@ -72,7 +72,7 @@ func TestEncodingApplies(t *testing.T) {
 func TestLogsAnnotatedWithFilenameAndLineNumber(t *testing.T) {
 	Reset()
 
-	temp, err := ioutil.TempFile("", "zapup-annotation-test")
+	temp, err := os.CreateTemp("", "zapup-annotation-test")
 	require.NoError(t, err, "Unexpected error constructing logger.")
 	defer os.Remove(temp.Name())
 
@@ -85,7 +85,7 @@ func TestLogsAnnotatedWithFilenameAndLineNumber(t *testing.T) {
 	require.NoError(t, err)
 
 	z.Info("Hello, world!")
-	bytes, e := ioutil.ReadAll(temp)
+	bytes, e := io.ReadAll(temp)
 	require.NoError(t, e, "Couldn't read log contents from temp file.")
 	logs := string(bytes)
 
@@ -104,7 +104,7 @@ func TestFieldsApplied(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		temp, err := ioutil.TempFile("", "zapup-fields-applied-test")
+		temp, err := os.CreateTemp("", "zapup-fields-applied-test")
 		require.NoError(t, err, "Unexpected error constructing logger.")
 		defer os.RemoveAll(temp.Name())
 		os.Setenv(KeyOutput, temp.Name())
@@ -122,7 +122,7 @@ func TestFieldsApplied(t *testing.T) {
 		require.NoError(t, err)
 
 		z.Info("The Go gopher was designed by Renee French.")
-		bytes, e := ioutil.ReadAll(temp)
+		bytes, e := io.ReadAll(temp)
 		require.NoError(t, e, "Couldn't read log contents from temp file.")
 		logs := string(bytes)
 
