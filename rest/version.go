@@ -5,6 +5,7 @@ import (
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	restful "github.com/emicklei/go-restful/v3"
+	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/metal-stack/v"
 )
 
@@ -43,7 +44,8 @@ func NewVersion(name string, basePath string) *restful.WebService {
 			Operation("info").
 			To(func(r *restful.Request, rsp *restful.Response) {
 				_ = rsp.WriteAsJson(vi)
-			}))
+			}).
+			DefaultReturns("Error", httperrors.HTTPErrorResponse{}))
 
 	return ws
 }
