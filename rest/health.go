@@ -5,6 +5,7 @@ import (
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	restful "github.com/emicklei/go-restful/v3"
+	"github.com/metal-stack/metal-lib/httperrors"
 	"go.uber.org/zap"
 )
 
@@ -51,7 +52,8 @@ func NewHealth(log *zap.Logger, basePath string, h ...HealthCheck) *restful.WebS
 		Doc("perform a healthcheck").
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "OK", status{}).
-		Returns(http.StatusInternalServerError, "Unhealthy", status{}))
+		Returns(http.StatusInternalServerError, "Unhealthy", status{}).
+		DefaultReturns("Error", httperrors.HTTPErrorResponse{}))
 	return ws
 }
 
