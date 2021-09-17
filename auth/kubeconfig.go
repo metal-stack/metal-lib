@@ -247,7 +247,7 @@ func GetClusterNames(cfg map[interface{}]interface{}) ([]string, error) {
 	return clusterNames, nil
 }
 
-//AddContext adds or replaces the given context with given clusterName and userName.
+//AddCluster adds or replaces the given cluster with given clusterName and data.
 func AddCluster(cfg map[interface{}]interface{}, clusterName string, clusterData map[string]interface{}) error {
 	type Cluster struct {
 		Cluster map[string]interface{}
