@@ -247,6 +247,44 @@ func GetClusterNames(cfg map[interface{}]interface{}) ([]string, error) {
 	return clusterNames, nil
 }
 
+//AddContext adds or replaces the given context with given clusterName and userName.
+func AddCluster(cfg map[interface{}]interface{}, clusterName string, clusterData map[string]interface{}) error {
+	type Cluster struct {
+		Cluster map[string]interface{}
+		Name    string
+	}
+
+	cluster := Cluster{
+		Name:    clusterName,
+		Cluster: clusterData,
+	}
+
+	//check if "clusters" exists
+	_, err := dyno.Get(cfg, "clusters")
+	if err != nil {
+		// not found, create contexts completely
+		cfg["clusters"] = []Cluster{
+			cluster,
+		}
+	} else {
+		// "clusters" exist, now find named cluster within "clusters"
+		_, index, err := findMapListMap(cfg, "clusters", "name", clusterName)
+		if err != nil {
+			// cluster name not found
+			err = dyno.Append(cfg, cluster, "clusters")
+			if err != nil {
+				return err
+			}
+		} else {
+			// update cluster
+			clusterList, _ := dyno.GetSlice(cfg, "clusters")
+			clusterList[index] = cluster
+		}
+	}
+
+	return nil
+}
+
 //EncodeKubeconfig serializes the given kubeconfig
 func EncodeKubeconfig(kubeconfig map[interface{}]interface{}) (bytes.Buffer, error) {
 	var yamlBytes bytes.Buffer
