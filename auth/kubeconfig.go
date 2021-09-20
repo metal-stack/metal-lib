@@ -262,7 +262,7 @@ func AddCluster(cfg map[interface{}]interface{}, clusterName string, clusterData
 	//check if "clusters" exists
 	_, err := dyno.Get(cfg, "clusters")
 	if err != nil {
-		// not found, create contexts completely
+		// not found, create clusters completely
 		cfg["clusters"] = []Cluster{
 			cluster,
 		}
