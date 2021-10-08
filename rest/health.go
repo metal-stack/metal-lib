@@ -42,7 +42,7 @@ type healthResponse struct {
 	// Message gives additional information on the overall health state.
 	Message string `json:"message"`
 	// Services is map of services by name with their individual health results.
-	Services map[string]healthResult
+	Services map[string]healthResult `json:"services"`
 }
 
 // healthResult holds the health state of a service.
