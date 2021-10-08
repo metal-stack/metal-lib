@@ -172,7 +172,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			case HealthStatusHealthy:
 			case HealthStatusDegraded:
 				degraded++
-			case HealthStatusUnhealthy:
+			case HealthStatusUnhealthy, HealthStatusPartiallyUnhealthy:
 				unhealthy++
 			default:
 				unhealthy++
