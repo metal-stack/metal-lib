@@ -69,7 +69,7 @@ func TestNewHealth(t *testing.T) {
 				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
 			},
 			want: &healthResponse{
-				Status:  HealthStatusUnhealthy,
+				Status:  HealthStatusPartiallyUnhealthy,
 				Message: "facing an issue",
 				Services: map[string]healthResult{
 					"success": {

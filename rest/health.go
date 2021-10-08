@@ -192,11 +192,16 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 
 	<-finished
 
-	if degraded > 0 {
-		result.Status = HealthStatusDegraded
-	}
-	if unhealthy > 0 {
-		result.Status = HealthStatusUnhealthy
+	if len(h.healthChecks) > 0 {
+		if degraded > 0 {
+			result.Status = HealthStatusDegraded
+		}
+		if unhealthy > 0 {
+			result.Status = HealthStatusPartiallyUnhealthy
+		}
+		if unhealthy == len(result.Services) {
+			result.Status = HealthStatusUnhealthy
+		}
 	}
 
 	err := response.WriteHeaderAndEntity(rc, result)
