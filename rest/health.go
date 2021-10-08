@@ -23,6 +23,8 @@ const (
 	HealthStatusUnhealthy HealthStatus = "unhealthy"
 	// HealthStatusDegraded is returned when the service is degraded.
 	HealthStatusDegraded HealthStatus = "degraded"
+	// HealthStatusPartiallyUnhealthy is returned when the service is partially not healthy.
+	HealthStatusPartiallyUnhealthy HealthStatus = "partial-outage"
 )
 
 // HealthCheck defines an interface for health checks.
