@@ -35,18 +35,18 @@ type HealthCheck interface {
 	Check(ctx context.Context) (HealthStatus, error)
 }
 
-// healthResponse is returned by the API when executing a health check.
-type healthResponse struct {
+// HealthResponse is returned by the API when executing a health check.
+type HealthResponse struct {
 	// Status indicates the overall health state.
 	Status HealthStatus `json:"status"`
 	// Message gives additional information on the overall health state.
 	Message string `json:"message"`
 	// Services is map of services by name with their individual health results.
-	Services map[string]healthResult `json:"services"`
+	Services map[string]HealthResult `json:"services"`
 }
 
-// healthResult holds the health state of a service.
-type healthResult struct {
+// HealthResult holds the health state of a service.
+type HealthResult struct {
 	// Status indicates the health of the service.
 	Status HealthStatus `json:"status"`
 	// Message gives additional information on the health of a service.
@@ -95,8 +95,8 @@ func (h *healthResource) webService(basePath string) *restful.WebService {
 		Doc("perform a healthcheck").
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Param(ws.QueryParameter("service", "return health for this specific service only").DataType("string")).
-		Returns(http.StatusOK, "OK", healthResponse{}).
-		Returns(http.StatusInternalServerError, "Unhealthy", healthResponse{}).
+		Returns(http.StatusOK, "OK", HealthResponse{}).
+		Returns(http.StatusInternalServerError, "Unhealthy", HealthResponse{}).
 		DefaultReturns("Error", httperrors.HTTPErrorResponse{}))
 
 	return ws
@@ -105,15 +105,15 @@ func (h *healthResource) webService(basePath string) *restful.WebService {
 func (h *healthResource) check(request *restful.Request, response *restful.Response) {
 	type chanResult struct {
 		name string
-		healthResult
+		HealthResult
 	}
 
 	var (
 		service = request.QueryParameter("service")
-		result  = healthResponse{
+		result  = HealthResponse{
 			Status:   HealthStatusHealthy,
 			Message:  "",
-			Services: map[string]healthResult{},
+			Services: map[string]HealthResult{},
 		}
 
 		resultChan = make(chan chanResult)
@@ -137,7 +137,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 
 			result := chanResult{
 				name: name,
-				healthResult: healthResult{
+				HealthResult: HealthResult{
 					Status:  HealthStatusHealthy,
 					Message: "",
 				},
@@ -166,7 +166,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	go func() {
 		for r := range resultChan {
 			r := r
-			result.Services[r.name] = r.healthResult
+			result.Services[r.name] = r.HealthResult
 
 			switch r.Status {
 			case HealthStatusHealthy:

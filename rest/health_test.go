@@ -46,7 +46,7 @@ func TestNewHealth(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *healthResponse
+		want *HealthResponse
 	}{
 		{
 			name: "check without giving health checks",
@@ -55,10 +55,10 @@ func TestNewHealth(t *testing.T) {
 				basePath: "/",
 				h:        nil,
 			},
-			want: &healthResponse{
+			want: &HealthResponse{
 				Status:   HealthStatusHealthy,
 				Message:  "",
-				Services: map[string]healthResult{},
+				Services: map[string]HealthResult{},
 			},
 		},
 		{
@@ -68,10 +68,10 @@ func TestNewHealth(t *testing.T) {
 				basePath: "/",
 				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
 			},
-			want: &healthResponse{
+			want: &HealthResponse{
 				Status:  HealthStatusPartiallyUnhealthy,
 				Message: "facing an issue",
-				Services: map[string]healthResult{
+				Services: map[string]HealthResult{
 					"success": {
 						Status:  HealthStatusHealthy,
 						Message: "",
@@ -91,10 +91,10 @@ func TestNewHealth(t *testing.T) {
 				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
 				service:  "success",
 			},
-			want: &healthResponse{
+			want: &HealthResponse{
 				Status:  HealthStatusHealthy,
 				Message: "",
-				Services: map[string]healthResult{
+				Services: map[string]HealthResult{
 					"success": {
 						Status:  HealthStatusHealthy,
 						Message: "",
@@ -121,7 +121,7 @@ func TestNewHealth(t *testing.T) {
 
 			resp := w.Result()
 			defer resp.Body.Close()
-			var s healthResponse
+			var s HealthResponse
 			err = json.NewDecoder(resp.Body).Decode(&s)
 			require.NoError(t, err)
 
