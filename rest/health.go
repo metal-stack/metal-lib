@@ -157,26 +157,12 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 		})
 	}
 
-	var (
-		finished = make(chan bool)
-
-		degraded  int
-		unhealthy int
-	)
+	finished := make(chan bool)
 	go func() {
 		for r := range resultChan {
 			r := r
 			result.Services[r.name] = r.HealthResult
 
-			switch r.Status {
-			case HealthStatusHealthy:
-			case HealthStatusDegraded:
-				degraded++
-			case HealthStatusUnhealthy, HealthStatusPartiallyUnhealthy:
-				unhealthy++
-			default:
-				unhealthy++
-			}
 		}
 		finished <- true
 	}()
@@ -192,20 +178,44 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 
 	<-finished
 
-	if len(h.healthChecks) > 0 {
-		if degraded > 0 {
-			result.Status = HealthStatusDegraded
-		}
-		if unhealthy > 0 {
-			result.Status = HealthStatusPartiallyUnhealthy
-		}
-		if unhealthy == len(result.Services) {
-			result.Status = HealthStatusUnhealthy
-		}
-	}
+	result.Status = DeriveOverallHealthStatus(result.Services)
 
 	err := response.WriteHeaderAndEntity(rc, result)
 	if err != nil {
 		h.log.Error("error writing response", zap.Error(err))
 	}
+}
+
+func DeriveOverallHealthStatus(services map[string]HealthResult) HealthStatus {
+	var (
+		result    = HealthStatusHealthy
+		degraded  int
+		unhealthy int
+	)
+
+	for _, service := range services {
+		switch service.Status {
+		case HealthStatusHealthy:
+		case HealthStatusDegraded:
+			degraded++
+		case HealthStatusUnhealthy, HealthStatusPartiallyUnhealthy:
+			unhealthy++
+		default:
+			unhealthy++
+		}
+	}
+
+	if len(services) > 0 {
+		if degraded > 0 {
+			result = HealthStatusDegraded
+		}
+		if unhealthy > 0 {
+			result = HealthStatusPartiallyUnhealthy
+		}
+		if unhealthy == len(services) {
+			result = HealthStatusUnhealthy
+		}
+	}
+
+	return result
 }
