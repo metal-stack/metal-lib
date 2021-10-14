@@ -49,6 +49,9 @@ func TestParseTokenUnvalidated(t *testing.T) {
 				Tenant: "tnnt",
 			},
 			wantClaims: &security.Claims{
+				// TODO needs updated metal-stack/security
+				// for defails see https://github.com/golang-jwt/jwt/pull/15
+				//nolint:staticcheck
 				StandardClaims: jwt.StandardClaims{
 					Audience:  "",
 					ExpiresAt: expAtUnix,
