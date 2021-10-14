@@ -119,9 +119,10 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 		resultChan = make(chan chanResult)
 		once       sync.Once
 	)
-
 	defer once.Do(func() { close(resultChan) })
-	g, ctx := errgroup.WithContext(request.Request.Context())
+
+	ctx := request.Request.Context()
+	g, _ := errgroup.WithContext(ctx)
 
 	for name, healthCheck := range h.healthChecks {
 		name := name
