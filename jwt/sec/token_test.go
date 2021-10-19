@@ -20,11 +20,10 @@ func TestParseTokenUnvalidated(t *testing.T) {
 		"tnnt_kaas-all-all-admin", "tnnt_maas-all-all-admin", "tnnt_k8s-test-all-clusteradmin", "tnnt_k8s-qa$poc-all-clusteradmin", "tnnt_k8s-ddd$poc-all-clusteradmin", "tnnt_k8s-prod$poc-all-clusteradmin",
 	}
 
-	issAtUnix := int64(1557381999)
-	issuedAt := time.Unix(issAtUnix, 0)
-	expAtUnix := int64(1557410799)
-	expiredAt := time.Unix(expAtUnix, 0)
-	token, err := libjwt.GenerateToken("tnnt", grps, issuedAt, expiredAt)
+	issuedAt := jwt.NewNumericDate(time.Unix(1557381999, 0))
+	expiredAt := jwt.NewNumericDate(time.Unix(1557410799, 0))
+
+	token, err := libjwt.GenerateToken("tnnt", grps, issuedAt.Time, expiredAt.Time)
 	require.NoError(t, err)
 
 	type args struct {
@@ -49,16 +48,13 @@ func TestParseTokenUnvalidated(t *testing.T) {
 				Tenant: "tnnt",
 			},
 			wantClaims: &security.Claims{
-				// TODO needs updated metal-stack/security
-				// for defails see https://github.com/golang-jwt/jwt/pull/15
-				//nolint:staticcheck
-				StandardClaims: jwt.StandardClaims{
-					Audience:  "",
-					ExpiresAt: expAtUnix,
-					Id:        "",
-					IssuedAt:  issAtUnix,
+				RegisteredClaims: jwt.RegisteredClaims{
+					Audience:  nil,
+					ExpiresAt: expiredAt,
+					ID:        "",
+					IssuedAt:  issuedAt,
 					Issuer:    "https://dex.test.metal-stack.io/dex",
-					NotBefore: 0,
+					NotBefore: nil,
 					Subject:   "achim",
 				},
 				Audience: []interface{}{"theAudience"},
