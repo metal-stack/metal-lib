@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.7
 	github.com/google/uuid v1.3.0
 	github.com/icza/dyno v0.0.0-20210726202311-f1bafe5d9996
-	github.com/metal-stack/security v0.6.3
+	github.com/metal-stack/security v0.6.4
 	github.com/metal-stack/v v1.0.3
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nsqio/nsq v1.2.1
