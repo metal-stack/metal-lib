@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/coreos/go-oidc/v3 v3.1.0
 	github.com/emicklei/go-restful-openapi/v2 v2.6.0
-	github.com/emicklei/go-restful/v3 v3.7.1
+	github.com/emicklei/go-restful/v3 v3.8.0
 	github.com/golang-jwt/jwt/v4 v4.1.0
 	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.3.0
