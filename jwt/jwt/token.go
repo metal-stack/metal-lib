@@ -1,10 +1,11 @@
 package jwt
 
 import (
+	"time"
+
 	"github.com/metal-stack/security"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"time"
 )
 
 type ExtendedClaims struct {
@@ -36,11 +37,12 @@ func GenerateToken(tenant string, grps []string, issuedAt, expiresAt time.Time) 
 	}
 
 	cl := jwt.Claims{
-		Issuer:   "https://dex.test.metal-stack.io/dex",
-		Subject:  "achim",
-		Audience: jwt.Audience{"theAudience"},
-		Expiry:   jwt.NewNumericDate(expiresAt),
-		IssuedAt: jwt.NewNumericDate(issuedAt),
+		Issuer:    "https://dex.test.metal-stack.io/dex",
+		Subject:   "achim",
+		Audience:  jwt.Audience{"theAudience"},
+		Expiry:    jwt.NewNumericDate(expiresAt),
+		IssuedAt:  jwt.NewNumericDate(issuedAt),
+		NotBefore: nil,
 	}
 
 	fed := map[string]string{
