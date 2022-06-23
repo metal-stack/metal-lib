@@ -12,7 +12,7 @@ type tokenTmplData struct {
 	RefreshToken   string
 	RedirectURL    string
 	Claims         string
-	SuccessMessage string
+	SuccessMessage template.HTML
 	Debug          bool
 }
 
@@ -58,7 +58,7 @@ func renderToken(w http.ResponseWriter, idToken, refreshToken string, claims []b
 		IDToken:        idToken,
 		RefreshToken:   refreshToken,
 		Claims:         string(claims),
-		SuccessMessage: successMessage,
+		SuccessMessage: template.HTML(successMessage), //nolint
 		Debug:          debug,
 	})
 }
