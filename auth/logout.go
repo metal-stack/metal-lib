@@ -2,15 +2,12 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 )
@@ -134,40 +131,4 @@ func (l *logoutHandler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	l.completeChan <- true
-}
-
-func fetchJSON(url string, data any) error {
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("User-Agent", "metal-lib")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error fetching url: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("unable to read response body: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("retrieved bad status code (%s): %s", resp.Status, body)
-	}
-
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal object: %w", err)
-	}
-
-	return nil
 }
