@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -89,7 +90,7 @@ func Logout(config *LogoutParams) error {
 	fmt.Printf("Opening Browser for Authentication. If this does not work, please point your browser to %s\n", listenAddr)
 
 	go func() {
-		log.Debugw("opening browser", "addr", listenAddr, "port", port, "call-url", endSessionURL.String())
+		log.Debugw("opening browser", "addr", listenAddr, "port", port, "end-session-url", endSessionURL.String())
 		err := openBrowser(endSessionURL.String())
 		if err != nil {
 			log.Errorw("open browser", "error", err)
@@ -136,7 +137,19 @@ func (l *logoutHandler) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func fetchJSON(url string, data any) error {
-	resp, err := http.Get(url) //nolint:gosec
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("User-Agent", "metal-lib")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error fetching url: %w", err)
 	}
