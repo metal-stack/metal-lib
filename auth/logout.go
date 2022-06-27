@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -66,14 +65,10 @@ func Logout(config *LogoutParams) error {
 		return fmt.Errorf("cannot parse end session url: %w", err)
 	}
 
-	// use next free port for callback
-	/* #nosec */
-	listener, err := net.Listen("tcp", ":0")
+	listener, listenAddr, err := newRandomPortListener()
 	if err != nil {
 		return err
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	listenAddr := fmt.Sprintf("http://localhost:%d", port)
 
 	values := endSessionURL.Query()
 	values.Add("redirect_uri", listenAddr)
@@ -87,7 +82,7 @@ func Logout(config *LogoutParams) error {
 	fmt.Printf("Opening Browser for Authentication. If this does not work, please point your browser to %s\n", listenAddr)
 
 	go func() {
-		log.Debugw("opening browser", "addr", listenAddr, "port", port, "end-session-url", endSessionURL.String())
+		log.Debugw("opening browser", "addr", listenAddr, "end-session-url", endSessionURL.String())
 		err := openBrowser(endSessionURL.String())
 		if err != nil {
 			log.Errorw("open browser", "error", err)
