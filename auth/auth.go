@@ -246,23 +246,20 @@ func oidcFlow(appModel *app) error {
 	appModel.verifier = provider.Verifier(&oidc.Config{ClientID: appModel.config.ClientID})
 	appModel.completeChan = make(chan bool)
 
-	// use next free port for callback
-	/* #nosec */
-	listener, err := net.Listen("tcp", ":0")
+	listener, listenAddr, err := newRandomPortListener()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	port := listener.Addr().(*net.TCPAddr).Port
 	callbackPath := "/callback"
 
-	appModel.config.Log.Debug("Listening", zap.String("hostname", "localhost"), zap.Int("port", port))
+	appModel.config.Log.Debug("Listening", zap.String("hostname", "localhost"), zap.String("addr", listenAddr))
 
 	srv := &http.Server{}
 	http.HandleFunc("/", appModel.handleLogin)
 	http.HandleFunc(callbackPath, appModel.handleCallback)
 
-	appModel.Listen = fmt.Sprintf("http://localhost:%d", port)
+	appModel.Listen = listenAddr
 	appModel.RedirectURI = fmt.Sprintf("%s%s", appModel.Listen, callbackPath)
 
 	appModel.config.Log.Debug("Opening Browser for Authentication")
@@ -562,6 +559,53 @@ func (u *updateKubeConfig) updateKubeConfigFunc(tokenInfo TokenInfo) error {
 
 	if u.writer != nil {
 		fmt.Fprintf(u.writer, "Successfully written token to %s\n", filename)
+	}
+
+	return nil
+}
+
+func newRandomPortListener() (net.Listener, string, error) {
+	listener, err := net.Listen("tcp", ":0") //nolint:gosec
+	if err != nil {
+		return nil, "", err
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listenAddr := fmt.Sprintf("http://localhost:%d", port)
+
+	return listener, listenAddr, nil
+}
+
+func fetchJSON(url string, data any) error {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("User-Agent", "metal-lib")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error fetching url: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("unable to read response body: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("retrieved bad status code (%s): %s", resp.Status, body)
+	}
+
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal object: %w", err)
 	}
 
 	return nil

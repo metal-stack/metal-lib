@@ -12,31 +12,34 @@ type tokenTmplData struct {
 	RefreshToken   string
 	RedirectURL    string
 	Claims         string
-	SuccessMessage string
+	SuccessMessage template.HTML
 	Debug          bool
 }
 
-var tokenTmpl = template.Must(template.New("token.html").Parse(`<html>
-  <head>
-    <style>
+const (
+	commonStyle = `<style>
 html {
-  font-family: sans-serif; /* 1 */
-  -ms-text-size-adjust: 100%; /* 2 */
-  -webkit-text-size-adjust: 100%; /* 2 */
+	font-family: sans-serif; /* 1 */
+	-ms-text-size-adjust: 100%; /* 2 */
+	-webkit-text-size-adjust: 100%; /* 2 */
 }
 body {
-  margin: 50;
-  background: #F0F0F0;
+	margin: 50;
+	background: #F0F0F0;
 }
 /* make pre wrap */
 pre {
- white-space: pre-wrap;       /* css-3 */
- white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
- white-space: -pre-wrap;      /* Opera 4-6 */
- white-space: -o-pre-wrap;    /* Opera 7 */
- word-wrap: break-word;       /* Internet Explorer 5.5+ */
+	white-space: pre-wrap;       /* css-3 */
+	white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+	white-space: -pre-wrap;      /* Opera 4-6 */
+	white-space: -o-pre-wrap;    /* Opera 7 */
+	word-wrap: break-word;       /* Internet Explorer 5.5+ */
 }
-    </style>
+</style>`
+)
+
+var tokenTmpl = template.Must(template.New("token.html").Parse(`<html>
+  <head>` + commonStyle + `
   </head>
   <body>
 		<h3>Authentication successful</h3>
@@ -58,7 +61,7 @@ func renderToken(w http.ResponseWriter, idToken, refreshToken string, claims []b
 		IDToken:        idToken,
 		RefreshToken:   refreshToken,
 		Claims:         string(claims),
-		SuccessMessage: successMessage,
+		SuccessMessage: template.HTML(successMessage), //nolint
 		Debug:          debug,
 	})
 }
