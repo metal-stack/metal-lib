@@ -27,17 +27,17 @@ func (l *LogoutParams) Validate() error {
 	return nil
 }
 
-func Logout(config *LogoutParams) error {
-	err := config.Validate()
+func Logout(params *LogoutParams) error {
+	err := params.Validate()
 	if err != nil {
 		return err
 	}
 
 	var (
-		log          = config.Logger
+		log          = params.Logger
 		completeChan = make(chan bool)
 
-		wellKnownURL    = strings.TrimSuffix(config.IssuerURL, "/") + "/.well-known/openid-configuration"
+		wellKnownURL    = strings.TrimSuffix(params.IssuerURL, "/") + "/.well-known/openid-configuration"
 		wellKnownConfig struct {
 			EndSessionEndpoint string `json:"end_session_endpoint"`
 		}
@@ -57,7 +57,7 @@ func Logout(config *LogoutParams) error {
 	}
 
 	if wellKnownConfig.EndSessionEndpoint == "" {
-		return fmt.Errorf("no end session endpoint discovered, unsupported by oidc provider")
+		return fmt.Errorf("no endpoint for ending oidc session discovered, unsupported by oidc provider")
 	}
 
 	endSessionURL, err := url.Parse(wellKnownConfig.EndSessionEndpoint)
