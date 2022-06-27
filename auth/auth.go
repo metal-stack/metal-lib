@@ -9,14 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -294,118 +292,6 @@ func oidcFlow(appModel *app) error {
 	return err
 }
 
-func Logout(config Config) error {
-	if config.IssuerURL == "" {
-		return errors.New("error validating config: IssuerURL is required")
-	}
-
-	appModel := &app{
-		config: config,
-	}
-
-	return logout(appModel)
-}
-
-func logout(appModel *app) error {
-	if appModel.config.Log == nil {
-		appModel.config.Log = zapup.MustRootLogger()
-	}
-
-	if appModel.client == nil {
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		/* #nosec */
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: appModel.config.SkipTLSVerify} // ignore expired SSL certificates
-
-		appModel.client = &http.Client{
-			Transport: transport,
-		}
-	}
-
-	if appModel.config.Debug {
-		appModel.client.Transport = debugTransport{roundTripper: appModel.client.Transport, log: appModel.config.Log}
-	}
-
-	type providerJSON struct {
-		EndSessionEndpoint string `json:"end_session_endpoint"`
-	}
-
-	if appModel.config.IssuerURL == "" {
-		return fmt.Errorf("no issuer url configured")
-	}
-
-	wellKnown := strings.TrimSuffix(appModel.config.IssuerURL, "/") + "/.well-known/openid-configuration"
-	resp, err := http.Get(wellKnown) //nolint:gosec
-	if err != nil {
-		return fmt.Errorf("error finding well-known openid configuration: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("unable to read response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s: %s", resp.Status, body)
-	}
-
-	var p providerJSON
-	err = json.Unmarshal(body, &p)
-	if err != nil {
-		return fmt.Errorf("oidc: failed to decode provider discovery object: %w", err)
-	}
-
-	if p.EndSessionEndpoint == "" {
-		return fmt.Errorf("not supported by oidc provider")
-	}
-
-	appModel.completeChan = make(chan bool)
-
-	// use next free port for callback
-	/* #nosec */
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		panic(err)
-	}
-
-	port := listener.Addr().(*net.TCPAddr).Port
-
-	appModel.config.Log.Debug("Listening", zap.String("hostname", "localhost"), zap.Int("port", port))
-
-	srv := &http.Server{}
-	http.HandleFunc("/", appModel.handleLogout)
-
-	appModel.Listen = fmt.Sprintf("http://localhost:%d", port)
-
-	p.EndSessionEndpoint = p.EndSessionEndpoint + "?redirect_uri=" + appModel.Listen
-
-	appModel.config.Log.Debug("Opening Browser for Logout")
-
-	appModel.Consolef("Opening Browser for Logout. If this does not work, please point your browser to %s\n", appModel.Listen)
-
-	go func() {
-		err := openBrowser(p.EndSessionEndpoint)
-		if err != nil {
-			appModel.config.Log.Error("openBrowser", zap.Error(err))
-		}
-	}()
-	go func() {
-		appModel.waitShutdown()
-		err = srv.Shutdown(context.Background())
-		if err != nil {
-			appModel.config.Log.Error("Shutdown", zap.Error(err))
-		}
-	}()
-
-	err = srv.Serve(listener)
-	// after Shutdown ErrServerClosed is returned, this is expected and ok
-	if errors.Is(err, http.ErrServerClosed) {
-		return nil
-	}
-
-	return err
-}
-
 // return an HTTP client which trusts the provided root CAs.
 func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
 	tlsConfig := tls.Config{
@@ -596,47 +482,6 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	a.config.Log.Debug("Login Succeeded", zap.String("username", claims.Username()))
 	a.config.Log.Debug("Login-Data", zap.String("token", rawIDToken), zap.String("Refresh Token", token.RefreshToken), zap.String("Claims", string(rawClaims)))
-
-	go func() {
-		a.completeChan <- true
-	}()
-}
-
-func (a *app) handleLogout(w http.ResponseWriter, r *http.Request) {
-	logoutPage := `<html>
-  <head>
-    <style>
-html {
-  font-family: sans-serif; /* 1 */
-  -ms-text-size-adjust: 100%; /* 2 */
-  -webkit-text-size-adjust: 100%; /* 2 */
-}
-body {
-  margin: 50;
-  background: #F0F0F0;
-}
-/* make pre wrap */
-pre {
- white-space: pre-wrap;       /* css-3 */
- white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
- white-space: -pre-wrap;      /* Opera 4-6 */
- white-space: -o-pre-wrap;    /* Opera 7 */
- word-wrap: break-word;       /* Internet Explorer 5.5+ */
-}
-    </style>
-  </head>
-  <body>
-		<h3>Logout successful</h3>
-		<h4>OIDC SSO session successfully logged out. Token is not revoked and are valid until expiration.</h4>
-  </body>
-</html>
-`
-	_, err := w.Write([]byte(logoutPage))
-	if err != nil {
-		a.config.Log.Debug("Logout Failed")
-	} else {
-		a.config.Log.Debug("Logout Succeeded")
-	}
 
 	go func() {
 		a.completeChan <- true
