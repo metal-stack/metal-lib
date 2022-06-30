@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/metal-stack/metal-lib/zapup"
 	"github.com/nsqio/nsq/nsqd"
+	"go.uber.org/zap/zaptest"
 )
 
 var (
@@ -24,7 +24,7 @@ func startupNSQD() error {
 		opts.DataPath = "/tmp/"
 		nsqd, err := nsqd.New(opts)
 		if err != nil {
-			return err
+			panic(err)
 		}
 		go func() {
 			err = nsqd.Main()
@@ -34,9 +34,9 @@ func startupNSQD() error {
 		}()
 	}
 	var err error
-	consumer, err = NewConsumer(zapup.MustRootLogger(), nil)
+	consumer, err = NewConsumer(zaptest.NewLogger(&testing.T{}), nil)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	consumer.With(NSQDs(tcpAddress))
 
@@ -45,9 +45,9 @@ func startupNSQD() error {
 		HTTPEndpoint: httpAddress,
 	}
 
-	publisher, err = NewPublisher(zapup.MustRootLogger(), cfg)
+	publisher, err = NewPublisher(zaptest.NewLogger(&testing.T{}), cfg)
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	return nil
