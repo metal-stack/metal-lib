@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httputil"
-	"strings"
 	"time"
 
 	restful "github.com/emicklei/go-restful/v3"
@@ -59,12 +58,9 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 			requestID = uuid.New().String()
 		}
 
-		clone := *logger
-		requestLogger := &clone
-
 		fields := []any{
 			"rqid", requestID,
-			"remoteaddr", strings.Split(rq.RemoteAddr, ":")[0],
+			"remoteaddr", rq.RemoteAddr,
 			"method", rq.Method,
 			"uri", rq.URL.RequestURI(),
 			"route", req.SelectedRoutePath(),
@@ -75,15 +71,17 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 		if debug {
 			body, _ := httputil.DumpRequest(rq, true)
 			fields = append(fields, "body", string(body))
-			resp.ResponseWriter = &loggingResponseWriter{w: resp.ResponseWriter}
 		}
 
-		requestLogger = requestLogger.With(fields...)
+		// this creates a child log with the given fields as a structured context
+		requestLogger := logger.With(fields...)
 
 		enrichedContext := context.WithValue(req.Request.Context(), RequestLoggerKey, requestLogger)
 		req.Request = req.Request.WithContext(enrichedContext)
 
 		t := time.Now()
+
+		resp.ResponseWriter = &loggingResponseWriter{w: resp.ResponseWriter}
 
 		chain.ProcessFilter(req, resp)
 
@@ -91,12 +89,12 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 
 		// refetch logger. the stack of filters could contain the "UserAuth" filter from below which
 		// changes the logger
-
 		requestLogger = GetLoggerFromContext(req.Request, requestLogger)
 
-		if debug {
+		if debug || resp.StatusCode() >= 400 {
 			fields = append(fields, "response", resp.ResponseWriter.(*loggingResponseWriter).Content())
 		}
+
 		if resp.StatusCode() < 400 {
 			requestLogger.Infow("finished handling rest call", fields...)
 		} else {
