@@ -85,20 +85,20 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 
 		chain.ProcessFilter(req, resp)
 
-		fields = append(fields, "status", resp.StatusCode(), "content-length", resp.ContentLength(), "duration", time.Since(t).String())
+		afterChainFields := []any{"status", resp.StatusCode(), "content-length", resp.ContentLength(), "duration", time.Since(t).String()}
 
 		// refetch logger. the stack of filters could contain the "UserAuth" filter from below which
 		// changes the logger
 		requestLogger = GetLoggerFromContext(req.Request, requestLogger)
 
 		if debug || resp.StatusCode() >= 400 {
-			fields = append(fields, "response", resp.ResponseWriter.(*loggingResponseWriter).Content())
+			afterChainFields = append(afterChainFields, "response", resp.ResponseWriter.(*loggingResponseWriter).Content())
 		}
 
 		if resp.StatusCode() < 400 {
-			requestLogger.Infow("finished handling rest call", fields...)
+			requestLogger.Infow("finished handling rest call", afterChainFields...)
 		} else {
-			requestLogger.Errorw("finished handling rest call", fields...)
+			requestLogger.Errorw("finished handling rest call", afterChainFields...)
 		}
 	}
 }
