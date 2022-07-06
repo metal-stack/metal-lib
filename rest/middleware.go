@@ -81,7 +81,8 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 
 		t := time.Now()
 
-		resp.ResponseWriter = &loggingResponseWriter{w: resp.ResponseWriter}
+		writer := &loggingResponseWriter{w: resp.ResponseWriter}
+		resp.ResponseWriter = writer
 
 		chain.ProcessFilter(req, resp)
 
@@ -92,7 +93,7 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 		requestLogger = GetLoggerFromContext(req.Request, requestLogger)
 
 		if debug || resp.StatusCode() >= 400 {
-			afterChainFields = append(afterChainFields, "response", resp.ResponseWriter.(*loggingResponseWriter).Content())
+			afterChainFields = append(afterChainFields, "response", writer.Content())
 		}
 
 		if resp.StatusCode() < 400 {
