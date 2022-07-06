@@ -119,7 +119,7 @@ func UserAuth(ug security.UserGetter, fallbackLogger *zap.SugaredLogger) restful
 
 			err = resp.WriteHeaderAndEntity(http.StatusForbidden, httperrors.NewHTTPError(http.StatusForbidden, err))
 			if err != nil {
-				log.Error("error sending response", "error", err)
+				log.Errorw("error sending response", "error", err)
 			}
 			return
 		}
