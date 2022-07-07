@@ -1,4 +1,4 @@
-package cli
+package genericcli
 
 import (
 	"errors"
@@ -23,6 +23,11 @@ func NewMultiDocumentYAML[D any]() *MultiDocumentYAML[D] {
 
 // ReadAll reads all documents from a multi-document YAML from a given path
 func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
+	err := validateFrom(m.fs, from)
+	if err != nil {
+		return nil, err
+	}
+
 	reader, err := getReader(m.fs, from)
 	if err != nil {
 		return nil, err
@@ -50,9 +55,33 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 	return docs, nil
 }
 
+// ReadOne reads exactly one document from a multi-document YAML from a given path, returns an error if there are no or more than one documents in it
+func (m *MultiDocumentYAML[D]) ReadOne(from string) (D, error) {
+	emptyD := new(D)
+
+	docs, err := m.ReadAll(from)
+	if err != nil {
+		return *emptyD, err
+	}
+
+	if len(docs) == 0 {
+		return *emptyD, fmt.Errorf("no document parsed from yaml")
+	}
+	if len(docs) > 1 {
+		return *emptyD, fmt.Errorf("more than one document parsed from yaml")
+	}
+
+	return docs[0], nil
+}
+
 // ReadIndex reads a document from a specific index of a multi-document YAML from a given path
 func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 	emptyD := new(D)
+
+	err := validateFrom(m.fs, from)
+	if err != nil {
+		return *emptyD, err
+	}
 
 	reader, err := getReader(m.fs, from)
 	if err != nil {
@@ -95,4 +124,22 @@ func getReader(fs afero.Fs, from string) (io.Reader, error) {
 	}
 
 	return reader, nil
+}
+
+func validateFrom(fs afero.Fs, from string) error {
+	switch from {
+	case "":
+		return fmt.Errorf("from must not be empty")
+	case "-":
+	default:
+		exists, err := afero.Exists(fs, from)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("file does not exist: %s", from)
+		}
+	}
+
+	return nil
 }

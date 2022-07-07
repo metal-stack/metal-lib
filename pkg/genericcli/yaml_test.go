@@ -1,4 +1,4 @@
-package cli
+package genericcli
 
 import (
 	"fmt"
