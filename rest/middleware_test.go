@@ -110,7 +110,7 @@ func TestRequestLoggerFilter(t *testing.T) {
 			testLogger := newZapTestLogger(t, tt.level)
 			log := testLogger.GetLogger().Named("test-logger")
 
-			sendRequestThroughLogChain(t, tt.handler, RequestLoggerFilter(log))
+			sendRequestThroughFilterChain(t, tt.handler, RequestLoggerFilter(log))
 
 			lines := strings.Split(testLogger.GetLogs(), "\n")
 			t.Log(lines)
@@ -216,7 +216,7 @@ func newZapTestLogger(t *testing.T, level zapcore.Level) *ZapTestLogger {
 	return &testLogger
 }
 
-func sendRequestThroughLogChain(t *testing.T, handler func(req *restful.Request, resp *restful.Response), filters ...restful.FilterFunction) {
+func sendRequestThroughFilterChain(t *testing.T, handler func(req *restful.Request, resp *restful.Response), filters ...restful.FilterFunction) {
 	ws := new(restful.WebService).Path("/").Consumes(restful.MIME_JSON).Produces(restful.MIME_JSON)
 
 	c := restful.NewContainer()
