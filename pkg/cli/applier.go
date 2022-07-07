@@ -88,3 +88,57 @@ func (a *Applier[C, U, R]) Apply(appliable Appliable[C, U, R]) ([]R, error) {
 
 	return result, nil
 }
+
+func (a *Applier[C, U, R]) Create(appliable Appliable[C, U, R]) (R, error) {
+	mc := MultiDocumentYAML[C]{
+		fs: a.fs,
+	}
+
+	emptyR := new(R)
+
+	docs, err := mc.ReadAll(a.from)
+	if err != nil {
+		return *emptyR, err
+	}
+
+	if len(docs) == 0 {
+		return *emptyR, fmt.Errorf("no document parsed from yaml")
+	}
+	if len(docs) > 1 {
+		return *emptyR, fmt.Errorf("more than one document parsed from yaml")
+	}
+
+	result, err := appliable.Create(docs[0])
+	if err != nil {
+		return *emptyR, fmt.Errorf("error creating entity: %w", err)
+	}
+
+	return *result, nil
+}
+
+func (a *Applier[C, U, R]) Update(appliable Appliable[C, U, R]) (R, error) {
+	mc := MultiDocumentYAML[U]{
+		fs: a.fs,
+	}
+
+	emptyR := new(R)
+
+	docs, err := mc.ReadAll(a.from)
+	if err != nil {
+		return *emptyR, err
+	}
+
+	if len(docs) == 0 {
+		return *emptyR, fmt.Errorf("no document parsed from yaml")
+	}
+	if len(docs) > 1 {
+		return *emptyR, fmt.Errorf("more than one document parsed from yaml")
+	}
+
+	result, err := appliable.Update(docs[0])
+	if err != nil {
+		return *emptyR, fmt.Errorf("error updating entity: %w", err)
+	}
+
+	return result, nil
+}
