@@ -22,10 +22,8 @@ type Generic[C any, U any, R any] interface {
 	Update(rq U) (R, error)
 }
 
-func NewGenericCLI[C any, U any, R any](generic Generic[C, U, R]) (*GenericCLI[C, U, R], error) {
-	fs := afero.NewOsFs()
-
+func NewGenericCLI[C any, U any, R any](generic Generic[C, U, R]) *GenericCLI[C, U, R] {
 	return &GenericCLI[C, U, R]{
-		fs: fs,
-	}, nil
+		fs: afero.NewOsFs(),
+	}
 }
