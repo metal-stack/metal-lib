@@ -127,7 +127,7 @@ func UserAuth(ug security.UserGetter, fallbackLogger *zap.SugaredLogger) restful
 		rq := req.Request
 		ctx := security.PutUserInContext(rq.Context(), usr)
 
-		log = log.With("useremail", usr.EMail)
+		log = log.With("useremail", usr.EMail, "username", usr.Name, "usertenant", usr.Tenant)
 		ctx = context.WithValue(ctx, RequestLoggerKey, log)
 
 		req.Request = req.Request.WithContext(ctx)
