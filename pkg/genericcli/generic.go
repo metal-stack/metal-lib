@@ -7,6 +7,7 @@ import (
 // GenericCLI can be used to gain generic CLI functionality.
 type GenericCLI[C any, U any, R any] struct {
 	fs afero.Fs
+	g  Generic[C, U, R]
 }
 
 // Generic must be implemented in order to get generic CLI functionality.
@@ -21,7 +22,7 @@ type Generic[C any, U any, R any] interface {
 	Update(rq U) (R, error)
 }
 
-func NewGenericCLI[C any, U any, R any]() (*GenericCLI[C, U, R], error) {
+func NewGenericCLI[C any, U any, R any](generic Generic[C, U, R]) (*GenericCLI[C, U, R], error) {
 	fs := afero.NewOsFs()
 
 	return &GenericCLI[C, U, R]{

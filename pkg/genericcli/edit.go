@@ -10,7 +10,7 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-func (a *GenericCLI[C, U, R]) Edit(generic Generic[C, U, R], id string) (R, error) {
+func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
 	emptyR := new(R)
 
 	editor, ok := os.LookupEnv("EDITOR")
@@ -24,7 +24,7 @@ func (a *GenericCLI[C, U, R]) Edit(generic Generic[C, U, R], id string) (R, erro
 	}
 	defer os.Remove(tmpfile.Name())
 
-	content, err := generic.Get(id)
+	content, err := a.g.Get(id)
 	if err != nil {
 		return *emptyR, err
 	}
@@ -58,5 +58,5 @@ func (a *GenericCLI[C, U, R]) Edit(generic Generic[C, U, R], id string) (R, erro
 		return *emptyR, fmt.Errorf("no changes were made")
 	}
 
-	return a.UpdateFromFile(generic, tmpfile.Name())
+	return a.UpdateFromFile(tmpfile.Name())
 }

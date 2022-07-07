@@ -2,7 +2,47 @@ package genericcli
 
 import "fmt"
 
-func (a *GenericCLI[C, U, R]) ApplyFromFile(generic Generic[C, U, R], from string) ([]R, error) {
+func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
+	emptyR := new(R)
+
+	mc := MultiDocumentYAML[C]{
+		fs: a.fs,
+	}
+
+	doc, err := mc.ReadOne(from)
+	if err != nil {
+		return *emptyR, err
+	}
+
+	result, err := a.g.Create(doc)
+	if err != nil {
+		return *emptyR, fmt.Errorf("error creating entity: %w", err)
+	}
+
+	return *result, nil
+}
+
+func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
+	emptyR := new(R)
+
+	mc := MultiDocumentYAML[U]{
+		fs: a.fs,
+	}
+
+	doc, err := mc.ReadOne(from)
+	if err != nil {
+		return *emptyR, err
+	}
+
+	result, err := a.g.Update(doc)
+	if err != nil {
+		return *emptyR, fmt.Errorf("error updating entity: %w", err)
+	}
+
+	return result, nil
+}
+
+func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 	mc := MultiDocumentYAML[C]{
 		fs: a.fs,
 	}
@@ -20,7 +60,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(generic Generic[C, U, R], from strin
 	for index := range docs {
 		createDoc := docs[index]
 
-		created, err := generic.Create(createDoc)
+		created, err := a.g.Create(createDoc)
 		if err != nil {
 			return nil, fmt.Errorf("error creating entity: %w", err)
 		}
@@ -35,7 +75,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(generic Generic[C, U, R], from strin
 			return nil, err
 		}
 
-		updated, err := generic.Update(updateDoc)
+		updated, err := a.g.Update(updateDoc)
 		if err != nil {
 			return nil, fmt.Errorf("error updating entity: %w", err)
 		}
