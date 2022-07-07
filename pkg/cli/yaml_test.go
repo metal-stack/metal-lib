@@ -38,7 +38,7 @@ labels:
 	})
 )
 
-func Test_readYAML(t *testing.T) {
+func Test_ReadAll(t *testing.T) {
 	const testFile = "/test.yaml"
 
 	tests := []struct {
@@ -74,12 +74,15 @@ func Test_readYAML(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fs := afero.NewMemMapFs()
-			if tt.mockFn != nil {
-				tt.mockFn(fs)
+			m := MultiDocumentYAML[*testYAML]{
+				fs: afero.NewMemMapFs(),
 			}
 
-			got, err := readYAML[*testYAML](fs, testFile)
+			if tt.mockFn != nil {
+				tt.mockFn(m.fs)
+			}
+
+			got, err := m.ReadAll(testFile)
 
 			if diff := cmp.Diff(tt.wantErr, err, errorComparer); diff != "" {
 				t.Errorf("error diff (+got -want):\n %s", diff)
@@ -92,7 +95,7 @@ func Test_readYAML(t *testing.T) {
 	}
 }
 
-func Test_readYAMLIndex(t *testing.T) {
+func Test_ReadIndex(t *testing.T) {
 	const testFile = "/test.yaml"
 
 	tests := []struct {
@@ -136,12 +139,15 @@ func Test_readYAMLIndex(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fs := afero.NewMemMapFs()
-			if tt.mockFn != nil {
-				tt.mockFn(fs)
+			m := MultiDocumentYAML[*testYAML]{
+				fs: afero.NewMemMapFs(),
 			}
 
-			got, err := readYAMLIndex[*testYAML](fs, testFile, tt.index)
+			if tt.mockFn != nil {
+				tt.mockFn(m.fs)
+			}
+
+			got, err := m.ReadIndex(testFile, tt.index)
 
 			if diff := cmp.Diff(tt.wantErr, err, errorComparer); diff != "" {
 				t.Errorf("error diff (+got -want):\n %s", diff)

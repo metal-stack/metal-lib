@@ -1,13 +1,9 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v3"
 )
 
 // Applier can be used to apply entities
@@ -50,12 +46,19 @@ func NewApplier[C any, U any, R any](from string) (*Applier[C, U, R], error) {
 }
 
 func (a *Applier[C, U, R]) Apply(appliable Appliable[C, U, R]) ([]R, error) {
-	docs, err := readYAML[C](a.fs, a.from)
+	mc := MultiDocumentYAML[C]{
+		fs: a.fs,
+	}
+
+	docs, err := mc.ReadAll(a.from)
 	if err != nil {
 		return nil, err
 	}
 
 	result := []R{}
+	mu := MultiDocumentYAML[U]{
+		fs: a.fs,
+	}
 
 	for index := range docs {
 		createDoc := docs[index]
@@ -70,7 +73,7 @@ func (a *Applier[C, U, R]) Apply(appliable Appliable[C, U, R]) ([]R, error) {
 			continue
 		}
 
-		updateDoc, err := readYAMLIndex[U](a.fs, a.from, index)
+		updateDoc, err := mu.ReadIndex(a.from, index)
 		if err != nil {
 			return nil, err
 		}
@@ -84,80 +87,4 @@ func (a *Applier[C, U, R]) Apply(appliable Appliable[C, U, R]) ([]R, error) {
 	}
 
 	return result, nil
-}
-
-// readFrom will either read from stdin (-) or a file path an marshall from yaml to data
-func readYAML[D any](fs afero.Fs, from string) ([]D, error) {
-	reader, err := getReader(fs, from)
-	if err != nil {
-		return nil, err
-	}
-
-	var docs []D
-
-	dec := yaml.NewDecoder(reader)
-
-	for {
-		data := new(D)
-
-		err := dec.Decode(&data)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("decode error: %w", err)
-		}
-
-		docs = append(docs, *data)
-	}
-
-	return docs, nil
-}
-
-// readFrom will either read from stdin (-) or a file path an marshall from yaml to data
-func readYAMLIndex[D any](fs afero.Fs, from string, index int) (D, error) {
-	emptyD := new(D)
-
-	reader, err := getReader(fs, from)
-	if err != nil {
-		return *emptyD, err
-	}
-
-	dec := yaml.NewDecoder(reader)
-
-	count := 0
-	for {
-		data := new(D)
-
-		err := dec.Decode(data)
-		if errors.Is(err, io.EOF) {
-			return *emptyD, fmt.Errorf("index not found in document: %d", index)
-		}
-		if err != nil {
-			return *emptyD, fmt.Errorf("decode error: %w", err)
-		}
-
-		if count == index {
-			return *data, nil
-		}
-
-		count++
-	}
-}
-
-func getReader(fs afero.Fs, from string) (io.Reader, error) {
-	var reader io.Reader
-	var err error
-	switch from {
-	case "-":
-		reader = os.Stdin
-	default:
-		reader, err = fs.Open(from)
-		if err != nil {
-			return nil, fmt.Errorf("unable to open %q: %w", from, err)
-		}
-	}
-
-	return reader, nil
 }
