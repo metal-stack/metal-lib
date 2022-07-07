@@ -1,10 +1,13 @@
 package genericcli
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
-	"gopkg.in/yaml.v2"
+	"github.com/spf13/afero"
+	yaml "gopkg.in/yaml.v3"
 )
 
 func (a *GenericCLI[C, U, R]) Edit(generic Generic[C, U, R], id string) (R, error) {
@@ -31,7 +34,7 @@ func (a *GenericCLI[C, U, R]) Edit(generic Generic[C, U, R], id string) (R, erro
 		return *emptyR, err
 	}
 
-	err = os.WriteFile(tmpfile.Name(), raw, os.ModePerm)
+	err = afero.WriteFile(a.fs, tmpfile.Name(), raw, 0755)
 	if err != nil {
 		return *emptyR, err
 	}
@@ -44,6 +47,15 @@ func (a *GenericCLI[C, U, R]) Edit(generic Generic[C, U, R], id string) (R, erro
 	err = editCommand.Run()
 	if err != nil {
 		return *emptyR, err
+	}
+
+	editedContent, err := afero.ReadFile(a.fs, tmpfile.Name())
+	if err != nil {
+		return *emptyR, err
+	}
+
+	if strings.TrimSpace(string(editedContent)) == strings.TrimSpace(string(raw)) {
+		return *emptyR, fmt.Errorf("no changes were made")
 	}
 
 	return a.UpdateFromFile(generic, tmpfile.Name())
