@@ -15,7 +15,7 @@ type MultiDocumentYAML[D any] struct {
 	fs afero.Fs
 }
 
-func NewMultiDocumentYAML[D any](from string) *MultiDocumentYAML[D] {
+func NewMultiDocumentYAML[D any]() *MultiDocumentYAML[D] {
 	return &MultiDocumentYAML[D]{
 		fs: afero.NewOsFs(),
 	}
