@@ -57,18 +57,18 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 
 // ReadOne reads exactly one document from a multi-document YAML from a given path, returns an error if there are no or more than one documents in it
 func (m *MultiDocumentYAML[D]) ReadOne(from string) (D, error) {
-	emptyD := new(D)
+	var zero D
 
 	docs, err := m.ReadAll(from)
 	if err != nil {
-		return *emptyD, err
+		return zero, err
 	}
 
 	if len(docs) == 0 {
-		return *emptyD, fmt.Errorf("no document parsed from yaml")
+		return zero, fmt.Errorf("no document parsed from yaml")
 	}
 	if len(docs) > 1 {
-		return *emptyD, fmt.Errorf("more than one document parsed from yaml")
+		return zero, fmt.Errorf("more than one document parsed from yaml")
 	}
 
 	return docs[0], nil
@@ -76,16 +76,16 @@ func (m *MultiDocumentYAML[D]) ReadOne(from string) (D, error) {
 
 // ReadIndex reads a document from a specific index of a multi-document YAML from a given path
 func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
-	emptyD := new(D)
+	var zero D
 
 	err := validateFrom(m.fs, from)
 	if err != nil {
-		return *emptyD, err
+		return zero, err
 	}
 
 	reader, err := getReader(m.fs, from)
 	if err != nil {
-		return *emptyD, err
+		return zero, err
 	}
 
 	dec := yaml.NewDecoder(reader)
@@ -96,10 +96,10 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 
 		err := dec.Decode(data)
 		if errors.Is(err, io.EOF) {
-			return *emptyD, fmt.Errorf("index not found in document: %d", index)
+			return zero, fmt.Errorf("index not found in document: %d", index)
 		}
 		if err != nil {
-			return *emptyD, fmt.Errorf("decode error: %w", err)
+			return zero, fmt.Errorf("decode error: %w", err)
 		}
 
 		if count == index {

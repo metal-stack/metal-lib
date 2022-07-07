@@ -11,7 +11,7 @@ import (
 )
 
 func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
-	emptyR := new(R)
+	var zero R
 
 	editor, ok := os.LookupEnv("EDITOR")
 	if !ok {
@@ -20,23 +20,23 @@ func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
 
 	tmpfile, err := os.CreateTemp("", "metallib-*.yaml")
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 	defer os.Remove(tmpfile.Name())
 
 	content, err := a.g.Get(id)
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	raw, err := yaml.Marshal(content)
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	err = afero.WriteFile(a.fs, tmpfile.Name(), raw, 0755)
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	editCommand := exec.Command(editor, tmpfile.Name())
@@ -46,16 +46,16 @@ func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
 
 	err = editCommand.Run()
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	editedContent, err := afero.ReadFile(a.fs, tmpfile.Name())
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	if strings.TrimSpace(string(editedContent)) == strings.TrimSpace(string(raw)) {
-		return *emptyR, fmt.Errorf("no changes were made")
+		return zero, fmt.Errorf("no changes were made")
 	}
 
 	return a.UpdateFromFile(tmpfile.Name())

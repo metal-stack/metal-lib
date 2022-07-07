@@ -22,8 +22,14 @@ type Generic[C any, U any, R any] interface {
 	Update(rq U) (R, error)
 }
 
+// NewGenericCLI returns a new generic cli.
 func NewGenericCLI[C any, U any, R any](generic Generic[C, U, R]) *GenericCLI[C, U, R] {
 	return &GenericCLI[C, U, R]{
 		fs: afero.NewOsFs(),
 	}
+}
+
+// Interface returns the interface that was used to create this generic cli.
+func (a *GenericCLI[C, U, R]) Interface() Generic[C, U, R] {
+	return a.g
 }

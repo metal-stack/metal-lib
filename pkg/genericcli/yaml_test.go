@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
@@ -24,18 +25,6 @@ id: b
 labels:
   - b
 `
-	errorComparer = cmp.Comparer(func(x, y error) bool {
-		if x == nil && y == nil {
-			return true
-		}
-		if x == nil && y != nil {
-			return false
-		}
-		if x != nil && y == nil {
-			return false
-		}
-		return x.Error() == y.Error()
-	})
 )
 
 func Test_ReadAll(t *testing.T) {
@@ -84,7 +73,7 @@ func Test_ReadAll(t *testing.T) {
 
 			got, err := m.ReadAll(testFile)
 
-			if diff := cmp.Diff(tt.wantErr, err, errorComparer); diff != "" {
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
 				t.Errorf("error diff (+got -want):\n %s", diff)
 			}
 
@@ -149,7 +138,7 @@ func Test_ReadIndex(t *testing.T) {
 
 			got, err := m.ReadIndex(testFile, tt.index)
 
-			if diff := cmp.Diff(tt.wantErr, err, errorComparer); diff != "" {
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
 				t.Errorf("error diff (+got -want):\n %s", diff)
 			}
 

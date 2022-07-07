@@ -3,7 +3,7 @@ package genericcli
 import "fmt"
 
 func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
-	emptyR := new(R)
+	var zero R
 
 	mc := MultiDocumentYAML[C]{
 		fs: a.fs,
@@ -11,19 +11,19 @@ func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 
 	doc, err := mc.ReadOne(from)
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	result, err := a.g.Create(doc)
 	if err != nil {
-		return *emptyR, fmt.Errorf("error creating entity: %w", err)
+		return zero, fmt.Errorf("error creating entity: %w", err)
 	}
 
 	return *result, nil
 }
 
 func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
-	emptyR := new(R)
+	var zero R
 
 	mc := MultiDocumentYAML[U]{
 		fs: a.fs,
@@ -31,12 +31,12 @@ func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 
 	doc, err := mc.ReadOne(from)
 	if err != nil {
-		return *emptyR, err
+		return zero, err
 	}
 
 	result, err := a.g.Update(doc)
 	if err != nil {
-		return *emptyR, fmt.Errorf("error updating entity: %w", err)
+		return zero, fmt.Errorf("error updating entity: %w", err)
 	}
 
 	return result, nil
