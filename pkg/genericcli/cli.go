@@ -62,3 +62,43 @@ func (a *GenericCLI[C, U, R]) DeleteAndPrint(args []string, p Printer) error {
 
 	return p.Print(resp)
 }
+
+func (a *GenericCLI[C, U, R]) Create(rq C) (R, error) {
+	var zero R
+
+	resp, err := a.g.Create(rq)
+	if err != nil {
+		return zero, err
+	}
+
+	return resp, nil
+}
+
+func (a *GenericCLI[C, U, R]) CreateAndPrint(rq C, p Printer) error {
+	resp, err := a.Create(rq)
+	if err != nil {
+		return err
+	}
+
+	return p.Print(resp)
+}
+
+func (a *GenericCLI[C, U, R]) Update(rq U) (R, error) {
+	var zero R
+
+	resp, err := a.g.Update(rq)
+	if err != nil {
+		return zero, err
+	}
+
+	return resp, nil
+}
+
+func (a *GenericCLI[C, U, R]) UpdateAndPrint(rq U, p Printer) error {
+	resp, err := a.Update(rq)
+	if err != nil {
+		return err
+	}
+
+	return p.Print(resp)
+}
