@@ -18,6 +18,8 @@ type Generic[C any, U any, R any] interface {
 	Create(rq C) (R, error)
 	// Update tries to update the entity with the given request and returns the updated entity.
 	Update(rq U) (R, error)
+	// Delete tries to delete the entity with the given id and returns the deleted entity.
+	Delete(id string) (R, error)
 }
 
 // NewGenericCLI returns a new generic cli.

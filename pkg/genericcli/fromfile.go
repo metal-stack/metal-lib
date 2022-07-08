@@ -31,6 +31,15 @@ func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 	return result, nil
 }
 
+func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p Printer) error {
+	result, err := a.CreateFromFile(from)
+	if err != nil {
+		return err
+	}
+
+	return p.Print(result)
+}
+
 func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	var zero R
 
@@ -49,6 +58,15 @@ func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	}
 
 	return result, nil
+}
+
+func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p Printer) error {
+	result, err := a.UpdateFromFile(from)
+	if err != nil {
+		return err
+	}
+
+	return p.Print(result)
 }
 
 // ApplyFromFile creates or updates entities from a given file.
@@ -95,4 +113,13 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 	}
 
 	return result, nil
+}
+
+func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p Printer) error {
+	result, err := a.ApplyFromFile(from)
+	if err != nil {
+		return err
+	}
+
+	return p.Print(result)
 }

@@ -9,8 +9,13 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
+func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 	var zero R
+
+	id, err := GetExactlyOneArg(args)
+	if err != nil {
+		return zero, err
+	}
 
 	editor, ok := os.LookupEnv("EDITOR")
 	if !ok {
@@ -62,4 +67,13 @@ func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
 	}
 
 	return a.UpdateFromFile(tmpfile.Name())
+}
+
+func (a *GenericCLI[C, U, R]) EditAndPrint(args []string, p Printer) error {
+	result, err := a.Edit(args)
+	if err != nil {
+		return err
+	}
+
+	return p.Print(result)
 }
