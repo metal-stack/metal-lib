@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v3"
@@ -54,8 +53,12 @@ func (a *GenericCLI[C, U, R]) Edit(id string) (R, error) {
 		return zero, err
 	}
 
-	if strings.TrimSpace(string(editedContent)) == strings.TrimSpace(string(raw)) {
-		return zero, fmt.Errorf("no changes were made")
+	equal, err := YamlIsEqual(raw, editedContent)
+	if err != nil {
+		return zero, err
+	}
+	if equal {
+		return zero, fmt.Errorf("no changes were made, aborting")
 	}
 
 	return a.UpdateFromFile(tmpfile.Name())

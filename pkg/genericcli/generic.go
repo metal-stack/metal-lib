@@ -14,17 +14,16 @@ type GenericCLI[C any, U any, R any] struct {
 type Generic[C any, U any, R any] interface {
 	// Get returns the entity with the given id.
 	Get(id string) (R, error)
-	// Create tries to create the entity with the given request, if it already exists it does NOT return an error but nil for both return arguments.
-	// if the creation was successful it returns the success response.
-	Create(rq C) (*R, error)
-	// Update tries to update the entity with the given request.
-	// if the update was successful it returns the success response.
+	// Create tries to create the entity with the given request and returns the created entity.
+	Create(rq C) (R, error)
+	// Update tries to update the entity with the given request and returns the updated entity.
 	Update(rq U) (R, error)
 }
 
 // NewGenericCLI returns a new generic cli.
-func NewGenericCLI[C any, U any, R any](generic Generic[C, U, R]) *GenericCLI[C, U, R] {
+func NewGenericCLI[C any, U any, R any](g Generic[C, U, R]) *GenericCLI[C, U, R] {
 	return &GenericCLI[C, U, R]{
+		g:  g,
 		fs: afero.NewOsFs(),
 	}
 }

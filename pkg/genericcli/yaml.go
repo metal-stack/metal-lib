@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -142,4 +143,20 @@ func validateFrom(fs afero.Fs, from string) error {
 	}
 
 	return nil
+}
+
+func YamlIsEqual(x []byte, y []byte) (bool, error) {
+	var xParsed any
+	err := yaml.Unmarshal(x, &xParsed)
+	if err != nil {
+		return false, err
+	}
+
+	var yParsed any
+	err = yaml.Unmarshal(y, &yParsed)
+	if err != nil {
+		return false, err
+	}
+
+	return cmp.Equal(xParsed, yParsed), nil
 }

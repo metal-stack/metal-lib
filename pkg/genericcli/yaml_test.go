@@ -1,6 +1,7 @@
 package genericcli
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -144,6 +145,54 @@ func Test_ReadIndex(t *testing.T) {
 
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
+			}
+		})
+	}
+}
+
+func Test_YamlIsEqual(t *testing.T) {
+	tests := []struct {
+		name    string
+		x       []byte
+		y       []byte
+		want    bool
+		wantErr error
+	}{
+		{
+			name: "yaml is equal",
+			x:    []byte(`a: b`),
+			y:    []byte(`a: b`),
+			want: true,
+		},
+		{
+			name: "yaml is equal indepedent of trailing spaces",
+			x:    []byte(`a: b`),
+			y:    []byte(`  a: b   `),
+			want: true,
+		},
+		{
+			name: "yaml is unequal ",
+			x:    []byte(`a: b`),
+			y:    []byte(`a: c`),
+			want: false,
+		},
+		{
+			name:    "yaml is invalid ",
+			x:       []byte(`a: b`),
+			y:       []byte(`a: b: c`),
+			want:    false,
+			wantErr: errors.New("yaml: mapping values are not allowed in this context"),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := YamlIsEqual(tt.x, tt.y)
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+			if got != tt.want {
+				t.Errorf("yamlIsEqual() = %v, want %v", got, tt.want)
 			}
 		})
 	}

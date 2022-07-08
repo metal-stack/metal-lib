@@ -1,6 +1,15 @@
 package genericcli
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var alreadyExistsError = errors.New("entity already exists")
+
+func AlreadyExistsError() error {
+	return alreadyExistsError
+}
 
 func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 	var zero R
@@ -19,7 +28,7 @@ func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 		return zero, fmt.Errorf("error creating entity: %w", err)
 	}
 
-	return *result, nil
+	return result, nil
 }
 
 func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
@@ -42,6 +51,8 @@ func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	return result, nil
 }
 
+// ApplyFromFile creates or updates entities from a given file.
+// In order to work, the create function must return an already exists error as defined in this package.
 func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 	mc := MultiDocumentYAML[C]{
 		fs: a.fs,
@@ -61,13 +72,13 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 		createDoc := docs[index]
 
 		created, err := a.g.Create(createDoc)
-		if err != nil {
-			return nil, fmt.Errorf("error creating entity: %w", err)
+		if err == nil {
+			result = append(result, created)
+			continue
 		}
 
-		if created != nil {
-			result = append(result, *created)
-			continue
+		if !errors.Is(err, AlreadyExistsError()) {
+			return nil, fmt.Errorf("error creating entity: %w", err)
 		}
 
 		updateDoc, err := mu.ReadIndex(from, index)
