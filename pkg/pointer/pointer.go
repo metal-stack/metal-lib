@@ -20,7 +20,7 @@ func PointerOrDefault[T any](t T, defaultValue T) *T {
 }
 
 // Deref returns the value from the passed pointer or zero value for a nil pointer.
-func Deref[T any](t *T) T { //nolint:ireturn
+func Deref[T any](t *T) T {
 	if t == nil {
 		var zero T
 
@@ -31,7 +31,7 @@ func Deref[T any](t *T) T { //nolint:ireturn
 }
 
 // DerefOrDefault returns the value from the passed pointer or the default value for a nil pointer or zero value.
-func DerefOrDefault[T any](t *T, defaultValue T) T { //nolint:ireturn
+func DerefOrDefault[T any](t *T, defaultValue T) T {
 	if t == nil {
 		return defaultValue
 	}
@@ -43,4 +43,15 @@ func DerefOrDefault[T any](t *T, defaultValue T) T { //nolint:ireturn
 	}
 
 	return *t
+}
+
+// FirstOrZero returns the first value of a slice or the zero slice if slize is empty.
+func FirstOrZero[T any](t []T) T {
+	if len(t) == 0 {
+		var zero T
+
+		return zero
+	}
+
+	return t[0]
 }
