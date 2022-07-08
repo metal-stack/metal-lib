@@ -111,6 +111,23 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 	}
 }
 
+// YamlIsEqual returns true if a yaml equal in content.
+func YamlIsEqual(x []byte, y []byte) (bool, error) {
+	var xParsed any
+	err := yaml.Unmarshal(x, &xParsed)
+	if err != nil {
+		return false, err
+	}
+
+	var yParsed any
+	err = yaml.Unmarshal(y, &yParsed)
+	if err != nil {
+		return false, err
+	}
+
+	return cmp.Equal(xParsed, yParsed), nil
+}
+
 func getReader(fs afero.Fs, from string) (io.Reader, error) {
 	var reader io.Reader
 	var err error
@@ -143,20 +160,4 @@ func validateFrom(fs afero.Fs, from string) error {
 	}
 
 	return nil
-}
-
-func YamlIsEqual(x []byte, y []byte) (bool, error) {
-	var xParsed any
-	err := yaml.Unmarshal(x, &xParsed)
-	if err != nil {
-		return false, err
-	}
-
-	var yParsed any
-	err = yaml.Unmarshal(y, &yParsed)
-	if err != nil {
-		return false, err
-	}
-
-	return cmp.Equal(xParsed, yParsed), nil
 }
