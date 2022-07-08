@@ -13,6 +13,24 @@ func GetExactlyOneArg(args []string) (string, error) {
 	}
 }
 
+func (a *GenericCLI[C, U, R]) List() ([]R, error) {
+	resp, err := a.crud.List()
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (a *GenericCLI[C, U, R]) ListAndPrint(p Printer) error {
+	resp, err := a.List()
+	if err != nil {
+		return err
+	}
+
+	return p.Print(resp)
+}
+
 func (a *GenericCLI[C, U, R]) Describe(args []string) (R, error) {
 	var zero R
 
@@ -21,7 +39,7 @@ func (a *GenericCLI[C, U, R]) Describe(args []string) (R, error) {
 		return zero, err
 	}
 
-	resp, err := a.g.Get(id)
+	resp, err := a.crud.Get(id)
 	if err != nil {
 		return zero, err
 	}
@@ -46,7 +64,7 @@ func (a *GenericCLI[C, U, R]) Delete(args []string) (R, error) {
 		return zero, err
 	}
 
-	resp, err := a.g.Delete(id)
+	resp, err := a.crud.Delete(id)
 	if err != nil {
 		return zero, err
 	}
@@ -66,7 +84,7 @@ func (a *GenericCLI[C, U, R]) DeleteAndPrint(args []string, p Printer) error {
 func (a *GenericCLI[C, U, R]) Create(rq C) (R, error) {
 	var zero R
 
-	resp, err := a.g.Create(rq)
+	resp, err := a.crud.Create(rq)
 	if err != nil {
 		return zero, err
 	}
@@ -86,7 +104,7 @@ func (a *GenericCLI[C, U, R]) CreateAndPrint(rq C, p Printer) error {
 func (a *GenericCLI[C, U, R]) Update(rq U) (R, error) {
 	var zero R
 
-	resp, err := a.g.Update(rq)
+	resp, err := a.crud.Update(rq)
 	if err != nil {
 		return zero, err
 	}

@@ -28,7 +28,7 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 	}
 	defer os.Remove(tmpfile.Name())
 
-	content, err := a.g.Get(id)
+	content, err := a.crud.Get(id)
 	if err != nil {
 		return zero, err
 	}

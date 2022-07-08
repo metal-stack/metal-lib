@@ -23,7 +23,7 @@ func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 		return zero, err
 	}
 
-	result, err := a.g.Create(doc)
+	result, err := a.crud.Create(doc)
 	if err != nil {
 		return zero, fmt.Errorf("error creating entity: %w", err)
 	}
@@ -52,7 +52,7 @@ func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 		return zero, err
 	}
 
-	result, err := a.g.Update(doc)
+	result, err := a.crud.Update(doc)
 	if err != nil {
 		return zero, fmt.Errorf("error updating entity: %w", err)
 	}
@@ -89,7 +89,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 	for index := range docs {
 		createDoc := docs[index]
 
-		created, err := a.g.Create(createDoc)
+		created, err := a.crud.Create(createDoc)
 		if err == nil {
 			result = append(result, created)
 			continue
@@ -104,7 +104,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 			return nil, err
 		}
 
-		updated, err := a.g.Update(updateDoc)
+		updated, err := a.crud.Update(updateDoc)
 		if err != nil {
 			return nil, fmt.Errorf("error updating entity: %w", err)
 		}
