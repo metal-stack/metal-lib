@@ -14,9 +14,11 @@ require (
 	github.com/metal-stack/v v1.0.3
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nsqio/nsq v1.2.1
+	github.com/peterrk/slices v0.0.0-20220521081151-845fd2be5016
 	github.com/spf13/afero v1.8.2
 	github.com/stretchr/testify v1.7.4
 	go.uber.org/zap v1.21.0
+	golang.org/x/exp v0.0.0-20220706164943-b4a6d9510983
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	gopkg.in/square/go-jose.v2 v2.6.0
