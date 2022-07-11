@@ -1,0 +1,71 @@
+package genericcli
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/pkg/testcommon"
+)
+
+func TestTemplatePrinter_Print(t *testing.T) {
+	type nested struct {
+		C string `json:"c"`
+	}
+	type machine struct {
+		A      string `json:"a"`
+		B      string `json:"b"`
+		Nested nested `json:"nested"`
+	}
+
+	tests := []struct {
+		name    string
+		t       string
+		data    interface{}
+		want    string
+		wantErr error
+	}{
+		{
+			name:    "template single entity",
+			t:       "{{ .a }} {{ .b }} {{ .nested.c }}",
+			data:    machine{A: "a", B: "b", Nested: nested{C: "c"}},
+			want:    "a b c\n",
+			wantErr: nil,
+		},
+		{
+			name:    "template multiple entities",
+			t:       "{{ .a }} {{ .b }}",
+			data:    []machine{{A: "a", B: "b"}, {A: "c", B: "d"}},
+			want:    "a b\nc d\n",
+			wantErr: nil,
+		},
+		{
+			name:    "also works with list of pointers",
+			t:       "{{ .a }} {{ .b }}",
+			data:    []*machine{{A: "a", B: "b"}, {A: "c", B: "d"}},
+			want:    "a b\nc d\n",
+			wantErr: nil,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := NewTemplatePrinter(tt.t)
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+
+			var out bytes.Buffer
+			p.out = &out
+
+			err = p.Print(tt.data)
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+
+			if diff := cmp.Diff(tt.want, out.String()); diff != "" {
+				t.Errorf("diff (+got -want):\n %s", diff)
+			}
+		})
+	}
+}
