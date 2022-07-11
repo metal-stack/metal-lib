@@ -182,6 +182,11 @@ func NewTablePrinter(config *TablePrinterConfig) (*TablePrinter, error) {
 	}, nil
 }
 
+// GetTable can be used to alter the table element. Try not to do it all the time but rather propose an API change in this project.
+func (p *TablePrinter) GetTable() *tablewriter.Table {
+	return p.table
+}
+
 func (p *TablePrinter) Print(data any) error {
 	header, rows, err := p.c.ToHeaderAndRows(data, p.c.Wide)
 	if err != nil {
