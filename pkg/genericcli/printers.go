@@ -188,7 +188,9 @@ func (p *TablePrinter) Print(data any) error {
 		return err
 	}
 
-	p.table.SetHeader(header)
+	if !p.c.NoHeaders {
+		p.table.SetHeader(header)
+	}
 	p.table.AppendBulk(rows)
 
 	p.table.Render()
