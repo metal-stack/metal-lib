@@ -20,10 +20,14 @@ type (
 	}
 
 	// JSONPrinter prints data in JSON format
-	JSONPrinter struct{}
+	JSONPrinter struct {
+		out io.Writer
+	}
 
 	// YAMLPrinter prints data in YAML format
-	YAMLPrinter struct{}
+	YAMLPrinter struct {
+		out io.Writer
+	}
 
 	// TemplatePrinter prints data with a given template
 	TemplatePrinter struct {
@@ -53,31 +57,35 @@ type (
 )
 
 func NewJSONPrinter() *JSONPrinter {
-	return &JSONPrinter{}
+	return &JSONPrinter{
+		out: os.Stdout,
+	}
 }
 
-func (_ *JSONPrinter) Print(data any) error {
+func (p *JSONPrinter) Print(data any) error {
 	content, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%s\n", string(content))
+	fmt.Fprintf(p.out, "%s\n", string(content))
 
 	return nil
 }
 
 func NewYAMLPrinter() *YAMLPrinter {
-	return &YAMLPrinter{}
+	return &YAMLPrinter{
+		out: os.Stdout,
+	}
 }
 
-func (_ *YAMLPrinter) Print(data any) error {
+func (p *YAMLPrinter) Print(data any) error {
 	content, err := yaml.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%s", string(content))
+	fmt.Fprintf(p.out, "%s", string(content))
 
 	return nil
 }
