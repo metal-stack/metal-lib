@@ -22,11 +22,13 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 		editor = "vi"
 	}
 
-	tmpfile, err := os.CreateTemp("", "metallib-*.yaml")
+	tmpfile, err := afero.TempFile(a.fs, "", "metallib-*.yaml")
 	if err != nil {
 		return zero, err
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		_ = a.fs.Remove(tmpfile.Name())
+	}()
 
 	content, err := a.crud.Get(id)
 	if err != nil {

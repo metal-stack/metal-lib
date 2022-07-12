@@ -14,11 +14,7 @@ func AlreadyExistsError() error {
 func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 	var zero R
 
-	mc := MultiDocumentYAML[C]{
-		fs: a.fs,
-	}
-
-	doc, err := mc.ReadOne(from)
+	doc, err := a.createParser.ReadOne(from)
 	if err != nil {
 		return zero, err
 	}
@@ -43,11 +39,7 @@ func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p Printer) err
 func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	var zero R
 
-	mc := MultiDocumentYAML[U]{
-		fs: a.fs,
-	}
-
-	doc, err := mc.ReadOne(from)
+	doc, err := a.updateParser.ReadOne(from)
 	if err != nil {
 		return zero, err
 	}
@@ -72,19 +64,12 @@ func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p Printer) err
 // ApplyFromFile creates or updates entities from a given file.
 // In order to work, the create function must return an already exists error as defined in this package.
 func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
-	mc := MultiDocumentYAML[C]{
-		fs: a.fs,
-	}
-
-	docs, err := mc.ReadAll(from)
+	docs, err := a.createParser.ReadAll(from)
 	if err != nil {
 		return nil, err
 	}
 
 	result := []R{}
-	mu := MultiDocumentYAML[U]{
-		fs: a.fs,
-	}
 
 	for index := range docs {
 		createDoc := docs[index]
@@ -99,7 +84,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) ([]R, error) {
 			return nil, fmt.Errorf("error creating entity: %w", err)
 		}
 
-		updateDoc, err := mu.ReadIndex(from, index)
+		updateDoc, err := a.updateParser.ReadIndex(from, index)
 		if err != nil {
 			return nil, err
 		}

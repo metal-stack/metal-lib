@@ -1,13 +1,13 @@
 package genericcli
 
-import (
-	"github.com/spf13/afero"
-)
+import "github.com/spf13/afero"
 
 // GenericCLI can be used to gain generic CLI functionality.
 type GenericCLI[C any, U any, R any] struct {
-	fs   afero.Fs
-	crud CRUD[C, U, R]
+	fs           afero.Fs
+	crud         CRUD[C, U, R]
+	createParser MultiDocumentYAML[C]
+	updateParser MultiDocumentYAML[U]
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -26,9 +26,12 @@ type CRUD[C any, U any, R any] interface {
 
 // NewGenericCLI returns a new generic cli.
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
+	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		crud: crud,
-		fs:   afero.NewOsFs(),
+		crud:         crud,
+		fs:           fs,
+		createParser: MultiDocumentYAML[C]{fs: fs},
+		updateParser: MultiDocumentYAML[U]{fs: fs},
 	}
 }
 
