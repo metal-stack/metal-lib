@@ -3,7 +3,7 @@ package multisort
 import (
 	"fmt"
 
-	"github.com/peterrk/slices"
+	"golang.org/x/exp/slices"
 )
 
 // Sorter can sort by multiple criteria.

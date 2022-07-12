@@ -16,7 +16,6 @@ require (
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nsqio/nsq v1.2.1
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/peterrk/slices v0.0.0-20220521081151-845fd2be5016
 	github.com/spf13/afero v1.8.2
 	github.com/stretchr/testify v1.7.4
 	go.uber.org/zap v1.21.0
