@@ -9,6 +9,8 @@ const (
 	ClusterDescription = "cluster.metal-stack.io/description"
 	// ClusterProject tag to store the project the cluster belongs to
 	ClusterProject = "cluster.metal-stack.io/project"
+	// ClusterPartition tag to store the partition the cluster belongs to
+	ClusterPartition = "cluster.metal-stack.io/partition"
 	// ClusterTenant tag to store the tenant of the cluster
 	ClusterTenant = "cluster.metal-stack.io/tenant"
 	// ClusterServiceFQN tag to identify a service running in the cluster
