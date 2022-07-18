@@ -11,15 +11,18 @@ const (
 	AccountingNetworkTrafficExternal = "accounting.metal-stack.io/network-traffic-external"
 	// AccountingNetworkTrafficInternal tag to indicate internal network traffic
 	AccountingNetworkTrafficInternal = "accounting.metal-stack.io/network-traffic-internal"
+	// AccountingVolumeReplicas tag to store accounting volume replicas
+	AccountingVolumeReplicas = "accounting.metal-stack.io/volume-replicas"
 )
 
 // AccountingTags returns all accounting tags
-func AccountingTags() []string {
-	return []string{
-		AccountingProductID,
-		AccountingContractID,
-		AccountingDebtor,
-		AccountingNetworkTrafficExternal,
-		AccountingNetworkTrafficInternal,
+func AccountingTags() map[string]bool {
+	return map[string]bool{
+		AccountingProductID:              true,
+		AccountingContractID:             true,
+		AccountingDebtor:                 true,
+		AccountingNetworkTrafficExternal: true,
+		AccountingNetworkTrafficInternal: true,
+		AccountingVolumeReplicas:         true,
 	}
 }
