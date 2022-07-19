@@ -251,7 +251,9 @@ func oidcFlow(appModel *app) error {
 
 	appModel.config.Log.Debug("Listening", zap.String("hostname", "localhost"), zap.String("addr", listenAddr))
 
-	srv := &http.Server{}
+	srv := &http.Server{
+		ReadHeaderTimeout: 1 * time.Minute,
+	}
 	http.HandleFunc("/", appModel.handleLogin)
 	http.HandleFunc(callbackPath, appModel.handleCallback)
 

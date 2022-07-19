@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -75,7 +76,8 @@ func Logout(params *LogoutParams) error {
 	endSessionURL.RawQuery = values.Encode()
 
 	server := &http.Server{
-		Handler: mux,
+		Handler:           mux,
+		ReadHeaderTimeout: 1 * time.Minute,
 	}
 
 	log.Debug("Opening Browser for Logout")
