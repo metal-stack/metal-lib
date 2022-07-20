@@ -44,14 +44,3 @@ func DerefOrDefault[T any](t *T, defaultValue T) T {
 
 	return *t
 }
-
-// FirstOrZero returns the first value of a slice or the zero slice if slize is empty.
-func FirstOrZero[T any](t []T) T {
-	if len(t) == 0 {
-		var zero T
-
-		return zero
-	}
-
-	return t[0]
-}
