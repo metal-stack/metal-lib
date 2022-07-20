@@ -172,7 +172,7 @@ func NewTablePrinter(config *TablePrinterConfig) (*TablePrinter, error) {
 		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 		table.SetCenterSeparator("|")
 	} else {
-		table.SetHeaderLine(!config.NoHeaders)
+		table.SetHeaderLine(false)
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 		table.SetBorder(false)
