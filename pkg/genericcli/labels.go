@@ -9,11 +9,11 @@ import (
 func LabelsToMap(labels []string) (map[string]string, error) {
 	labelMap := make(map[string]string)
 	for _, l := range labels {
-		parts := strings.SplitN(l, "=", 2)
-		if len(parts) != 2 {
+		key, value, found := strings.Cut(l, "=")
+		if !found {
 			return nil, fmt.Errorf("provided labels must be in the form <key>=<value>, found: %s", l)
 		}
-		labelMap[parts[0]] = parts[1]
+		labelMap[key] = value
 	}
 	return labelMap, nil
 }
