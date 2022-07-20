@@ -2,17 +2,23 @@ package rest
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httputil"
-	"strings"
 	"time"
 
 	restful "github.com/emicklei/go-restful/v3"
+	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/httperrors"
-	"github.com/metal-stack/metal-lib/zapup"
 	"github.com/metal-stack/security"
 	"go.uber.org/zap"
+)
+
+type Key int
+
+const (
+	RequestLoggerKey = Key(0)
 )
 
 type loggingResponseWriter struct {
@@ -39,78 +45,105 @@ func (w *loggingResponseWriter) Content() string {
 	return w.buf.String()
 }
 
-func RequestLogger(debug bool, logger *zap.Logger) restful.FilterFunction {
+func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		rq := req.Request
+
 		// search a better way for a unique callid
-		// perhaps a reverseproxy in front generates a unique header for som sort
+		// perhaps a reverseproxy in front generates a unique header for some sort
 		// of opentracing support?
 
 		requestID := req.HeaderParameter("X-Request-Id")
-		rqid := zap.String("rqid", requestID)
 		if requestID == "" {
-			ts := time.Now().UnixNano()
-			rqid = zap.Int64("rqid", ts)
+			requestID = uuid.New().String()
 		}
-		fields := []zap.Field{
-			rqid,
-			zap.String("remoteaddr", strings.Split(rq.RemoteAddr, ":")[0]),
-			zap.String("method", rq.Method),
-			zap.String("uri", rq.URL.RequestURI()),
-			zap.String("route", req.SelectedRoutePath()),
+
+		fields := []any{
+			"rqid", requestID,
+			"remoteaddr", rq.RemoteAddr,
+			"method", rq.Method,
+			"uri", rq.URL.RequestURI(),
+			"route", req.SelectedRoutePath(),
 		}
+
+		debug := isDebug(logger)
 
 		if debug {
 			body, _ := httputil.DumpRequest(rq, true)
-			fields = append(fields, zap.String("body", string(body)))
-			resp.ResponseWriter = &loggingResponseWriter{w: resp.ResponseWriter}
+			fields = append(fields, "body", string(body))
 		}
 
-		rqlogger := logger.With(fields...)
-		rq = req.Request.WithContext(zapup.PutLogger(req.Request.Context(), rqlogger))
-		req.Request = rq
+		// this creates a child log with the given fields as a structured context
+		requestLogger := logger.With(fields...)
+
+		enrichedContext := context.WithValue(req.Request.Context(), RequestLoggerKey, requestLogger)
+		req.Request = req.Request.WithContext(enrichedContext)
+
 		t := time.Now()
 
+		writer := &loggingResponseWriter{w: resp.ResponseWriter}
+		resp.ResponseWriter = writer
+
 		chain.ProcessFilter(req, resp)
-		fields = append(fields, zap.Int("status", resp.StatusCode()), zap.Int("content-length", resp.ContentLength()), zap.Duration("duration", time.Since(t)))
+
+		afterChainFields := []any{"status", resp.StatusCode(), "content-length", resp.ContentLength(), "duration", time.Since(t).String()}
 
 		// refetch logger. the stack of filters could contain the "UserAuth" filter from below which
 		// changes the logger
+		requestLogger = GetLoggerFromContext(req.Request, requestLogger)
 
-		innerlogger := zapup.RequestLogger(req.Request)
-
-		if debug {
-			fields = append(fields, zap.String("response", resp.ResponseWriter.(*loggingResponseWriter).Content()))
+		if debug || resp.StatusCode() >= 400 {
+			afterChainFields = append(afterChainFields, "response", writer.Content())
 		}
+
 		if resp.StatusCode() < 400 {
-			innerlogger.Info("Rest Call", fields...)
+			requestLogger.Infow("finished handling rest call", afterChainFields...)
 		} else {
-			innerlogger.Error("Rest Call", fields...)
+			requestLogger.Errorw("finished handling rest call", afterChainFields...)
 		}
 	}
 }
 
-func UserAuth(ug security.UserGetter) restful.FilterFunction {
+func UserAuth(ug security.UserGetter, fallbackLogger *zap.SugaredLogger) restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		log := zapup.RequestLogger(req.Request)
+		log := GetLoggerFromContext(req.Request, fallbackLogger)
+
 		usr, err := ug.User(req.Request)
 		if err != nil {
 			var hmerr *security.WrongHMAC
 			if errors.As(err, &hmerr) {
-				log.Error("cannot get user from request", zap.Error(err), zap.String("got", hmerr.Got), zap.String("want", hmerr.Want))
+				log.Errorw("cannot get user from request", "error", err, "got", hmerr.Got, "want", hmerr.Want)
 			} else {
-				log.Error("cannot get user from request", zap.Error(err))
+				log.Errorw("cannot get user from request", "error", err)
 			}
+
 			err = resp.WriteHeaderAndEntity(http.StatusForbidden, httperrors.NewHTTPError(http.StatusForbidden, err))
 			if err != nil {
-				log.Error("writeHeaderAndEntity", zap.Error(err))
+				log.Errorw("error sending response", "error", err)
 			}
 			return
 		}
-		log = log.With(zap.String("useremail", usr.EMail))
+
 		rq := req.Request
-		ctx := security.PutUserInContext(zapup.PutLogger(rq.Context(), log), usr)
-		req.Request = rq.WithContext(ctx)
+		ctx := security.PutUserInContext(rq.Context(), usr)
+
+		log = log.With("useremail", usr.EMail, "username", usr.Name, "usertenant", usr.Tenant)
+		ctx = context.WithValue(ctx, RequestLoggerKey, log)
+
+		req.Request = req.Request.WithContext(ctx)
+
 		chain.ProcessFilter(req, resp)
 	}
+}
+
+func isDebug(log *zap.SugaredLogger) bool {
+	return log.Desugar().Core().Enabled(zap.DebugLevel)
+}
+
+func GetLoggerFromContext(rq *http.Request, fallback *zap.SugaredLogger) *zap.SugaredLogger {
+	l, ok := rq.Context().Value(RequestLoggerKey).(*zap.SugaredLogger)
+	if ok {
+		return l
+	}
+	return fallback
 }

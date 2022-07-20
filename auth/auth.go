@@ -20,8 +20,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/metal-stack/metal-lib/zapup"
-
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
@@ -145,6 +143,9 @@ func (c Claims) Username() string {
 // 3. receive Callback, extract token and redirect to Success-Page
 // 4. call TokenHandler
 func OIDCFlow(config Config) error {
+	if config.Log == nil {
+		return errors.New("error validating config: Log is required")
+	}
 
 	if config.IssuerURL == "" {
 		return errors.New("error validating config: IssuerURL is required")
@@ -174,11 +175,6 @@ func OIDCFlow(config Config) error {
 }
 
 func oidcFlow(appModel *app) error {
-
-	if appModel.config.Log == nil {
-		appModel.config.Log = zapup.MustRootLogger()
-	}
-
 	if appModel.config.SuccessMessage == "" {
 		appModel.config.SuccessMessage = "Please close this page and return to your terminal."
 	}
@@ -255,7 +251,9 @@ func oidcFlow(appModel *app) error {
 
 	appModel.config.Log.Debug("Listening", zap.String("hostname", "localhost"), zap.String("addr", listenAddr))
 
-	srv := &http.Server{}
+	srv := &http.Server{
+		ReadHeaderTimeout: 1 * time.Minute,
+	}
 	http.HandleFunc("/", appModel.handleLogin)
 	http.HandleFunc(callbackPath, appModel.handleCallback)
 

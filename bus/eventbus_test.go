@@ -8,17 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metal-stack/metal-lib/zapup"
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
 )
 
 // tests if the handler returns prematurely with specific error if a timeout occurs
 func TestTimeoutWrapper_FailTimeout(t *testing.T) {
-
 	e := &nsq.Message{
 		Body: []byte("{}"),
 	}
@@ -40,7 +39,6 @@ func TestTimeoutWrapper_FailTimeout(t *testing.T) {
 
 // tests if the handler returns prematurely with call of the onTimeout if a timeout occurs, onTimeout returns no error
 func TestTimeoutWrapper_FailTimeoutWithTimeoutFunc(t *testing.T) {
-
 	messageFromQueue := &nsq.Message{
 		Body: []byte("{}"),
 	}
@@ -79,7 +77,6 @@ func TestTimeoutWrapper_FailTimeoutWithTimeoutFunc(t *testing.T) {
 
 // tests if the handler returns prematurely with specific error if a timeout occurs
 func TestTimeoutWrapper_OK_NoTimeout(t *testing.T) {
-
 	e := &nsq.Message{
 		Body: []byte("{}"),
 	}
@@ -101,7 +98,6 @@ func TestTimeoutWrapper_OK_NoTimeout(t *testing.T) {
 
 // tests the ok case, in which the handler finishes execution within the given timeout
 func TestTimeoutWrapper_OK(t *testing.T) {
-
 	e := &nsq.Message{
 		Body: []byte("{}"),
 	}
@@ -123,7 +119,6 @@ func TestTimeoutWrapper_OK(t *testing.T) {
 
 // tests the ok case, in which the message age is in the valid range
 func TestTimeoutWrapper_TTL_OK(t *testing.T) {
-
 	e := &nsq.Message{
 		Timestamp: time.Now().UnixNano(),
 		Body:      []byte("{}"),
@@ -150,7 +145,6 @@ func TestTimeoutWrapper_TTL_OK(t *testing.T) {
 
 // tests the ok case, in which the handler finishes execution within the given timeout
 func TestTimeoutWrapper_TTL_DropMessage(t *testing.T) {
-
 	e := &nsq.Message{
 		Timestamp: time.Now().UnixNano(),
 		Body:      []byte("{}"),
@@ -182,7 +176,6 @@ type Msg struct {
 }
 
 func TestNewPublisher(t *testing.T) {
-
 	err := publisher.CreateTopic("topic42")
 
 	var netErr net.Error
@@ -225,7 +218,7 @@ func TestNewPublisher(t *testing.T) {
 }
 
 func TestNewConsumer(t *testing.T) {
-	c, err := NewConsumer(zapup.MustRootLogger(), nil)
+	c, err := NewConsumer(zaptest.NewLogger(t), nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -240,7 +233,7 @@ func TestNewConsumer(t *testing.T) {
 }
 
 func TestNewConsumerLogLevel(t *testing.T) {
-	c, err := NewConsumer(zapup.MustRootLogger(), nil)
+	c, err := NewConsumer(zaptest.NewLogger(t), nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -256,7 +249,7 @@ func TestNewConsumerLogLevel(t *testing.T) {
 }
 
 func TestNewConsumerWithTimeout(t *testing.T) {
-	c, err := NewConsumer(zapup.MustRootLogger(), nil)
+	c, err := NewConsumer(zaptest.NewLogger(t), nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -277,7 +270,7 @@ func TestNewConsumerWithTimeout(t *testing.T) {
 }
 
 func TestNewConsumer_MultipleConsumeError(t *testing.T) {
-	c, err := NewConsumer(zapup.MustRootLogger(), nil)
+	c, err := NewConsumer(zaptest.NewLogger(t), nil)
 	if err != nil {
 		t.Error(err)
 	}
