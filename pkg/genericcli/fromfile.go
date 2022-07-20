@@ -29,6 +29,7 @@ type (
 
 func (ms MultiApplyResults[R]) ToList() []R {
 	var result []R
+
 	for _, m := range ms {
 		if m.Error == nil {
 			result = append(result, m.Result)
@@ -40,10 +41,15 @@ func (ms MultiApplyResults[R]) ToList() []R {
 
 func (ms MultiApplyResults[R]) Error() error {
 	var errors []string
+
 	for _, m := range ms {
 		if m.Error != nil {
 			errors = append(errors, m.Error.Error())
 		}
+	}
+
+	if len(errors) == 0 {
+		return nil
 	}
 
 	return fmt.Errorf("errors occurred during apply: %s", strings.Join(errors, ", "))

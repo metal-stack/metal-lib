@@ -51,3 +51,28 @@ func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R]
 func (a *GenericCLI[C, U, R]) Interface() CRUD[C, U, R] {
 	return a.crud
 }
+
+// following only used for mock generation (has to be in non-test file), do not use:
+
+type (
+	testClient interface {
+		Get(id string) (*testResponse, error)
+		List() ([]*testResponse, error)
+		Create(rq *testCreate) (*testResponse, error)
+		Update(rq *testUpdate) (*testResponse, error)
+		Delete(id string) (*testResponse, error)
+	}
+	testCRUD   struct{ client testClient }
+	testCreate struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	testUpdate struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	testResponse struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+)
