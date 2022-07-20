@@ -44,7 +44,7 @@ type (
 	// TablePrinterConfig contains the configuration for the table printer
 	TablePrinterConfig struct {
 		// ToHeaderAndRows is called during print to obtain the headers and rows for the given data.
-		ToHeaderAndRows func(data interface{}, wide bool) ([]string, [][]string, error)
+		ToHeaderAndRows func(data any, wide bool) ([]string, [][]string, error)
 		// Wide is passed to the headers and rows function and allows to provide extendend columns.
 		Wide bool
 		// Markdown will print the table in Markdown format
@@ -111,7 +111,7 @@ func (p *TemplatePrinter) Print(data any) error {
 	}
 
 	if isSlice(data) {
-		var d []interface{}
+		var d []any
 		err = json.Unmarshal(raw, &d)
 		if err != nil {
 			return err
@@ -127,7 +127,7 @@ func (p *TemplatePrinter) Print(data any) error {
 		return nil
 	}
 
-	var d interface{}
+	var d any
 	err = json.Unmarshal(raw, &d)
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (p *TemplatePrinter) Print(data any) error {
 	return nil
 }
 
-func (p *TemplatePrinter) print(data interface{}) error {
+func (p *TemplatePrinter) print(data any) error {
 	var buf bytes.Buffer
 
 	err := p.t.Execute(&buf, data)

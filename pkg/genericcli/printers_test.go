@@ -21,7 +21,7 @@ func TestTemplatePrinter_Print(t *testing.T) {
 	tests := []struct {
 		name    string
 		t       string
-		data    interface{}
+		data    any
 		want    string
 		wantErr error
 	}{
