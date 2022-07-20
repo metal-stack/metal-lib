@@ -19,8 +19,8 @@ func PointerOrDefault[T any](t T, defaultValue T) *T {
 	return Pointer(t)
 }
 
-// Deref returns the value from the passed pointer or zero value for a nil pointer.
-func Deref[T any](t *T) T {
+// SafeDeref returns the value from the passed pointer or zero value for a nil pointer.
+func SafeDeref[T any](t *T) T {
 	if t == nil {
 		var zero T
 
@@ -30,8 +30,8 @@ func Deref[T any](t *T) T {
 	return *t
 }
 
-// DerefOrDefault returns the value from the passed pointer or the default value for a nil pointer or zero value.
-func DerefOrDefault[T any](t *T, defaultValue T) T {
+// SafeDerefOrDefault returns the value from the passed pointer or the default value for a nil pointer or zero value.
+func SafeDerefOrDefault[T any](t *T, defaultValue T) T {
 	if t == nil {
 		return defaultValue
 	}

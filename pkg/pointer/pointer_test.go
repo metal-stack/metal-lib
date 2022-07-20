@@ -57,46 +57,46 @@ func TestPointerOrDefault(t *testing.T) {
 	}
 }
 
-func TestDeref(t *testing.T) {
+func TestSafeDeref(t *testing.T) {
 	// test for strings
 	testString := "test"
-	gotString := Deref(&testString)
+	gotString := SafeDeref(&testString)
 	if diff := cmp.Diff(gotString, testString); diff != "" {
-		t.Errorf("Deref() = %s", diff)
+		t.Errorf("SafeDeref() = %s", diff)
 	}
 
 	// test for bool
 	testBool := true
-	gotBool := Deref(&testBool)
+	gotBool := SafeDeref(&testBool)
 	if diff := cmp.Diff(gotBool, testBool); diff != "" {
-		t.Errorf("Deref() = %s", diff)
+		t.Errorf("SafeDeref() = %s", diff)
 	}
 
 	// test for object
 	type testStructDef struct{}
 	testStruct := testStructDef{}
-	getStruct := Deref(&testStruct)
+	getStruct := SafeDeref(&testStruct)
 	if diff := cmp.Diff(getStruct, testStruct); diff != "" {
-		t.Errorf("Deref() = %s", diff)
+		t.Errorf("SafeDeref() = %s", diff)
 	}
 }
 
-func TestDerefOrDefault(t *testing.T) {
+func TestSafeDerefOrDefault(t *testing.T) {
 	// test for strings
 	testString := "test"
 	var testStringZero string
 	testStringDefault := "default"
-	gotString := DerefOrDefault(&testString, testStringDefault)
+	gotString := SafeDerefOrDefault(&testString, testStringDefault)
 	if diff := cmp.Diff(gotString, testString); diff != "" {
-		t.Errorf("DerefOrDefault() = %s", diff)
+		t.Errorf("SafeDerefOrDefault() = %s", diff)
 	}
-	gotString = DerefOrDefault(nil, testStringDefault)
+	gotString = SafeDerefOrDefault(nil, testStringDefault)
 	if diff := cmp.Diff(gotString, testStringDefault); diff != "" {
-		t.Errorf("DerefOrDefault() = %s", diff)
+		t.Errorf("SafeDerefOrDefault() = %s", diff)
 	}
-	gotString = DerefOrDefault(&testStringZero, testStringDefault)
+	gotString = SafeDerefOrDefault(&testStringZero, testStringDefault)
 	if diff := cmp.Diff(gotString, testStringDefault); diff != "" {
-		t.Errorf("DerefOrDefault() = %s", diff)
+		t.Errorf("SafeDerefOrDefault() = %s", diff)
 	}
 
 	// test for object
@@ -104,16 +104,16 @@ func TestDerefOrDefault(t *testing.T) {
 	testStruct := testStructDef{V: "test"}
 	var testStructZero testStructDef
 	testStructDefault := testStructDef{V: "default"}
-	gotStruct := DerefOrDefault(&testStruct, testStructDefault)
+	gotStruct := SafeDerefOrDefault(&testStruct, testStructDefault)
 	if diff := cmp.Diff(gotStruct, testStruct); diff != "" {
-		t.Errorf("DerefOrDefault() = %s", diff)
+		t.Errorf("SafeDerefOrDefault() = %s", diff)
 	}
-	gotStruct = DerefOrDefault(&testStructDef{}, testStructDefault)
+	gotStruct = SafeDerefOrDefault(&testStructDef{}, testStructDefault)
 	if diff := cmp.Diff(gotStruct, testStructDefault); diff != "" {
-		t.Errorf("DerefOrDefault() = %s", diff)
+		t.Errorf("SafeDerefOrDefault() = %s", diff)
 	}
-	gotStruct = DerefOrDefault(&testStructZero, testStructDefault)
+	gotStruct = SafeDerefOrDefault(&testStructZero, testStructDefault)
 	if diff := cmp.Diff(gotStruct, testStructDefault); diff != "" {
-		t.Errorf("DerefOrDefault() = %s", diff)
+		t.Errorf("SafeDerefOrDefault() = %s", diff)
 	}
 }
