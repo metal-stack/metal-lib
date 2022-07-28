@@ -11,6 +11,8 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/olekukonko/tablewriter"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -26,6 +28,16 @@ type (
 
 	// YAMLPrinter prints data in YAML format
 	YAMLPrinter struct {
+		out io.Writer
+	}
+
+	// ProtoJSONPrinter prints data of type proto.Message in JSON format
+	ProtoJSONPrinter struct {
+		out io.Writer
+	}
+
+	// ProtoYAMLPrinter prints data of type proto.Message in YAML format
+	ProtoYAMLPrinter struct {
 		out io.Writer
 	}
 
@@ -73,6 +85,31 @@ func (p *JSONPrinter) Print(data any) error {
 	return nil
 }
 
+func NewProtoJSONPrinter() *ProtoJSONPrinter {
+	return &ProtoJSONPrinter{
+		out: os.Stdout,
+	}
+}
+
+func (p *ProtoJSONPrinter) Print(data any) error {
+	msg, ok := data.(proto.Message)
+	if !ok {
+		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
+	}
+
+	m := &protojson.MarshalOptions{
+		Indent: "    ",
+	}
+	content, err := m.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(p.out, "%s\n", string(content))
+
+	return nil
+}
+
 func NewYAMLPrinter() *YAMLPrinter {
 	return &YAMLPrinter{
 		out: os.Stdout,
@@ -81,6 +118,39 @@ func NewYAMLPrinter() *YAMLPrinter {
 
 func (p *YAMLPrinter) Print(data any) error {
 	content, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(p.out, "%s", string(content))
+
+	return nil
+}
+
+func NewProtoYAMLPrinter() *ProtoYAMLPrinter {
+	return &ProtoYAMLPrinter{
+		out: os.Stdout,
+	}
+}
+
+func (p *ProtoYAMLPrinter) Print(data any) error {
+	msg, ok := data.(proto.Message)
+	if !ok {
+		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
+	}
+
+	intermediate, err := protojson.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	var r interface{}
+	err = json.Unmarshal(intermediate, &r)
+	if err != nil {
+		return err
+	}
+
+	content, err := yaml.Marshal(r)
 	if err != nil {
 		return err
 	}
