@@ -94,7 +94,7 @@ func NewProtoJSONPrinter() *ProtoJSONPrinter {
 func (p *ProtoJSONPrinter) Print(data any) error {
 	msg, ok := data.(proto.Message)
 	if !ok {
-		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
+		return NewJSONPrinter().Print(data)
 	}
 
 	m := &protojson.MarshalOptions{
@@ -136,7 +136,7 @@ func NewProtoYAMLPrinter() *ProtoYAMLPrinter {
 func (p *ProtoYAMLPrinter) Print(data any) error {
 	msg, ok := data.(proto.Message)
 	if !ok {
-		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
+		return NewYAMLPrinter().Print(data)
 	}
 
 	intermediate, err := protojson.Marshal(msg)
