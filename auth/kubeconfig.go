@@ -324,8 +324,7 @@ type AuthContext struct {
 }
 
 // finds the listKey from the given map, gets the list of maps, finds the map with matchKey == matchValue, returns map, index, error
-func findMapListMap(cfg map[interface{}]interface{}, listKey string, matchKey string, matchValue string) (map[string]interface{}, int, error) {
-
+func findMapListMap(cfg map[interface{}]interface{}, listKey string, matchKey string, matchValue string) (map[string]interface{}, int, error) { //nolint:unparam
 	ctxSlice, err := dyno.GetSlice(cfg, listKey)
 	if err != nil {
 		return nil, 0, err
