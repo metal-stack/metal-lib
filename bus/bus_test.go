@@ -15,7 +15,7 @@ var (
 	consumer    *Consumer
 )
 
-func startupNSQD() error {
+func startupNSQD() {
 	_, disable := os.LookupEnv("NO_NSQD_START")
 	if !disable {
 		opts := nsqd.NewOptions()
@@ -49,12 +49,10 @@ func startupNSQD() error {
 	if err != nil {
 		panic(err)
 	}
-
-	return nil
 }
 
 func TestMain(m *testing.M) {
-	_ = startupNSQD()
+	startupNSQD()
 	code := m.Run()
 	os.Exit(code)
 }
