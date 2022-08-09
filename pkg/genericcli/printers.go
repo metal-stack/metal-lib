@@ -250,7 +250,7 @@ func NewTablePrinter(config *TablePrinterConfig) (*TablePrinter, error) {
 		table.SetColumnSeparator("")
 		table.SetRowSeparator("")
 		table.SetRowLine(false)
-		table.SetTablePadding("\t") // pad with tabs
+		table.SetTablePadding("  ")
 		table.SetNoWhiteSpace(true) // no whitespace in front of every line
 	}
 
