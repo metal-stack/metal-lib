@@ -50,10 +50,8 @@ func TestTemplatePrinter_Print(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewTemplatePrinter(tt.t)
-
 			var out bytes.Buffer
-			p.out = &out
+			p := NewTemplatePrinter(tt.t).WithOut(&out)
 
 			err := p.Print(tt.data)
 			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
