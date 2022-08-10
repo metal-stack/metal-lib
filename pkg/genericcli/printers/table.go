@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -26,34 +27,20 @@ type TablePrinterConfig struct {
 	NoHeaders bool
 	// Out defines the output writer for the printer, will default to os.stdout
 	Out io.Writer
+	// CustomPadding defines the table padding, defaults to three whitespaces
+	CustomPadding *string
 }
 
 func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
 	if config.Out == nil {
 		config.Out = os.Stdout
 	}
-
-	table := tablewriter.NewWriter(config.Out)
-
-	if config.Markdown {
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-	} else {
-		table.SetHeaderLine(false)
-		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-		table.SetBorder(false)
-		table.SetCenterSeparator("")
-		table.SetColumnSeparator("")
-		table.SetRowSeparator("")
-		table.SetRowLine(false)
-		table.SetTablePadding("  ")
-		table.SetNoWhiteSpace(true) // no whitespace in front of every line
+	if config.CustomPadding == nil {
+		config.CustomPadding = pointer.Pointer("   ")
 	}
 
 	return &TablePrinter{
-		table: table,
-		c:     config,
+		c: config,
 	}
 }
 
@@ -68,8 +55,8 @@ func (p *TablePrinter) MutateTable(mutateFn func(table *tablewriter.Table)) {
 }
 
 func (p *TablePrinter) Print(data any) error {
-	if p.c.ToHeaderAndRows == nil {
-		return fmt.Errorf("missing to header and rows function in printer configuration")
+	if err := p.initTable(); err != nil {
+		return err
 	}
 
 	header, rows, err := p.c.ToHeaderAndRows(data, p.c.Wide)
@@ -83,6 +70,35 @@ func (p *TablePrinter) Print(data any) error {
 	p.table.AppendBulk(rows)
 
 	p.table.Render()
+
+	return nil
+}
+
+func (p *TablePrinter) initTable() error {
+	if p.c.ToHeaderAndRows == nil {
+		return fmt.Errorf("missing to header and rows function in printer configuration")
+	}
+	if p.c.CustomPadding == nil {
+		return fmt.Errorf("padding must be set")
+	}
+
+	p.table = tablewriter.NewWriter(p.c.Out)
+
+	if p.c.Markdown {
+		p.table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+		p.table.SetCenterSeparator("|")
+	} else {
+		p.table.SetHeaderLine(false)
+		p.table.SetAlignment(tablewriter.ALIGN_LEFT)
+		p.table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+		p.table.SetBorder(false)
+		p.table.SetCenterSeparator("")
+		p.table.SetColumnSeparator("")
+		p.table.SetRowSeparator("")
+		p.table.SetRowLine(false)
+		p.table.SetTablePadding(*p.c.CustomPadding)
+		p.table.SetNoWhiteSpace(true) // no whitespace in front of every line
+	}
 
 	return nil
 }
