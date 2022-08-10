@@ -1,6 +1,10 @@
 package genericcli
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
+)
 
 func GetExactlyOneArg(args []string) (string, error) {
 	switch count := len(args); count {
@@ -22,7 +26,7 @@ func (a *GenericCLI[C, U, R]) List() ([]R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) ListAndPrint(p Printer) error {
+func (a *GenericCLI[C, U, R]) ListAndPrint(p printers.Printer) error {
 	resp, err := a.List()
 	if err != nil {
 		return err
@@ -47,7 +51,7 @@ func (a *GenericCLI[C, U, R]) Describe(args []string) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) DescribeAndPrint(args []string, p Printer) error {
+func (a *GenericCLI[C, U, R]) DescribeAndPrint(args []string, p printers.Printer) error {
 	resp, err := a.Describe(args)
 	if err != nil {
 		return err
@@ -72,7 +76,7 @@ func (a *GenericCLI[C, U, R]) Delete(args []string) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) DeleteAndPrint(args []string, p Printer) error {
+func (a *GenericCLI[C, U, R]) DeleteAndPrint(args []string, p printers.Printer) error {
 	resp, err := a.Delete(args)
 	if err != nil {
 		return err
@@ -92,7 +96,7 @@ func (a *GenericCLI[C, U, R]) Create(rq C) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) CreateAndPrint(rq C, p Printer) error {
+func (a *GenericCLI[C, U, R]) CreateAndPrint(rq C, p printers.Printer) error {
 	resp, err := a.Create(rq)
 	if err != nil {
 		return err
@@ -112,7 +116,7 @@ func (a *GenericCLI[C, U, R]) Update(rq U) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) UpdateAndPrint(rq U, p Printer) error {
+func (a *GenericCLI[C, U, R]) UpdateAndPrint(rq U, p printers.Printer) error {
 	resp, err := a.Update(rq)
 	if err != nil {
 		return err

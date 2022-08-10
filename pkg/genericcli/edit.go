@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -71,7 +72,7 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 	return a.UpdateFromFile(tmpfile.Name())
 }
 
-func (a *GenericCLI[C, U, R]) EditAndPrint(args []string, p Printer) error {
+func (a *GenericCLI[C, U, R]) EditAndPrint(args []string, p printers.Printer) error {
 	result, err := a.Edit(args)
 	if err != nil {
 		return err
