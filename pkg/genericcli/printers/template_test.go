@@ -1,4 +1,4 @@
-package genericcli
+package printers
 
 import (
 	"bytes"
@@ -50,15 +50,10 @@ func TestTemplatePrinter_Print(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewTemplatePrinter(tt.t)
-			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
-				t.Errorf("error diff (+got -want):\n %s", diff)
-			}
-
 			var out bytes.Buffer
-			p.out = &out
+			p := NewTemplatePrinter(tt.t).WithOut(&out)
 
-			err = p.Print(tt.data)
+			err := p.Print(tt.data)
 			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
 				t.Errorf("error diff (+got -want):\n %s", diff)
 			}

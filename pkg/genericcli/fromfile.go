@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 )
 
 var alreadyExistsError = errors.New("entity already exists")
@@ -75,7 +77,7 @@ func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 	return result, nil
 }
 
-func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p Printer) error {
+func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Printer) error {
 	result, err := a.CreateFromFile(from)
 	if err != nil {
 		return err
@@ -100,7 +102,7 @@ func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	return result, nil
 }
 
-func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p Printer) error {
+func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Printer) error {
 	result, err := a.UpdateFromFile(from)
 	if err != nil {
 		return err
@@ -150,7 +152,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (MultiApplyResults[R], 
 	return result, result.Error()
 }
 
-func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p Printer) error {
+func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Printer) error {
 	var printErr error
 
 	result, err := a.ApplyFromFile(from)
