@@ -227,7 +227,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 type CmdsConfig[C any, U any, R any] struct {
 	GenericCLI *GenericCLI[C, U, R]
 
-	// OnlyCmds defines which default commands to include from the generic cli. if empty, all default commands will be added,
+	// OnlyCmds defines which default commands to include from the generic cli. if empty, all default commands will be added.
 	OnlyCmds map[DefaultCmd]bool
 
 	// BinaryName is the name of the cli binary.
