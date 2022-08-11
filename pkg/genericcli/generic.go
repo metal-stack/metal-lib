@@ -47,6 +47,13 @@ func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R]
 	}
 }
 
+func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
+	a.fs = fs
+	a.createParser = MultiDocumentYAML[C]{fs: fs}
+	a.updateParser = MultiDocumentYAML[U]{fs: fs}
+	return a
+}
+
 // Interface returns the interface that was used to create this generic cli.
 func (a *GenericCLI[C, U, R]) Interface() CRUD[C, U, R] {
 	return a.crud
