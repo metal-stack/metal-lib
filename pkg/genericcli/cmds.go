@@ -66,7 +66,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"ls"},
 			Short:   fmt.Sprintf("list all %s", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.ListAndPrint(c.ListPrinter)
+				return c.GenericCLI.ListAndPrint(c.ListPrinter())
 			},
 		}
 
@@ -88,7 +88,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"get"},
 			Short:   fmt.Sprintf("describes the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.DescribeAndPrint(args, c.DescribePrinter)
+				return c.GenericCLI.DescribeAndPrint(args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -111,10 +111,10 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
-					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter)
+					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter())
 				}
 
-				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), c.DescribePrinter)
+				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), c.DescribePrinter())
 			},
 		}
 
@@ -140,10 +140,10 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
-					return c.GenericCLI.UpdateAndPrint(rq, c.DescribePrinter)
+					return c.GenericCLI.UpdateAndPrint(rq, c.DescribePrinter())
 				}
 
-				return c.GenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), c.DescribePrinter)
+				return c.GenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -165,7 +165,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Short:   fmt.Sprintf("deletes the %s", c.Singular),
 			Aliases: []string{"destroy", "rm", "remove"},
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.DeleteAndPrint(args, c.DescribePrinter)
+				return c.GenericCLI.DeleteAndPrint(args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -182,7 +182,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Use:   "apply",
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), c.ListPrinter)
+				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
 			},
 		}
 
@@ -201,7 +201,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Use:   "edit <id>",
 			Short: fmt.Sprintf("edit the %s through an editor and update", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.EditAndPrint(args, c.DescribePrinter)
+				return c.GenericCLI.EditAndPrint(args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -239,10 +239,10 @@ type CmdsConfig[C any, U any, R any] struct {
 	// Aliases provides additional aliases for the root cmd.
 	Aliases []string
 
-	// DescribePrinter is the printer that is used for describing the entity.
-	DescribePrinter printers.Printer
-	// ListPrinter is the printer that is used for listing multiple entities.
-	ListPrinter printers.Printer
+	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get intialized later in the game.
+	DescribePrinter func() printers.Printer
+	// ListPrinter is the printer that is used for listing multiple entities. It's a function because printers potentially get intialized later in the game.
+	ListPrinter func() printers.Printer
 
 	// CreateRequestFromCLI if not nil, this function uses the returned create request to create the entity.
 	CreateRequestFromCLI func() (C, error)
