@@ -118,9 +118,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			},
 		}
 
-		if c.CreateRequestFromCLI != nil {
-			cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("create"))
-		}
+		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("create"))
 
 		if c.CreateCmdMutateFn != nil {
 			c.CreateCmdMutateFn(cmd)
@@ -148,9 +146,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			ValidArgsFunction: c.ValidArgsFn,
 		}
 
-		if c.UpdateRequestFromCLI != nil {
-			cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("update"))
-		}
+		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("update"))
 
 		if c.UpdateCmdMutateFn != nil {
 			c.UpdateCmdMutateFn(cmd)
