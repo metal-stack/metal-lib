@@ -49,10 +49,10 @@ func TestApplyFromFile(t *testing.T) {
 			},
 			fileMockFn: func(fs afero.Fs) {
 				require.NoError(t, afero.WriteFile(fs, testFile, []byte(`---
-id: 1
+id: "1"
 name: one
 ---
-id: 2
+id: "2"
 name: two
 `), 0755))
 			},
@@ -77,15 +77,15 @@ name: two
 			name: "apply two entities, update one",
 			mockFn: func(mock *mockTestClient) {
 				mock.On("Create", &testCreate{ID: "1", Name: "one"}).Return(&testResponse{ID: "1", Name: "one"}, nil)
-				mock.On("Create", &testCreate{ID: "2", Name: "two"}).Return(nil, AlreadyExistsError())
-				mock.On("Update", &testUpdate{ID: "2", Name: "two"}).Return(&testResponse{ID: "2", Name: "two"}, nil)
+				mock.On("Create", &testCreate{ID: "2", Name: "two"}).Return(nil, AlreadyExistsError()).Once()
+				mock.On("Update", &testUpdate{ID: "2", Name: "two"}).Return(&testResponse{ID: "2", Name: "two"}, nil).Once()
 			},
 			fileMockFn: func(fs afero.Fs) {
 				require.NoError(t, afero.WriteFile(fs, testFile, []byte(`---
-id: 1
+id: "1"
 name: one
 ---
-id: 2
+id: "2"
 name: two
 `), 0755))
 			},

@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	yaml "gopkg.in/yaml.v3"
+	yaml "github.com/goccy/go-yaml" // we do not use the standard yaml library from go because it does not support json tags
 )
 
 // YAMLPrinter prints data in YAML format

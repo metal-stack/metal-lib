@@ -5,9 +5,9 @@ import (
 	"os"
 	"os/exec"
 
+	yaml "github.com/goccy/go-yaml" // we do not use the standard yaml library from go because it does not support json tags
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v3"
 )
 
 func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
