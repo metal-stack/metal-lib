@@ -6,9 +6,9 @@ import (
 	"io"
 	"os"
 
-	yaml "github.com/goccy/go-yaml" // we do not use the standard yaml library from go because it does not support json tags
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"gopkg.in/yaml.v3"
 )
 
 // ProtoYAMLPrinter prints data of type proto.Message in YAML format

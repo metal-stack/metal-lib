@@ -1,16 +1,14 @@
 package genericcli
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
-	yaml "github.com/goccy/go-yaml" // we do not use the standard yaml library from go because it does not support json tags
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
-	defaultyaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 // MultiDocumentYAML offers functions on multidocument YAML files
@@ -41,25 +39,13 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 	dec := yaml.NewDecoder(reader)
 
 	for {
-		// go-yaml does not parse into a slice of pointer structs (result into nil)
-		// therefore we parse yaml into a map and then put it into the final object with json
-		var intermediate any
-		err := dec.Decode(&intermediate)
+		var data D
+
+		err := dec.Decode(&data)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return nil, fmt.Errorf("decode error: %w", err)
-		}
-
-		bytes, err := json.Marshal(intermediate)
-		if err != nil {
-			return nil, err
-		}
-
-		var data D
-		err = json.Unmarshal(bytes, &data)
-		if err != nil {
 			return nil, fmt.Errorf("decode error: %w", err)
 		}
 
@@ -106,25 +92,12 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 
 	count := 0
 	for {
-		// go-yaml does not parse into a slice of pointer structs (result into nil)
-		// therefore we parse yaml into a map and then put it into the final object with json
-		var intermediate any
-		err := dec.Decode(&intermediate)
+		var data D
+		err := dec.Decode(&data)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return zero, fmt.Errorf("index not found in document: %d", index)
 			}
-			return zero, fmt.Errorf("decode error: %w", err)
-		}
-
-		bytes, err := json.Marshal(intermediate)
-		if err != nil {
-			return zero, err
-		}
-
-		var data D
-		err = json.Unmarshal(bytes, &data)
-		if err != nil {
 			return zero, fmt.Errorf("decode error: %w", err)
 		}
 
@@ -139,13 +112,13 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 // YamlIsEqual returns true if a yaml equal in content.
 func YamlIsEqual(x []byte, y []byte) (bool, error) {
 	var xParsed any
-	err := defaultyaml.Unmarshal(x, &xParsed)
+	err := yaml.Unmarshal(x, &xParsed)
 	if err != nil {
 		return false, err
 	}
 
 	var yParsed any
-	err = defaultyaml.Unmarshal(y, &yParsed)
+	err = yaml.Unmarshal(y, &yParsed)
 	if err != nil {
 		return false, err
 	}
