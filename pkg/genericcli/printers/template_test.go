@@ -3,6 +3,7 @@ package printers
 import (
 	"bytes"
 	"testing"
+	"text/template"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
@@ -63,4 +64,32 @@ func TestTemplatePrinter_Print(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTemplatePrinter_WithTemplate(t *testing.T) {
+	type machine struct {
+		A string `json:"a"`
+		B string `json:"b"`
+	}
+
+	wrong := "{{ .a }}"
+	correct, err := template.New("test").Parse("{{ .a }} {{ .b }}")
+	if err != nil {
+		t.Error(err)
+	}
+	var out bytes.Buffer
+	p := NewTemplatePrinter(wrong).
+		WithOut(&out).
+		WithTemplate(correct)
+
+	err = p.Print(machine{A: "a", B: "b"})
+	if err != nil {
+		t.Error(err)
+	}
+	want := "a b\n"
+	got := out.String()
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+
 }

@@ -37,7 +37,7 @@ func (p *ProtoYAMLPrinter) Print(data any) error {
 	msg, ok := data.(proto.Message)
 	if !ok {
 		if p.fallback {
-			return NewYAMLPrinter().Print(data)
+			return NewYAMLPrinter().WithOut(p.out).Print(data)
 		}
 		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
 	}

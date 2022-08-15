@@ -15,7 +15,7 @@ func TestBasicTablePrinter(t *testing.T) {
 		Out: buffer,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			return []string{"a", "b"}, [][]string{
 				{"1", "2"},
@@ -27,13 +27,13 @@ func TestBasicTablePrinter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `A   B 
+	got := buffer.String()
+	want := `A   B 
 1   2   
 3   4   
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -44,7 +44,7 @@ func TestBasicMarkdownTablePrinter(t *testing.T) {
 		Markdown: true,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			return []string{"a", "b"}, [][]string{
 				{"1", "2"},
@@ -56,14 +56,14 @@ func TestBasicMarkdownTablePrinter(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `| A | B |
+	got := buffer.String()
+	want := `| A | B |
 |---|---|
 | 1 | 2 |
 | 3 | 4 |
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -75,7 +75,7 @@ func TestBasicMarkdownTablePrinterWithoutHeaders(t *testing.T) {
 		NoHeaders: true,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			return []string{"a", "b"}, [][]string{
 				{"1", "2"},
@@ -87,12 +87,12 @@ func TestBasicMarkdownTablePrinterWithoutHeaders(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `| 1 | 2 |
+	got := buffer.String()
+	want := `| 1 | 2 |
 | 3 | 4 |
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -103,7 +103,7 @@ func TestBasicMarkdownTablePrinterWithoutHeadersAndRows(t *testing.T) {
 		Markdown: true,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			return []string{"a", "b"}, [][]string{}, nil
 		},
@@ -112,12 +112,12 @@ func TestBasicMarkdownTablePrinterWithoutHeadersAndRows(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `| A | B |
+	got := buffer.String()
+	want := `| A | B |
 |---|---|
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -127,7 +127,7 @@ func TestMarkdownTablePrinterWithCustomOut(t *testing.T) {
 		Markdown: true,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			return []string{"a", "b"}, [][]string{
 				{"1", "2"},
@@ -140,14 +140,14 @@ func TestMarkdownTablePrinterWithCustomOut(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `| A | B |
+	got := buffer.String()
+	want := `| A | B |
 |---|---|
 | 1 | 2 |
 | 3 | 4 |
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -159,10 +159,10 @@ func TestMarkdownTablePrinterWithWideOutput(t *testing.T) {
 		Wide:     true,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			if !wide {
-				t.Errorf("expected wide output")
+				t.Errorf("want wide output")
 			}
 			return []string{"a", "b"}, [][]string{
 				{"1", "2"},
@@ -174,14 +174,14 @@ func TestMarkdownTablePrinterWithWideOutput(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `| A | B |
+	got := buffer.String()
+	want := `| A | B |
 |---|---|
 | 1 | 2 |
 | 3 | 4 |
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -194,10 +194,10 @@ func TestTablePrinterWithPadding(t *testing.T) {
 		CustomPadding: &padding,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 			if data != "test" {
-				t.Errorf("expected data test, got %s", data)
+				t.Errorf("want data test, got %s", data)
 			}
 			if !wide {
-				t.Errorf("expected wide output")
+				t.Errorf("want wide output")
 			}
 			return []string{"a", "b"}, [][]string{
 				{"1", "2"},
@@ -209,13 +209,13 @@ func TestTablePrinterWithPadding(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `A,B 
+	got := buffer.String()
+	want := `A,B 
 1,2,
 3,4,
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
@@ -226,18 +226,18 @@ func TestTableFailsWithMissingTOHeaderAndRows(t *testing.T) {
 	})
 	err := printer.Print("test")
 	if err == nil {
-		t.Error("expected error, got nil")
+		t.Error("want error, got nil")
 	}
-	actual := buffer.String()
-	expected := ``
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	got := buffer.String()
+	want := ``
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
 
 func TestTableFailsWithFailingContents(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	expectedError := errors.New("expected error")
+	expectedError := errors.New("want error")
 	printer := printers.NewTablePrinter(&printers.TablePrinterConfig{
 		Out: buffer,
 		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
@@ -246,11 +246,11 @@ func TestTableFailsWithFailingContents(t *testing.T) {
 	})
 	err := printer.Print("test")
 	if !errors.Is(err, expectedError) {
-		t.Errorf("expected error %q, got %q", expectedError, err)
+		t.Errorf("want error %q, got %q", expectedError, err)
 	}
-	actual := buffer.String()
-	expected := ``
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	got := buffer.String()
+	want := ``
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }

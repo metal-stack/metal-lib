@@ -28,18 +28,18 @@ func TestYamlSuccess(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `str: test
+	got := buffer.String()
+	want := `str: test
 num: 42
 real: 3.14
 bool: true
 keys:
-    - a
-    - b
+- a
+- b
 object:
-    a: b
+  a: b
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }

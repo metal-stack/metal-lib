@@ -28,8 +28,8 @@ func TestJsonSuccess(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	actual := buffer.String()
-	expected := `{
+	got := buffer.String()
+	want := `{
     "Str": "test",
     "Num": 42,
     "Real": 3.14,
@@ -43,7 +43,7 @@ func TestJsonSuccess(t *testing.T) {
     }
 }
 `
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Errorf("unexpected diff: %s", diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }
