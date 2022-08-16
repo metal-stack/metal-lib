@@ -34,10 +34,10 @@ num: 42
 real: 3.14
 bool: true
 keys:
-- a
-- b
+    - a
+    - b
 object:
-  a: b
+    a: b
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
