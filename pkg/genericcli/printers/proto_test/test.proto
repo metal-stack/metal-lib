@@ -1,0 +1,13 @@
+// This file is only used for testing purposes.
+// Due to the low update frequency, the generation is not automated.
+// Simply run the following command from the root of the project:
+// protoc -I=. --go_out=./ ./pkg/genericcli/printers/proto_test/test.proto
+
+syntax = "proto3";
+package printers_test;
+
+option go_package = "pkg/genericcli/printers/proto_test";
+
+message Foo {
+  string text = 1;
+}

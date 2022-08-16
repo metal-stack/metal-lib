@@ -35,7 +35,7 @@ func (p *ProtoJSONPrinter) Print(data any) error {
 	msg, ok := data.(proto.Message)
 	if !ok {
 		if p.fallback {
-			return NewJSONPrinter().Print(data)
+			return NewJSONPrinter().WithOut(p.out).Print(data)
 		}
 		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
 	}
