@@ -57,15 +57,15 @@ func TestYamlProtoWithJsonAndFallbackSucceeds(t *testing.T) {
 		t.Error(err)
 	}
 	got := buffer.String()
-	want := `str: test
-num: 42
-real: 3.14
-bool: true
+	want := `bool: true
 keys:
-    - a
-    - b
+- a
+- b
+num: 42
 object:
-    a: b
+  a: b
+real: 3.14
+str: test
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)

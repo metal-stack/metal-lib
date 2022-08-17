@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 // YAMLPrinter prints data in YAML format
