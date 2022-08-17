@@ -12,8 +12,8 @@ import (
 )
 
 type testYAML struct {
-	ID     string
-	Labels []string
+	ID     string   `json:"id"`
+	Labels []string `json:"labels"`
 }
 
 var (
@@ -34,7 +34,7 @@ func Test_ReadAll(t *testing.T) {
 	tests := []struct {
 		name    string
 		mockFn  func(fs afero.Fs)
-		want    []*testYAML
+		want    []testYAML
 		wantErr error
 	}{
 		{
@@ -44,6 +44,56 @@ func Test_ReadAll(t *testing.T) {
 			},
 			want: nil,
 		},
+		{
+			name: "parsing multi-document yaml",
+			mockFn: func(fs afero.Fs) {
+				require.NoError(t, afero.WriteFile(fs, testFile, []byte(testYAMLRaw), 0755))
+			},
+			want: []testYAML{
+				{
+					ID:     "a",
+					Labels: []string{"a"},
+				},
+				{
+					ID:     "b",
+					Labels: []string{"b"},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			m := MultiDocumentYAML[testYAML]{
+				fs: afero.NewMemMapFs(),
+			}
+
+			if tt.mockFn != nil {
+				tt.mockFn(m.fs)
+			}
+
+			got, err := m.ReadAll(testFile)
+
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("diff (+got -want):\n %s", diff)
+			}
+		})
+	}
+}
+
+func Test_ReadAllWithPtrSlice(t *testing.T) {
+	const testFile = "/test.yaml"
+
+	tests := []struct {
+		name    string
+		mockFn  func(fs afero.Fs)
+		want    []*testYAML
+		wantErr error
+	}{
 		{
 			name: "parsing multi-document yaml",
 			mockFn: func(fs afero.Fs) {

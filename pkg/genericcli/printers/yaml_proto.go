@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // ProtoYAMLPrinter prints data of type proto.Message in YAML format
@@ -37,7 +37,7 @@ func (p *ProtoYAMLPrinter) Print(data any) error {
 	msg, ok := data.(proto.Message)
 	if !ok {
 		if p.fallback {
-			return NewYAMLPrinter().Print(data)
+			return NewYAMLPrinter().WithOut(p.out).Print(data)
 		}
 		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
 	}
@@ -47,7 +47,7 @@ func (p *ProtoYAMLPrinter) Print(data any) error {
 		return err
 	}
 
-	var r interface{}
+	var r any
 	err = json.Unmarshal(intermediate, &r)
 	if err != nil {
 		return err

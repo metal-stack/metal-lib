@@ -2,6 +2,7 @@ package multisort
 
 import (
 	"fmt"
+	"sort"
 
 	"golang.org/x/exp/slices"
 )
@@ -63,6 +64,9 @@ func (s *Sorter[E]) AvailableKeys() []string {
 	for k := range s.fields {
 		res = append(res, k)
 	}
+
+	sort.Strings(res)
+
 	return res
 }
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 // MultiDocumentYAML offers functions on multidocument YAML files
@@ -39,18 +39,17 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 	dec := yaml.NewDecoder(reader)
 
 	for {
-		data := new(D)
+		var data D
 
 		err := dec.Decode(&data)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			return nil, fmt.Errorf("decode error: %w", err)
 		}
 
-		docs = append(docs, *data)
+		docs = append(docs, data)
 	}
 
 	return docs, nil
@@ -93,18 +92,17 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 
 	count := 0
 	for {
-		data := new(D)
-
-		err := dec.Decode(data)
-		if errors.Is(err, io.EOF) {
-			return zero, fmt.Errorf("index not found in document: %d", index)
-		}
+		var data D
+		err := dec.Decode(&data)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return zero, fmt.Errorf("index not found in document: %d", index)
+			}
 			return zero, fmt.Errorf("decode error: %w", err)
 		}
 
 		if count == index {
-			return *data, nil
+			return data, nil
 		}
 
 		count++

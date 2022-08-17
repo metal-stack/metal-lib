@@ -7,7 +7,7 @@ import (
 
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/spf13/afero"
-	yaml "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
@@ -31,12 +31,17 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 		_ = a.fs.Remove(tmpfile.Name())
 	}()
 
-	content, err := a.crud.Get(id)
+	doc, err := a.crud.Get(id)
 	if err != nil {
 		return zero, err
 	}
 
-	raw, err := yaml.Marshal(content)
+	updateDoc, err := a.crud.ToUpdate(doc)
+	if err != nil {
+		return zero, err
+	}
+
+	raw, err := yaml.Marshal(updateDoc)
 	if err != nil {
 		return zero, err
 	}

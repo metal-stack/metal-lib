@@ -8,10 +8,9 @@ import "github.com/spf13/afero"
 // U is the update request for an entity.
 // R is the response object of an entity.
 type GenericCLI[C any, U any, R any] struct {
-	fs           afero.Fs
-	crud         CRUD[C, U, R]
-	createParser MultiDocumentYAML[C]
-	updateParser MultiDocumentYAML[U]
+	fs     afero.Fs
+	crud   CRUD[C, U, R]
+	parser MultiDocumentYAML[R]
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -30,6 +29,12 @@ type CRUD[C any, U any, R any] interface {
 	Update(rq U) (R, error)
 	// Delete tries to delete the entity with the given id and returns the deleted entity.
 	Delete(id string) (R, error)
+	// ToCreate transforms an entity's response object to its create request.
+	// This is required for capabilities like creation from file of response objects.
+	ToCreate(r R) (C, error)
+	// ToUpdate transforms an entity's response object to its update request.
+	// This is required for capabilities like update from file of response objects or edit.
+	ToUpdate(r R) (U, error)
 }
 
 // NewGenericCLI returns a new generic cli.
@@ -40,17 +45,15 @@ type CRUD[C any, U any, R any] interface {
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
 	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		crud:         crud,
-		fs:           fs,
-		createParser: MultiDocumentYAML[C]{fs: fs},
-		updateParser: MultiDocumentYAML[U]{fs: fs},
+		crud:   crud,
+		fs:     fs,
+		parser: MultiDocumentYAML[R]{fs: fs},
 	}
 }
 
 func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
 	a.fs = fs
-	a.createParser = MultiDocumentYAML[C]{fs: fs}
-	a.updateParser = MultiDocumentYAML[U]{fs: fs}
+	a.parser = MultiDocumentYAML[R]{fs: fs}
 	return a
 }
 
@@ -68,6 +71,8 @@ type (
 		Create(rq *testCreate) (*testResponse, error)
 		Update(rq *testUpdate) (*testResponse, error)
 		Delete(id string) (*testResponse, error)
+		ToCreate(r *testResponse) (*testCreate, error)
+		ToUpdate(r *testResponse) (*testUpdate, error)
 	}
 	testCRUD   struct{ client testClient }
 	testCreate struct {

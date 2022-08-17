@@ -44,9 +44,9 @@ func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
 	}
 }
 
-func (p *TablePrinter) WithOut(out io.Writer) *tablewriter.Table {
+func (p *TablePrinter) WithOut(out io.Writer) *TablePrinter {
 	p.c.Out = out
-	return p.table
+	return p
 }
 
 // MutateTable can be used to alter the table element. Try not to do it all the time but rather propose an API change in this project.

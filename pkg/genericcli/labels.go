@@ -17,3 +17,12 @@ func LabelsToMap(labels []string) (map[string]string, error) {
 	}
 	return labelMap, nil
 }
+
+// MapToLabels returns a list of labels from a label map.
+func MapToLabels(m map[string]string) []string {
+	var res []string
+	for k, v := range m {
+		res = append(res, fmt.Sprintf("%s=%s", k, v))
+	}
+	return res
+}
