@@ -17,6 +17,15 @@ func PointerOrDefault[T any](t T, defaultValue T) *T {
 	return Pointer(t)
 }
 
+// PointerOrNil returns the pointer of the given value or nil if given value is equal to zero value.
+func PointerOrNil[T any](t T) *T {
+	if IsZero(t) {
+		return nil
+	}
+
+	return Pointer(t)
+}
+
 // SafeDeref returns the value from the passed pointer or zero value for a nil pointer.
 func SafeDeref[T any](t *T) T {
 	if t == nil {

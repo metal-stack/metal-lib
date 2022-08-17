@@ -64,12 +64,17 @@ func AlreadyExistsError() error {
 func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 	var zero R
 
-	doc, err := a.createParser.ReadOne(from)
+	doc, err := a.parser.ReadOne(from)
 	if err != nil {
 		return zero, err
 	}
 
-	result, err := a.crud.Create(doc)
+	rq, err := a.crud.ToCreate(doc)
+	if err != nil {
+		return zero, err
+	}
+
+	result, err := a.crud.Create(rq)
 	if err != nil {
 		return zero, fmt.Errorf("error creating entity: %w", err)
 	}
@@ -89,12 +94,17 @@ func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Pri
 func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	var zero R
 
-	doc, err := a.updateParser.ReadOne(from)
+	doc, err := a.parser.ReadOne(from)
 	if err != nil {
 		return zero, err
 	}
 
-	result, err := a.crud.Update(doc)
+	updateDoc, err := a.crud.ToUpdate(doc)
+	if err != nil {
+		return zero, err
+	}
+
+	result, err := a.crud.Update(updateDoc)
 	if err != nil {
 		return zero, fmt.Errorf("error updating entity: %w", err)
 	}
@@ -114,7 +124,7 @@ func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Pri
 // ApplyFromFile creates or updates entities from a given file.
 // In order to work, the create function must return an already exists error as defined in this package.
 func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (MultiApplyResults[R], error) {
-	docs, err := a.createParser.ReadAll(from)
+	docs, err := a.parser.ReadAll(from)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +132,12 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (MultiApplyResults[R], 
 	var result MultiApplyResults[R]
 
 	for index := range docs {
-		createDoc := docs[index]
+		doc := docs[index]
+
+		createDoc, err := a.crud.ToCreate(doc)
+		if err != nil {
+			return nil, err
+		}
 
 		created, err := a.crud.Create(createDoc)
 		if err == nil {
@@ -135,7 +150,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (MultiApplyResults[R], 
 			continue
 		}
 
-		updateDoc, err := a.updateParser.ReadIndex(from, index)
+		updateDoc, err := a.crud.ToUpdate(doc)
 		if err != nil {
 			return nil, err
 		}

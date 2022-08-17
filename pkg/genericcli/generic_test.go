@@ -19,3 +19,17 @@ func (t testCRUD) Update(rq *testUpdate) (*testResponse, error) {
 func (t testCRUD) Delete(id string) (*testResponse, error) {
 	return t.client.Delete(id)
 }
+
+func (t testCRUD) ToCreate(r *testResponse) (*testCreate, error) {
+	return &testCreate{
+		ID:   r.ID,
+		Name: r.Name,
+	}, nil
+}
+
+func (t testCRUD) ToUpdate(r *testResponse) (*testUpdate, error) {
+	return &testUpdate{
+		ID:   r.ID,
+		Name: r.Name,
+	}, nil
+}

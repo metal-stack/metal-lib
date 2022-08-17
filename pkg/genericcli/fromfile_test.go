@@ -114,10 +114,9 @@ name: two
 			fs := afero.NewMemMapFs()
 
 			cli := GenericCLI[*testCreate, *testUpdate, *testResponse]{
-				crud:         testCRUD{client: client},
-				fs:           fs,
-				createParser: MultiDocumentYAML[*testCreate]{fs: fs},
-				updateParser: MultiDocumentYAML[*testUpdate]{fs: fs},
+				crud:   testCRUD{client: client},
+				fs:     fs,
+				parser: MultiDocumentYAML[*testResponse]{fs: fs},
 			}
 
 			if tt.mockFn != nil {

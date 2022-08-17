@@ -101,6 +101,52 @@ func (_m *mockTestClient) List() ([]*testResponse, error) {
 	return r0, r1
 }
 
+// ToCreate provides a mock function with given fields: r
+func (_m *mockTestClient) ToCreate(r *testResponse) (*testCreate, error) {
+	ret := _m.Called(r)
+
+	var r0 *testCreate
+	if rf, ok := ret.Get(0).(func(*testResponse) *testCreate); ok {
+		r0 = rf(r)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*testCreate)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*testResponse) error); ok {
+		r1 = rf(r)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ToUpdate provides a mock function with given fields: r
+func (_m *mockTestClient) ToUpdate(r *testResponse) (*testUpdate, error) {
+	ret := _m.Called(r)
+
+	var r0 *testUpdate
+	if rf, ok := ret.Get(0).(func(*testResponse) *testUpdate); ok {
+		r0 = rf(r)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*testUpdate)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*testResponse) error); ok {
+		r1 = rf(r)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Update provides a mock function with given fields: rq
 func (_m *mockTestClient) Update(rq *testUpdate) (*testResponse, error) {
 	ret := _m.Called(rq)
