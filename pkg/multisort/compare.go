@@ -21,6 +21,7 @@ const (
 
 // Compare compares values according to multisort criteria.
 func Compare[O constraints.Ordered](a O, b O, descending bool) CompareResult {
+
 	if descending {
 		if b < a {
 			return Less
@@ -32,6 +33,27 @@ func Compare[O constraints.Ordered](a O, b O, descending bool) CompareResult {
 	}
 
 	if a != b {
+		return NotEqual
+	}
+
+	return 0
+}
+
+// WithCompareFunc compares input and returns a CompareResult according to multisort criteria.
+func WithCompareFunc(f func() int, descending bool) CompareResult {
+	r := f()
+
+	if descending {
+		if r == 1 {
+			return Less
+		}
+	} else {
+		if r == -1 {
+			return Less
+		}
+	}
+
+	if r != 0 {
 		return NotEqual
 	}
 

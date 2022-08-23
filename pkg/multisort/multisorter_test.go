@@ -2,6 +2,7 @@ package multisort
 
 import (
 	"errors"
+	"net/netip"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ func TestSortByWithStrings(t *testing.T) {
 		Project    string
 		Liveliness string
 		LastEvent  time.Time
+		IP         netip.Addr
 	}
 
 	testData := []machine{
@@ -24,24 +26,28 @@ func TestSortByWithStrings(t *testing.T) {
 			ID:         "004",
 			Project:    "B",
 			Liveliness: "Alive",
+			IP:         netip.MustParseAddr("1.2.3.4"),
 			LastEvent:  now.Add(-3 * time.Minute),
 		},
 		{
 			ID:         "001",
 			Project:    "B",
 			Liveliness: "Unknown",
+			IP:         netip.MustParseAddr("1.2.3.1"),
 			LastEvent:  now.Add(-2 * time.Minute),
 		},
 		{
 			ID:         "002",
 			Project:    "A",
 			Liveliness: "Alive",
+			IP:         netip.MustParseAddr("1.2.3.2"),
 			LastEvent:  now.Add(3 * time.Minute),
 		},
 		{
 			ID:         "003",
 			Project:    "A",
 			Liveliness: "Unknown",
+			IP:         netip.MustParseAddr("1.2.3.3"),
 			LastEvent:  now.Add(1 * time.Minute),
 		},
 	}
@@ -58,6 +64,11 @@ func TestSortByWithStrings(t *testing.T) {
 		},
 		"event": func(a, b machine, descending bool) CompareResult {
 			return Compare(a.LastEvent.Unix(), b.LastEvent.Unix(), descending)
+		},
+		"ip": func(a, b machine, descending bool) CompareResult {
+			return WithCompareFunc(func() int {
+				return a.IP.Compare(b.IP)
+			}, descending)
 		},
 	}
 
@@ -79,24 +90,28 @@ func TestSortByWithStrings(t *testing.T) {
 					ID:         "004",
 					Project:    "B",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
 					LastEvent:  now.Add(-3 * time.Minute),
 				},
 				{
 					ID:         "001",
 					Project:    "B",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
 					LastEvent:  now.Add(-2 * time.Minute),
 				},
 				{
 					ID:         "002",
 					Project:    "A",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
 					LastEvent:  now.Add(3 * time.Minute),
 				},
 				{
 					ID:         "003",
 					Project:    "A",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
 					LastEvent:  now.Add(1 * time.Minute),
 				},
 			},
@@ -111,24 +126,28 @@ func TestSortByWithStrings(t *testing.T) {
 					ID:         "004",
 					Project:    "B",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
 					LastEvent:  now.Add(-3 * time.Minute),
 				},
 				{
 					ID:         "001",
 					Project:    "B",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
 					LastEvent:  now.Add(-2 * time.Minute),
 				},
 				{
 					ID:         "002",
 					Project:    "A",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
 					LastEvent:  now.Add(3 * time.Minute),
 				},
 				{
 					ID:         "003",
 					Project:    "A",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
 					LastEvent:  now.Add(1 * time.Minute),
 				},
 			},
@@ -144,24 +163,28 @@ func TestSortByWithStrings(t *testing.T) {
 					ID:         "001",
 					Project:    "B",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
 					LastEvent:  now.Add(-2 * time.Minute),
 				},
 				{
 					ID:         "002",
 					Project:    "A",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
 					LastEvent:  now.Add(3 * time.Minute),
 				},
 				{
 					ID:         "003",
 					Project:    "A",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
 					LastEvent:  now.Add(1 * time.Minute),
 				},
 				{
 					ID:         "004",
 					Project:    "B",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
 					LastEvent:  now.Add(-3 * time.Minute),
 				},
 			},
@@ -176,24 +199,28 @@ func TestSortByWithStrings(t *testing.T) {
 					ID:         "004",
 					Project:    "B",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
 					LastEvent:  now.Add(-3 * time.Minute),
 				},
 				{
 					ID:         "003",
 					Project:    "A",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
 					LastEvent:  now.Add(1 * time.Minute),
 				},
 				{
 					ID:         "002",
 					Project:    "A",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
 					LastEvent:  now.Add(3 * time.Minute),
 				},
 				{
 					ID:         "001",
 					Project:    "B",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
 					LastEvent:  now.Add(-2 * time.Minute),
 				},
 			},
@@ -208,24 +235,28 @@ func TestSortByWithStrings(t *testing.T) {
 					ID:         "002",
 					Project:    "A",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
 					LastEvent:  now.Add(3 * time.Minute),
 				},
 				{
 					ID:         "003",
 					Project:    "A",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
 					LastEvent:  now.Add(1 * time.Minute),
 				},
 				{
 					ID:         "001",
 					Project:    "B",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
 					LastEvent:  now.Add(-2 * time.Minute),
 				},
 				{
 					ID:         "004",
 					Project:    "B",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
 					LastEvent:  now.Add(-3 * time.Minute),
 				},
 			},
@@ -240,25 +271,66 @@ func TestSortByWithStrings(t *testing.T) {
 					ID:         "004",
 					Project:    "B",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
 					LastEvent:  now.Add(-3 * time.Minute),
 				},
 				{
 					ID:         "001",
 					Project:    "B",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
 					LastEvent:  now.Add(-2 * time.Minute),
 				},
 				{
 					ID:         "003",
 					Project:    "A",
 					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
 					LastEvent:  now.Add(1 * time.Minute),
 				},
 				{
 					ID:         "002",
 					Project:    "A",
 					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
 					LastEvent:  now.Add(3 * time.Minute),
+				},
+			},
+		},
+
+		{
+			name:   "sort by ip",
+			keys:   Keys{{ID: "ip"}},
+			fields: fields,
+			data:   testData,
+			want: []machine{
+				{
+					ID:         "001",
+					Project:    "B",
+					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
+					LastEvent:  now.Add(-2 * time.Minute),
+				},
+				{
+					ID:         "002",
+					Project:    "A",
+					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
+					LastEvent:  now.Add(3 * time.Minute),
+				},
+				{
+					ID:         "003",
+					Project:    "A",
+					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
+					LastEvent:  now.Add(1 * time.Minute),
+				},
+				{
+					ID:         "004",
+					Project:    "B",
+					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
+					LastEvent:  now.Add(-3 * time.Minute),
 				},
 			},
 		},
@@ -272,7 +344,7 @@ func TestSortByWithStrings(t *testing.T) {
 				t.Errorf("error diff (+got -want):\n %s", diff)
 			}
 
-			if diff := cmp.Diff(tt.want, tt.data); diff != "" {
+			if diff := cmp.Diff(tt.want, tt.data, testcommon.IgnoreUnexported()); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
 			}
 		})
