@@ -70,7 +70,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"ls"},
 			Short:   fmt.Sprintf("list all %s", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.ListAndPrint(c.ListPrinter(), c.parseSortFlags()...)
+				sortKeys, err := c.ParseSortFlags()
+				if err != nil {
+					return err
+				}
+
+				return c.GenericCLI.ListAndPrint(c.ListPrinter(), sortKeys...)
 			},
 		}
 
@@ -268,7 +273,7 @@ type CmdsConfig[C any, U any, R any] struct {
 	EditCmdMutateFn     func(cmd *cobra.Command)
 }
 
-func (c *CmdsConfig[C, U, R]) parseSortFlags() multisort.Keys {
+func (c *CmdsConfig[C, U, R]) ParseSortFlags() (multisort.Keys, error) {
 	var keys multisort.Keys
 
 	for _, col := range viper.GetStringSlice("sort-by") {
@@ -284,14 +289,14 @@ func (c *CmdsConfig[C, U, R]) parseSortFlags() multisort.Keys {
 			case "desc", "descending":
 				descending = true
 			default:
-				panic(fmt.Errorf("unsupported sort direction: %s", directionRaw))
+				return nil, fmt.Errorf("unsupported sort direction: %s", directionRaw)
 			}
 		}
 
 		keys = append(keys, multisort.Key{ID: id, Descending: descending})
 	}
 
-	return keys
+	return keys, nil
 }
 
 func (c *CmdsConfig[C, U, R]) validate() error {
