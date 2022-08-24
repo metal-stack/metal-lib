@@ -9,7 +9,8 @@ import (
 
 // Sorter can sort by multiple criteria.
 type Sorter[E any] struct {
-	fields FieldMap[E]
+	defaultSortKeys Keys
+	fields          FieldMap[E]
 }
 
 // FieldMap defines the fields that the sorter is capable to sort and provides the corresponsing compare funcs.
@@ -24,21 +25,26 @@ type Key struct {
 type Keys []Key
 
 // New creates a new multisorter.
-func New[E any](fields FieldMap[E]) *Sorter[E] {
+func New[E any](fields FieldMap[E], defaultSortKeys Keys) *Sorter[E] {
 	return &Sorter[E]{
-		fields: fields,
+		defaultSortKeys: defaultSortKeys,
+		fields:          fields,
 	}
 }
 
 // SortBy sorts the given data by the given sort keys.
 func (s *Sorter[E]) SortBy(data []E, keys ...Key) error {
-	err := s.validate(keys...)
-	if err != nil {
-		return err
+	if len(keys) == 0 {
+		keys = s.defaultSortKeys
 	}
 
 	if len(keys) == 0 {
 		return nil
+	}
+
+	err := s.validate(keys...)
+	if err != nil {
+		return err
 	}
 
 	slices.SortStableFunc(data, func(a, b E) bool {

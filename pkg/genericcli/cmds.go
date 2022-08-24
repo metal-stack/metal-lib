@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
+	"github.com/metal-stack/metal-lib/pkg/multisort"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -48,6 +49,9 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	if len(c.OnlyCmds) == 0 {
 		c.OnlyCmds = allCmds()
 	}
+	if c.Sorter != nil {
+		c.GenericCLI = c.GenericCLI.WithSorter(c.Sorter)
+	}
 
 	Must(c.validate())
 
@@ -66,13 +70,15 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"ls"},
 			Short:   fmt.Sprintf("list all %s", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.ListAndPrint(c.ListPrinter())
+				return c.GenericCLI.ListAndPrint(c.ListPrinter(), c.parseSortFlags()...)
 			},
 		}
 
-		if len(c.AvailableSortKeys) > 0 {
-			cmd.Flags().StringSlice("order", []string{}, fmt.Sprintf("order by (comma separated) column(s), sort direction can be changed by appending :asc or :desc behind the column identifier. possible values: %s", strings.Join(c.AvailableSortKeys, "|")))
-			Must(cmd.RegisterFlagCompletionFunc("order", cobra.FixedCompletions(c.AvailableSortKeys, cobra.ShellCompDirectiveNoFileComp)))
+		if c.Sorter != nil {
+			if sortKeys := c.Sorter.AvailableKeys(); len(sortKeys) > 0 {
+				cmd.Flags().StringSlice("sort-by", []string{}, fmt.Sprintf("sort by (comma separated) column(s), sort direction can be changed by appending :asc or :desc behind the column identifier. possible values: %s", strings.Join(sortKeys, "|")))
+				Must(cmd.RegisterFlagCompletionFunc("sort-by", cobra.FixedCompletions(c.Sorter.AvailableKeys(), cobra.ShellCompDirectiveNoFileComp)))
+			}
 		}
 
 		if c.ListCmdMutateFn != nil {
@@ -245,8 +251,8 @@ type CmdsConfig[C any, U any, R any] struct {
 	// UpdateRequestFromCLI if not nil, this function uses the returned update request to update the entity.
 	UpdateRequestFromCLI func(args []string) (U, error)
 
-	// AvailableSortKeys adds an order flag to list commands by which keys this entity can be sorted. use the multisorter of this project to achieve sortability.
-	AvailableSortKeys []string
+	// Sorter allows sorting the results of list commands.
+	Sorter *multisort.Sorter[R]
 
 	// ValidArgsFn is a completion function that returns the valid command line arguments.
 	ValidArgsFn func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
@@ -260,6 +266,32 @@ type CmdsConfig[C any, U any, R any] struct {
 	DeleteCmdMutateFn   func(cmd *cobra.Command)
 	ApplyCmdMutateFn    func(cmd *cobra.Command)
 	EditCmdMutateFn     func(cmd *cobra.Command)
+}
+
+func (c *CmdsConfig[C, U, R]) parseSortFlags() multisort.Keys {
+	var keys multisort.Keys
+
+	for _, col := range viper.GetStringSlice("sort-by") {
+		col = strings.ToLower(strings.TrimSpace(col))
+
+		var descending bool
+
+		id, directionRaw, found := strings.Cut(col, ":")
+		if found {
+			switch directionRaw {
+			case "asc", "ascending":
+				descending = false
+			case "desc", "descending":
+				descending = true
+			default:
+				panic(fmt.Errorf("unsupported sort direction: %s", directionRaw))
+			}
+		}
+
+		keys = append(keys, multisort.Key{ID: id, Descending: descending})
+	}
+
+	return keys
 }
 
 func (c *CmdsConfig[C, U, R]) validate() error {
