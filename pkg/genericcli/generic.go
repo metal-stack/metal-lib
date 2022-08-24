@@ -1,6 +1,9 @@
 package genericcli
 
-import "github.com/spf13/afero"
+import (
+	"github.com/metal-stack/metal-lib/pkg/multisort"
+	"github.com/spf13/afero"
+)
 
 // GenericCLI can be used to gain generic CLI functionality.
 //
@@ -11,6 +14,7 @@ type GenericCLI[C any, U any, R any] struct {
 	fs     afero.Fs
 	crud   CRUD[C, U, R]
 	parser MultiDocumentYAML[R]
+	sorter *multisort.Sorter[R]
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -57,9 +61,19 @@ func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
 	return a
 }
 
+func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCLI[C, U, R] {
+	a.sorter = sorter
+	return a
+}
+
 // Interface returns the interface that was used to create this generic cli.
 func (a *GenericCLI[C, U, R]) Interface() CRUD[C, U, R] {
 	return a.crud
+}
+
+// Sorter returns the sorter of this generic cli.
+func (a *GenericCLI[C, U, R]) Sorter() *multisort.Sorter[R] {
+	return a.sorter
 }
 
 // following only used for mock generation (has to be in non-test file), do not use:

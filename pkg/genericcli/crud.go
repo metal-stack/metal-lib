@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
+	"github.com/metal-stack/metal-lib/pkg/multisort"
 )
 
 func GetExactlyOneArg(args []string) (string, error) {
@@ -17,17 +18,23 @@ func GetExactlyOneArg(args []string) (string, error) {
 	}
 }
 
-func (a *GenericCLI[C, U, R]) List() ([]R, error) {
+func (a *GenericCLI[C, U, R]) List(sortKeys ...multisort.Key) ([]R, error) {
 	resp, err := a.crud.List()
 	if err != nil {
 		return nil, err
 	}
 
+	if a.sorter != nil {
+		if err := a.sorter.SortBy(resp, sortKeys...); err != nil {
+			return nil, err
+		}
+	}
+
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) ListAndPrint(p printers.Printer) error {
-	resp, err := a.List()
+func (a *GenericCLI[C, U, R]) ListAndPrint(p printers.Printer, sortKeys ...multisort.Key) error {
+	resp, err := a.List(sortKeys...)
 	if err != nil {
 		return err
 	}

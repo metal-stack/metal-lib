@@ -73,12 +73,13 @@ func TestSortByWithStrings(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		keys    []Key
-		fields  FieldMap[machine]
-		data    []machine
-		want    []machine
-		wantErr error
+		name        string
+		keys        Keys
+		defaultKeys Keys
+		fields      FieldMap[machine]
+		data        []machine
+		want        []machine
+		wantErr     error
 	}{
 		{
 			name:   "sort without key does not change order",
@@ -158,6 +159,43 @@ func TestSortByWithStrings(t *testing.T) {
 			keys:   Keys{{ID: "id"}},
 			fields: fields,
 			data:   testData,
+			want: []machine{
+				{
+					ID:         "001",
+					Project:    "B",
+					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.1"),
+					LastEvent:  now.Add(-2 * time.Minute),
+				},
+				{
+					ID:         "002",
+					Project:    "A",
+					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.2"),
+					LastEvent:  now.Add(3 * time.Minute),
+				},
+				{
+					ID:         "003",
+					Project:    "A",
+					Liveliness: "Unknown",
+					IP:         netip.MustParseAddr("1.2.3.3"),
+					LastEvent:  now.Add(1 * time.Minute),
+				},
+				{
+					ID:         "004",
+					Project:    "B",
+					Liveliness: "Alive",
+					IP:         netip.MustParseAddr("1.2.3.4"),
+					LastEvent:  now.Add(-3 * time.Minute),
+				},
+			},
+		},
+		{
+			name:        "fallback to default keys",
+			keys:        nil,
+			defaultKeys: Keys{{ID: "id"}},
+			fields:      fields,
+			data:        testData,
 			want: []machine{
 				{
 					ID:         "001",
@@ -338,7 +376,7 @@ func TestSortByWithStrings(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			sorter := New(tt.fields)
+			sorter := New(tt.fields, tt.defaultKeys)
 			err := sorter.SortBy(tt.data, tt.keys...)
 			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
 				t.Errorf("error diff (+got -want):\n %s", diff)
