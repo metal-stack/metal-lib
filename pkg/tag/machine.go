@@ -46,3 +46,13 @@ const (
 	// UpdateFirmwareCmd update machine firmware
 	UpdateFirmwareCmd MachineCommand = "UPDATE-FIRMWARE"
 )
+
+// MachineEventType is the type of event send to a machine
+type MachineEventType string
+
+const (
+	Create  MachineEventType = "create"
+	Update  MachineEventType = "update"
+	Delete  MachineEventType = "delete"
+	Command MachineEventType = "command"
+)
