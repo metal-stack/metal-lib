@@ -51,8 +51,8 @@ const (
 type MachineEventType string
 
 const (
-	Create  MachineEventType = "create"
-	Update  MachineEventType = "update"
-	Delete  MachineEventType = "delete"
-	Command MachineEventType = "command"
+	MachineEventCreate  MachineEventType = "create"
+	MachineEventUpdate  MachineEventType = "update"
+	MachineEventDelete  MachineEventType = "delete"
+	MachineEventCommand MachineEventType = "command"
 )
