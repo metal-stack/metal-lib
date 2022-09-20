@@ -29,5 +29,6 @@ func AccountingTags() map[string]bool {
 		AccountingNetworkTrafficInternal: true,
 		AccountingVolumeReplicas:         true,
 		AccountingVolumeEncryption:       true,
+		AccountingVolumeSnapshotSource:   true,
 	}
 }
