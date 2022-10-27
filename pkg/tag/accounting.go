@@ -15,6 +15,8 @@ const (
 	AccountingVolumeReplicas = "accounting.metal-stack.io/volume-replicas"
 	// AccountingVolumeEncryption tag to store accounting volume encryption information
 	AccountingVolumeEncryption = "accounting.metal-stack.io/volume-encryption"
+	// AccountingVolumeSnapshotSource tag to store accounting volume snapshot source uuid
+	AccountingVolumeSnapshotSource = "accounting.metal-stack.io/volume-snapshot-source"
 )
 
 // AccountingTags returns all accounting tags
@@ -27,5 +29,6 @@ func AccountingTags() map[string]bool {
 		AccountingNetworkTrafficInternal: true,
 		AccountingVolumeReplicas:         true,
 		AccountingVolumeEncryption:       true,
+		AccountingVolumeSnapshotSource:   true,
 	}
 }
