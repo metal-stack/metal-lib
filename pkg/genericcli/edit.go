@@ -74,7 +74,18 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 		return zero, fmt.Errorf("no changes were made, aborting")
 	}
 
-	return a.UpdateFromFile(tmpfile.Name())
+	uparser := MultiDocumentYAML[U]{fs: a.fs}
+	updateDoc, err = uparser.ReadOne(tmpfile.Name())
+	if err != nil {
+		return zero, err
+	}
+
+	result, err := a.crud.Update(updateDoc)
+	if err != nil {
+		return zero, fmt.Errorf("error updating entity: %w", err)
+	}
+
+	return result, nil
 }
 
 func (a *GenericCLI[C, U, R]) EditAndPrint(args []string, p printers.Printer) error {
