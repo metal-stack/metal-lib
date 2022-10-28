@@ -61,6 +61,10 @@ func AlreadyExistsError() error {
 	return alreadyExistsError
 }
 
+// CreateFromFile creates a single entity from a given file containing a response entity.
+//
+// As this function uses response entities, it is possible that create and update entity representation
+// is inaccurate to a certain degree.
 func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (R, error) {
 	var zero R
 
@@ -91,6 +95,10 @@ func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Pri
 	return p.Print(result)
 }
 
+// UpdateFromFile updates a single entity from a given file containing a response entity.
+//
+// As this function uses response entities, it is possible that create and update entity representation
+// is inaccurate to a certain degree.
 func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (R, error) {
 	var zero R
 
@@ -121,8 +129,11 @@ func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Pri
 	return p.Print(result)
 }
 
-// ApplyFromFile creates or updates entities from a given file.
+// ApplyFromFile creates or updates entities from a given file of response entities.
 // In order to work, the create function must return an already exists error as defined in this package.
+//
+// As this function uses response entities, it is possible that create and update entity representation
+// is inaccurate to a certain degree.
 func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (MultiApplyResults[R], error) {
 	docs, err := a.parser.ReadAll(from)
 	if err != nil {
