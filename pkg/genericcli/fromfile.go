@@ -74,7 +74,7 @@ func (ms MultiApplyResults[R]) ToList() []R {
 	return result
 }
 
-func (ms MultiApplyResults[R]) Error() error {
+func (ms MultiApplyResults[R]) Error(joinErrors bool) error {
 	var errors []string
 
 	for _, m := range ms {
@@ -87,7 +87,11 @@ func (ms MultiApplyResults[R]) Error() error {
 		return nil
 	}
 
-	return fmt.Errorf("errors occurred during apply: %s", strings.Join(errors, ", "))
+	if joinErrors {
+		return fmt.Errorf("errors occurred during apply: %s", strings.Join(errors, ", "))
+	}
+
+	return fmt.Errorf("errors occurred during apply")
 }
 
 func AlreadyExistsError() error {
@@ -215,7 +219,12 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string, p printers.Printer) (Mu
 		results = res.Append(results, MultiApplyErrorOnUpdate, nil, fmt.Errorf("error updating entity: %w", err))
 	}
 
-	return results, results.Error()
+	joinErrors := false
+	if p == nil {
+		joinErrors = true
+	}
+
+	return results, results.Error(joinErrors)
 }
 
 func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Printer) error {

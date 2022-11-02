@@ -162,7 +162,7 @@ name: two
 					},
 				},
 			},
-			wantErr: fmt.Errorf("errors occurred during apply: error creating entity: creation error for id 1"),
+			wantErr: fmt.Errorf("errors occurred during apply"),
 			wantOutput: `
 error creating entity: creation error for id 1
 | ID | NAME |
