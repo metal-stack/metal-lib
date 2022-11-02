@@ -33,3 +33,7 @@ func (t testCRUD) ToUpdate(r *testResponse) (*testUpdate, error) {
 		Name: r.Name,
 	}, nil
 }
+
+func (t testCRUD) GetID(r *testResponse) (string, error) {
+	return r.ID, nil
+}

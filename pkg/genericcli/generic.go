@@ -16,7 +16,7 @@ type GenericCLI[C any, U any, R any] struct {
 	parser MultiDocumentYAML[R]
 	sorter *multisort.Sorter[R]
 
-	intermediateApplyPrint bool
+	bulkPrint bool
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -41,6 +41,9 @@ type CRUD[C any, U any, R any] interface {
 	// ToUpdate transforms an entity's response object to its update request.
 	// This is required for capabilities like update from file of response objects or edit.
 	ToUpdate(r R) (U, error)
+	// GetID returns the id from a given response object.
+	// This is required for capabilities like delete from file of response objects.
+	GetID(r R) (string, error)
 }
 
 // NewGenericCLI returns a new generic cli.
@@ -51,10 +54,10 @@ type CRUD[C any, U any, R any] interface {
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
 	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		crud:                   crud,
-		fs:                     fs,
-		parser:                 MultiDocumentYAML[R]{fs: fs},
-		intermediateApplyPrint: true,
+		crud:      crud,
+		fs:        fs,
+		parser:    MultiDocumentYAML[R]{fs: fs},
+		bulkPrint: true,
 	}
 }
 
@@ -69,10 +72,10 @@ func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCL
 	return a
 }
 
-// WithApplyBulkPrint prints apply results in a bulk at the end, the results are a list.
-// default is printing results intermediately during apply, which causes single entities to be printed sequentially.
-func (a *GenericCLI[C, U, R]) WithApplyBulkPrint() *GenericCLI[C, U, R] {
-	a.intermediateApplyPrint = false
+// WithBulkPrint prints results in a bulk at the end on multi-entity operations, the results are a list.
+// default is printing results intermediately during the operation, which causes single entities to be printed in sequence.
+func (a *GenericCLI[C, U, R]) WithBulkPrint() *GenericCLI[C, U, R] {
+	a.bulkPrint = true
 	return a
 }
 
@@ -97,6 +100,7 @@ type (
 		Delete(id string) (*testResponse, error)
 		ToCreate(r *testResponse) (*testCreate, error)
 		ToUpdate(r *testResponse) (*testUpdate, error)
+		GetID(r *testResponse) (string, error)
 	}
 	testCRUD   struct{ client testClient }
 	testCreate struct {

@@ -78,6 +78,27 @@ func (_m *mockTestClient) Get(id string) (*testResponse, error) {
 	return r0, r1
 }
 
+// GetID provides a mock function with given fields: r
+func (_m *mockTestClient) GetID(r *testResponse) (string, error) {
+	ret := _m.Called(r)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(*testResponse) string); ok {
+		r0 = rf(r)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*testResponse) error); ok {
+		r1 = rf(r)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // List provides a mock function with given fields:
 func (_m *mockTestClient) List() ([]*testResponse, error) {
 	ret := _m.Called()
