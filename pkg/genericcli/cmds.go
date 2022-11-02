@@ -99,12 +99,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"get"},
 			Short:   fmt.Sprintf("describes the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				id, err := GetExactlyOneArg(args)
-				if err != nil {
-					return err
-				}
-
-				return c.GenericCLI.DescribeAndPrint(id, c.DescribePrinter())
+				return c.GenericCLI.DescribeAndPrint(args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -177,12 +172,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Short:   fmt.Sprintf("deletes the %s", c.Singular),
 			Aliases: []string{"destroy", "rm", "remove"},
 			RunE: func(cmd *cobra.Command, args []string) error {
-				id, err := GetExactlyOneArg(args)
-				if err != nil {
-					return err
-				}
-
-				return c.GenericCLI.DeleteAndPrint(id, c.DescribePrinter())
+				return c.GenericCLI.DeleteAndPrint(args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}

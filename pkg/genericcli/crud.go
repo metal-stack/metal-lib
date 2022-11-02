@@ -42,8 +42,13 @@ func (a *GenericCLI[C, U, R]) ListAndPrint(p printers.Printer, sortKeys ...multi
 	return p.Print(resp)
 }
 
-func (a *GenericCLI[C, U, R]) Describe(id string) (R, error) {
+func (a *GenericCLI[C, U, R]) Describe(args []string) (R, error) {
 	var zero R
+
+	id, err := GetExactlyOneArg(args)
+	if err != nil {
+		return zero, err
+	}
 
 	resp, err := a.crud.Get(id)
 	if err != nil {
@@ -53,8 +58,8 @@ func (a *GenericCLI[C, U, R]) Describe(id string) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) DescribeAndPrint(id string, p printers.Printer) error {
-	resp, err := a.Describe(id)
+func (a *GenericCLI[C, U, R]) DescribeAndPrint(args []string, p printers.Printer) error {
+	resp, err := a.Describe(args)
 	if err != nil {
 		return err
 	}
@@ -62,8 +67,13 @@ func (a *GenericCLI[C, U, R]) DescribeAndPrint(id string, p printers.Printer) er
 	return p.Print(resp)
 }
 
-func (a *GenericCLI[C, U, R]) Delete(id string) (R, error) {
+func (a *GenericCLI[C, U, R]) Delete(args []string) (R, error) {
 	var zero R
+
+	id, err := GetExactlyOneArg(args)
+	if err != nil {
+		return zero, err
+	}
 
 	resp, err := a.crud.Delete(id)
 	if err != nil {
@@ -73,8 +83,8 @@ func (a *GenericCLI[C, U, R]) Delete(id string) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLI[C, U, R]) DeleteAndPrint(id string, p printers.Printer) error {
-	resp, err := a.Delete(id)
+func (a *GenericCLI[C, U, R]) DeleteAndPrint(args []string, p printers.Printer) error {
+	resp, err := a.Delete(args)
 	if err != nil {
 		return err
 	}
