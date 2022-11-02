@@ -24,10 +24,43 @@ type (
 		Result R
 		Action MultiApplyAction
 		Error  error
+
+		p printers.Printer
 	}
 
 	MultiApplyResults[R any] []MultiApplyResult[R]
 )
+
+func (m MultiApplyResult[R]) Append(ms MultiApplyResults[R], action MultiApplyAction, result *R, err error) MultiApplyResults[R] {
+	if result != nil {
+		m.Result = *result
+	}
+	m.Action = action
+	m.Error = err
+
+	m.Print()
+
+	return append(ms, m)
+}
+
+func (m *MultiApplyResult[R]) Print() {
+	if m.p == nil {
+		return
+	}
+
+	if m.Error == nil {
+		err := m.p.Print(m.Result)
+		if err != nil {
+			m.Error = err
+		}
+		return
+	}
+
+	err := m.p.Print(m.Error)
+	if err != nil {
+		m.Error = fmt.Errorf("error printing original error: %s, original error: %w", err, m.Error)
+	}
+}
 
 func (ms MultiApplyResults[R]) ToList() []R {
 	var result []R
@@ -134,54 +167,70 @@ func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Pri
 //
 // As this function uses response entities, it is possible that create and update entity representation
 // is inaccurate to a certain degree.
-func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (MultiApplyResults[R], error) {
+//
+// The printer can be passed optionally. If passed, results will be printed intermediately.
+func (a *GenericCLI[C, U, R]) ApplyFromFile(from string, p printers.Printer) (MultiApplyResults[R], error) {
 	docs, err := a.parser.ReadAll(from)
 	if err != nil {
 		return nil, err
 	}
 
-	var result MultiApplyResults[R]
+	var results MultiApplyResults[R]
 
 	for index := range docs {
-		doc := docs[index]
+		var (
+			res = MultiApplyResult[R]{p: p}
+			doc = docs[index]
+		)
 
 		createDoc, err := a.crud.ToCreate(doc)
 		if err != nil {
-			return nil, err
+			results = res.Append(results, MultiApplyErrorOnCreate, nil, fmt.Errorf("error converting to create entity: %w", err))
+			continue
 		}
 
 		created, err := a.crud.Create(createDoc)
 		if err == nil {
-			result = append(result, MultiApplyResult[R]{Action: MultiApplyCreated, Result: created})
+			results = res.Append(results, MultiApplyCreated, &created, nil)
 			continue
 		}
 
 		if !errors.Is(err, AlreadyExistsError()) {
-			result = append(result, MultiApplyResult[R]{Action: MultiApplyErrorOnCreate, Error: fmt.Errorf("error creating entity: %w", err)})
+			results = res.Append(results, MultiApplyErrorOnCreate, nil, fmt.Errorf("error creating entity: %w", err))
 			continue
 		}
 
 		updateDoc, err := a.crud.ToUpdate(doc)
 		if err != nil {
-			return nil, err
-		}
-
-		updated, err := a.crud.Update(updateDoc)
-		if err != nil {
-			result = append(result, MultiApplyResult[R]{Action: MultiApplyErrorOnUpdate, Error: fmt.Errorf("error updating entity: %w", err)})
+			results = res.Append(results, MultiApplyErrorOnUpdate, nil, fmt.Errorf("error converting to update entity: %w", err))
 			continue
 		}
 
-		result = append(result, MultiApplyResult[R]{Action: MultiApplyUpdated, Result: updated})
+		updated, err := a.crud.Update(updateDoc)
+		if err == nil {
+			results = res.Append(results, MultiApplyUpdated, &updated, nil)
+			continue
+		}
+
+		results = res.Append(results, MultiApplyErrorOnUpdate, nil, fmt.Errorf("error updating entity: %w", err))
 	}
 
-	return result, result.Error()
+	return results, results.Error()
 }
 
 func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Printer) error {
+	if a.intermediateApplyPrint {
+		_, err := a.ApplyFromFile(from, p)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	var printErr error
 
-	result, err := a.ApplyFromFile(from)
+	result, err := a.ApplyFromFile(from, nil)
 	defer func() {
 		printErr = p.Print(result.ToList())
 	}()

@@ -15,6 +15,8 @@ type GenericCLI[C any, U any, R any] struct {
 	crud   CRUD[C, U, R]
 	parser MultiDocumentYAML[R]
 	sorter *multisort.Sorter[R]
+
+	intermediateApplyPrint bool
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -49,9 +51,10 @@ type CRUD[C any, U any, R any] interface {
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
 	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		crud:   crud,
-		fs:     fs,
-		parser: MultiDocumentYAML[R]{fs: fs},
+		crud:                   crud,
+		fs:                     fs,
+		parser:                 MultiDocumentYAML[R]{fs: fs},
+		intermediateApplyPrint: true,
 	}
 }
 
@@ -63,6 +66,13 @@ func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
 
 func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCLI[C, U, R] {
 	a.sorter = sorter
+	return a
+}
+
+// WithApplyBulkPrint prints apply results in a bulk at the end, the results are a list.
+// default is printing results intermediately during apply, which causes single entities to be printed sequentially.
+func (a *GenericCLI[C, U, R]) WithApplyBulkPrint() *GenericCLI[C, U, R] {
+	a.intermediateApplyPrint = false
 	return a
 }
 
