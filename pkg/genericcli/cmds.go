@@ -189,12 +189,16 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Use:   "apply",
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
+				if viper.GetBool("bulk-output") {
+					c.GenericCLI = c.GenericCLI.WithApplyBulkPrint()
+				}
 				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
 			},
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("apply"))
 		Must(cmd.MarkFlagRequired("file"))
+		cmd.Flags().Bool("bulk-output", false, `prints apply results in a bulk at the end, the results are a list. default is printing results intermediately during apply, which causes single entities to be printed sequentially.`)
 
 		if c.ApplyCmdMutateFn != nil {
 			c.ApplyCmdMutateFn(cmd)
