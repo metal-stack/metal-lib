@@ -233,7 +233,7 @@ func (a *GenericCLI[C, U, R]) multiOperation(from string, opName multiOperationN
 }
 
 func (m *multiOperationCreateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan MultiApplyResult[R]) { //nolint:unused
-	createDoc, err := crud.ToCreate(doc)
+	_, createDoc, _, err := crud.Convert(doc)
 	if err != nil {
 		results <- MultiApplyResult[R]{Action: MultiApplyErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
 		return
@@ -249,7 +249,7 @@ func (m *multiOperationCreateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, result
 }
 
 func (m *multiOperationUpdateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan MultiApplyResult[R]) { //nolint:unused
-	updateDoc, err := crud.ToUpdate(doc)
+	_, _, updateDoc, err := crud.Convert(doc)
 	if err != nil {
 		results <- MultiApplyResult[R]{Action: MultiApplyErrorOnUpdate, Error: fmt.Errorf("error converting to update entity: %w", err)}
 		return
@@ -265,7 +265,7 @@ func (m *multiOperationUpdateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, result
 }
 
 func (m *multiOperationApplyImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan MultiApplyResult[R]) { //nolint:unused
-	createDoc, err := crud.ToCreate(doc)
+	_, createDoc, _, err := crud.Convert(doc)
 	if err != nil {
 		results <- MultiApplyResult[R]{Action: MultiApplyErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
 		return
@@ -287,7 +287,7 @@ func (m *multiOperationApplyImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results
 }
 
 func (m *multiOperationDeleteImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan MultiApplyResult[R]) { //nolint:unused
-	id, err := crud.GetID(doc)
+	id, _, _, err := crud.Convert(doc)
 	if err != nil {
 		results <- MultiApplyResult[R]{Action: MultiApplyErrorOnDelete, Error: fmt.Errorf("error retrieving id from response entity: %w", err)}
 		return

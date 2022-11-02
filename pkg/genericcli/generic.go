@@ -35,15 +35,9 @@ type CRUD[C any, U any, R any] interface {
 	Update(rq U) (R, error)
 	// Delete tries to delete the entity with the given id and returns the deleted entity.
 	Delete(id string) (R, error)
-	// ToCreate transforms an entity's response object to its create request.
-	// This is required for capabilities like creation from file of response objects.
-	ToCreate(r R) (C, error)
-	// ToUpdate transforms an entity's response object to its update request.
-	// This is required for capabilities like update from file of response objects or edit.
-	ToUpdate(r R) (U, error)
-	// GetID returns the id from a given response object.
-	// This is required for capabilities like delete from file of response objects.
-	GetID(r R) (string, error)
+	// Convert converts an entity's response object to best possible create and update requests and additionally returns the entities ID.
+	// This is required for capabilities like creation/update/deletion from a file of response objects.
+	Convert(r R) (string, C, U, error)
 }
 
 // NewGenericCLI returns a new generic cli.
@@ -98,9 +92,7 @@ type (
 		Create(rq *testCreate) (*testResponse, error)
 		Update(rq *testUpdate) (*testResponse, error)
 		Delete(id string) (*testResponse, error)
-		ToCreate(r *testResponse) (*testCreate, error)
-		ToUpdate(r *testResponse) (*testUpdate, error)
-		GetID(r *testResponse) (string, error)
+		Convert(r *testResponse) (string, *testCreate, *testUpdate, error)
 	}
 	testCRUD   struct{ client testClient }
 	testCreate struct {
