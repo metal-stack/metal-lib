@@ -202,7 +202,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("delete"))
-		cmd.Flags().Bool("bulk-output", false, `prints results in a bulk at the end, the results are a list. default is printing results intermediately during delete, which causes single entities to be printed sequentially.`)
+		cmd.Flags().Bool("bulk-output", false, `when deleting from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during deletion, which causes single entities to be printed sequentially.`)
 
 		if c.DeleteCmdMutateFn != nil {
 			c.DeleteCmdMutateFn(cmd)
