@@ -22,7 +22,7 @@ func TestApplyFromFile(t *testing.T) {
 		name           string
 		mockFn         func(mock *mockTestClient)
 		fileMockFn     func(fs afero.Fs)
-		want           MultiApplyResults[*testResponse]
+		want           BulkResults[*testResponse]
 		wantOutput     string
 		wantBulkOutput string
 		wantErr        error
@@ -38,9 +38,9 @@ func TestApplyFromFile(t *testing.T) {
 					Name: "one",
 				}), 0755))
 			},
-			want: MultiApplyResults[*testResponse]{
+			want: BulkResults[*testResponse]{
 				{
-					Action: MultiApplyCreated,
+					Action: BulkCreated,
 					Result: &testResponse{
 						ID:   "1",
 						Name: "one",
@@ -73,16 +73,16 @@ id: "2"
 name: two
 `), 0755))
 			},
-			want: MultiApplyResults[*testResponse]{
+			want: BulkResults[*testResponse]{
 				{
-					Action: MultiApplyCreated,
+					Action: BulkCreated,
 					Result: &testResponse{
 						ID:   "1",
 						Name: "one",
 					},
 				},
 				{
-					Action: MultiApplyCreated,
+					Action: BulkCreated,
 					Result: &testResponse{
 						ID:   "2",
 						Name: "two",
@@ -120,16 +120,16 @@ id: "2"
 name: two
 `), 0755))
 			},
-			want: MultiApplyResults[*testResponse]{
+			want: BulkResults[*testResponse]{
 				{
-					Action: MultiApplyCreated,
+					Action: BulkCreated,
 					Result: &testResponse{
 						ID:   "1",
 						Name: "one",
 					},
 				},
 				{
-					Action: MultiApplyUpdated,
+					Action: BulkUpdated,
 					Result: &testResponse{
 						ID:   "2",
 						Name: "two",
@@ -167,13 +167,13 @@ id: "2"
 name: two
 `), 0755))
 			},
-			want: MultiApplyResults[*testResponse]{
+			want: BulkResults[*testResponse]{
 				{
-					Action: MultiApplyErrorOnCreate,
+					Action: BulkErrorOnCreate,
 					Error:  fmt.Errorf("error creating entity: creation error for id 1"),
 				},
 				{
-					Action: MultiApplyUpdated,
+					Action: BulkUpdated,
 					Result: &testResponse{
 						ID:   "2",
 						Name: "two",

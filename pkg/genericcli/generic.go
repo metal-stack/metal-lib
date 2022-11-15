@@ -1,6 +1,8 @@
 package genericcli
 
 import (
+	"io"
+
 	"github.com/metal-stack/metal-lib/pkg/multisort"
 	"github.com/spf13/afero"
 )
@@ -16,7 +18,8 @@ type GenericCLI[C any, U any, R any] struct {
 	parser MultiDocumentYAML[R]
 	sorter *multisort.Sorter[R]
 
-	bulkPrint bool
+	bulkPrint          bool
+	bulkSecurityPrompt *PromptConfig
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -70,6 +73,15 @@ func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCL
 // default is printing results intermediately during the operation, which causes single entities to be printed in sequence.
 func (a *GenericCLI[C, U, R]) WithBulkPrint() *GenericCLI[C, U, R] {
 	a.bulkPrint = true
+	return a
+}
+
+// WithBulkSecurityPrompt prints interactive prompts before a multi-entity operation.
+func (a *GenericCLI[C, U, R]) WithBulkSecurityPrompt(in io.Reader, out io.Writer) *GenericCLI[C, U, R] {
+	a.bulkSecurityPrompt = &PromptConfig{
+		In:  in,
+		Out: out,
+	}
 	return a
 }
 

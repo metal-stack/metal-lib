@@ -130,6 +130,10 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter())
 				}
 
+				if !viper.GetBool("force") {
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+				}
+
 				if viper.GetBool("bulk-output") {
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
@@ -139,6 +143,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("create"))
+		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
 		cmd.Flags().Bool("bulk-output", false, `when creating from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during creation, which causes single entities to be printed sequentially.`)
 
 		if c.CreateCmdMutateFn != nil {
@@ -162,6 +167,10 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.GenericCLI.UpdateAndPrint(rq, c.DescribePrinter())
 				}
 
+				if !viper.GetBool("force") {
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+				}
+
 				if viper.GetBool("bulk-output") {
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
@@ -172,6 +181,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("update"))
+		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
 		cmd.Flags().Bool("bulk-output", false, `when updating from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during update, which causes single entities to be printed sequentially.`)
 
 		if c.UpdateCmdMutateFn != nil {
@@ -196,12 +206,21 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.GenericCLI.DeleteAndPrint(id, c.DescribePrinter())
 				}
 
+				if !viper.GetBool("force") {
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+				}
+
+				if viper.GetBool("bulk-output") {
+					c.GenericCLI = c.GenericCLI.WithBulkPrint()
+				}
+
 				return c.GenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("delete"))
+		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
 		cmd.Flags().Bool("bulk-output", false, `when deleting from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during deletion, which causes single entities to be printed sequentially.`)
 
 		if c.DeleteCmdMutateFn != nil {
@@ -216,14 +235,20 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Use:   "apply",
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
+				if !viper.GetBool("force") {
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+				}
+
 				if viper.GetBool("bulk-output") {
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
+
 				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
 			},
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("apply"))
+		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
 		Must(cmd.MarkFlagRequired("file"))
 		cmd.Flags().Bool("bulk-output", false, `prints results in a bulk at the end, the results are a list. default is printing results intermediately during apply, which causes single entities to be printed sequentially.`)
 
