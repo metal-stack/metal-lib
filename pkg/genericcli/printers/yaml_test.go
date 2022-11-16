@@ -54,9 +54,7 @@ func TestYamlPrintError(t *testing.T) {
 		t.Error(err)
 	}
 	got := buffer.String()
-	want := `---
-Test
-`
+	want := "Test\n"
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
 	}

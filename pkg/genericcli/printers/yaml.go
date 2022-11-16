@@ -10,7 +10,8 @@ import (
 
 // YAMLPrinter prints data in YAML format
 type YAMLPrinter struct {
-	out io.Writer
+	out                        io.Writer
+	disableDefaultErrorPrinter bool
 }
 
 func NewYAMLPrinter() *YAMLPrinter {
@@ -24,9 +25,15 @@ func (p *YAMLPrinter) WithOut(out io.Writer) *YAMLPrinter {
 	return p
 }
 
+func (p *YAMLPrinter) WithDisableDefaultErrorPrinter() *YAMLPrinter {
+	p.disableDefaultErrorPrinter = true
+	return p
+}
+
 func (p *YAMLPrinter) Print(data any) error {
-	if err, ok := data.(error); ok {
-		data = err.Error()
+	if err, ok := data.(error); ok && !p.disableDefaultErrorPrinter {
+		fmt.Fprintf(p.out, "%s\n", err)
+		return nil
 	}
 
 	content, err := yaml.Marshal(data)

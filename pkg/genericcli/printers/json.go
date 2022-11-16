@@ -9,7 +9,8 @@ import (
 
 // JSONPrinter prints data in JSON format
 type JSONPrinter struct {
-	out io.Writer
+	out                        io.Writer
+	disableDefaultErrorPrinter bool
 }
 
 func NewJSONPrinter() *JSONPrinter {
@@ -23,9 +24,15 @@ func (p *JSONPrinter) WithOut(out io.Writer) *JSONPrinter {
 	return p
 }
 
+func (p *JSONPrinter) WithDisableDefaultErrorPrinter() *JSONPrinter {
+	p.disableDefaultErrorPrinter = true
+	return p
+}
+
 func (p *JSONPrinter) Print(data any) error {
-	if err, ok := data.(error); ok {
-		data = err.Error()
+	if err, ok := data.(error); ok && !p.disableDefaultErrorPrinter {
+		fmt.Fprintf(p.out, "%s\n", err)
+		return nil
 	}
 
 	content, err := json.MarshalIndent(data, "", "    ")
