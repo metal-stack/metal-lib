@@ -247,8 +247,9 @@ func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printe
 	var beforeCallbacks []func(R) error
 	if a.bulkSecurityPrompt != nil {
 		beforeCallbacks = append(beforeCallbacks, a.securityPromptCallback(&PromptConfig{
-			In:  a.bulkSecurityPrompt.In,
-			Out: a.bulkSecurityPrompt.Out,
+			In:          a.bulkSecurityPrompt.In,
+			Out:         a.bulkSecurityPrompt.Out,
+			ShowAnswers: true,
 		}, opName))
 	}
 
@@ -282,6 +283,7 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 		wg                sync.WaitGroup
 		once              sync.Once
 		resultChan        = make(chan BulkResult[R])
+		consumed          = make(chan bool)
 		afterCallbackErrs []string
 		callbackErr       = func(err error) (BulkResults[R], error) {
 			bulkErr := results.ToError(args.joinErrors)
@@ -292,6 +294,7 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 		}
 	)
 	defer once.Do(func() { close(resultChan) })
+	defer close(consumed)
 
 	wg.Add(1)
 	go func() {
@@ -305,6 +308,7 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 					afterCallbackErrs = append(afterCallbackErrs, err.Error())
 				}
 			}
+			consumed <- true
 		}
 	}()
 
@@ -335,6 +339,7 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 			}
 		}
 		op.do(a.crud, docs[index], resultChan)
+		<-consumed
 	}
 
 	once.Do(func() { close(resultChan) })

@@ -24,6 +24,10 @@ func (p *JSONPrinter) WithOut(out io.Writer) *JSONPrinter {
 }
 
 func (p *JSONPrinter) Print(data any) error {
+	if err, ok := data.(error); ok {
+		data = err.Error()
+	}
+
 	content, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		return err

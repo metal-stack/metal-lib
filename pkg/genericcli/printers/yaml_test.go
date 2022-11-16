@@ -2,6 +2,7 @@ package printers_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,7 +30,8 @@ func TestYamlSuccess(t *testing.T) {
 		t.Error(err)
 	}
 	got := buffer.String()
-	want := `bool: true
+	want := `---
+bool: true
 keys:
 - a
 - b
@@ -38,6 +40,22 @@ object:
   a: b
 real: 3.14
 str: test
+`
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+}
+
+func TestYamlPrintError(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	printer := printers.NewYAMLPrinter().WithOut(buffer)
+	err := printer.Print(fmt.Errorf("Test"))
+	if err != nil {
+		t.Error(err)
+	}
+	got := buffer.String()
+	want := `---
+Test
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)

@@ -134,11 +134,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
 				}
 
+				p := c.DescribePrinter
 				if viper.GetBool("bulk-output") {
+					p = c.ListPrinter
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
 
-				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
+				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 
@@ -171,11 +173,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
 				}
 
+				p := c.DescribePrinter
 				if viper.GetBool("bulk-output") {
+					p = c.ListPrinter
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
 
-				return c.GenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
+				return c.GenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), p())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -210,11 +214,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
 				}
 
+				p := c.DescribePrinter
 				if viper.GetBool("bulk-output") {
+					p = c.ListPrinter
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
 
-				return c.GenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
+				return c.GenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), p())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -239,11 +245,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
 				}
 
+				p := c.DescribePrinter
 				if viper.GetBool("bulk-output") {
+					p = c.ListPrinter
 					c.GenericCLI = c.GenericCLI.WithBulkPrint()
 				}
 
-				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), c.ListPrinter())
+				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 

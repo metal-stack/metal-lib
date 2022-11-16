@@ -54,7 +54,7 @@ func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R]
 		crud:      crud,
 		fs:        fs,
 		parser:    MultiDocumentYAML[R]{fs: fs},
-		bulkPrint: true,
+		bulkPrint: false,
 	}
 }
 

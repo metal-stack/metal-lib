@@ -57,7 +57,8 @@ func TestYamlProtoWithJsonAndFallbackSucceeds(t *testing.T) {
 		t.Error(err)
 	}
 	got := buffer.String()
-	want := `bool: true
+	want := `---
+bool: true
 keys:
 - a
 - b

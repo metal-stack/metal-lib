@@ -25,12 +25,16 @@ func (p *YAMLPrinter) WithOut(out io.Writer) *YAMLPrinter {
 }
 
 func (p *YAMLPrinter) Print(data any) error {
+	if err, ok := data.(error); ok {
+		data = err.Error()
+	}
+
 	content, err := yaml.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(p.out, "%s", string(content))
+	fmt.Fprintf(p.out, "---\n%s", string(content))
 
 	return nil
 }
