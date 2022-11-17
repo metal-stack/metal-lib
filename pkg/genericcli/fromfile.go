@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"gopkg.in/yaml.v3"
@@ -156,7 +155,7 @@ func (a *GenericCLI[C, U, R]) DeleteFromFileAndPrint(from string, p printers.Pri
 type (
 	multiOperationName                  string
 	multiOperation[C any, U any, R any] interface {
-		do(crud CRUD[C, U, R], doc R, results chan BulkResult[R])
+		do(crud CRUD[C, U, R], doc R) BulkResult[R]
 	}
 	multiOperationCreateImpl[C any, U any, R any] struct{}
 	multiOperationUpdateImpl[C any, U any, R any] struct{}
@@ -280,12 +279,7 @@ func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printe
 
 func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (results BulkResults[R], err error) {
 	var (
-		wg                sync.WaitGroup
-		once              sync.Once
-		resultChan        = make(chan BulkResult[R])
-		consumed          = make(chan bool)
-		afterCallbackErrs []string
-		callbackErr       = func(err error) (BulkResults[R], error) {
+		callbackErr = func(err error) (BulkResults[R], error) {
 			bulkErr := results.ToError(args.joinErrors)
 			if bulkErr != nil {
 				return results, fmt.Errorf("aborting bulk operation: %s, errors already occurred along the way: %w", err.Error(), bulkErr)
@@ -293,24 +287,6 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 			return results, fmt.Errorf("aborting bulk operation: %w", err)
 		}
 	)
-	defer once.Do(func() { close(resultChan) })
-	defer close(consumed)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for result := range resultChan {
-			results = append(results, result)
-			for _, c := range args.afterCallbacks {
-				c := c
-				err := c(result)
-				if err != nil {
-					afterCallbackErrs = append(afterCallbackErrs, err.Error())
-				}
-			}
-			consumed <- true
-		}
-	}()
 
 	docs, err := a.parser.ReadAll(args.from)
 	if err != nil {
@@ -338,13 +314,19 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 				return callbackErr(err)
 			}
 		}
-		op.do(a.crud, docs[index], resultChan)
-		<-consumed
+
+		result := op.do(a.crud, docs[index])
+
+		results = append(results, result)
+
+		for _, c := range args.afterCallbacks {
+			c := c
+			err := c(result)
+			if err != nil {
+				return callbackErr(err)
+			}
+		}
 	}
-
-	once.Do(func() { close(resultChan) })
-
-	wg.Wait()
 
 	for _, c := range args.afterAllCallbacks {
 		c := c
@@ -357,72 +339,63 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[R]) (resul
 	return results, results.ToError(args.joinErrors)
 }
 
-func (m *multiOperationCreateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan BulkResult[R]) { //nolint:unused
+func (m *multiOperationCreateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	_, createDoc, _, err := crud.Convert(doc)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
 	}
 
 	result, err := crud.Create(createDoc)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error creating entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error creating entity: %w", err)}
 	}
 
-	results <- BulkResult[R]{Action: BulkCreated, Result: result}
+	return BulkResult[R]{Action: BulkCreated, Result: result}
 }
 
-func (m *multiOperationUpdateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan BulkResult[R]) { //nolint:unused
+func (m *multiOperationUpdateImpl[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	_, _, updateDoc, err := crud.Convert(doc)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnUpdate, Error: fmt.Errorf("error converting to update entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnUpdate, Error: fmt.Errorf("error converting to update entity: %w", err)}
 	}
 
 	result, err := crud.Update(updateDoc)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnUpdate, Error: fmt.Errorf("error updating entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnUpdate, Error: fmt.Errorf("error updating entity: %w", err)}
 	}
 
-	results <- BulkResult[R]{Action: BulkUpdated, Result: result}
+	return BulkResult[R]{Action: BulkUpdated, Result: result}
 }
 
-func (m *multiOperationApplyImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan BulkResult[R]) { //nolint:unused
+func (m *multiOperationApplyImpl[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	_, createDoc, _, err := crud.Convert(doc)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
 	}
 
 	result, err := crud.Create(createDoc)
 	if err == nil {
-		results <- BulkResult[R]{Action: BulkCreated, Result: result}
-		return
+		return BulkResult[R]{Action: BulkCreated, Result: result}
 	}
 
 	if !errors.Is(err, AlreadyExistsError()) {
-		results <- BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error creating entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error creating entity: %w", err)}
 	}
 
 	update := &multiOperationUpdateImpl[C, U, R]{}
-	update.do(crud, doc, results)
+	return update.do(crud, doc)
 }
 
-func (m *multiOperationDeleteImpl[C, U, R]) do(crud CRUD[C, U, R], doc R, results chan BulkResult[R]) { //nolint:unused
+func (m *multiOperationDeleteImpl[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	id, _, _, err := crud.Convert(doc)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error retrieving id from response entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error retrieving id from response entity: %w", err)}
 	}
 
 	result, err := crud.Delete(id)
 	if err != nil {
-		results <- BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error deleting entity: %w", err)}
-		return
+		return BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error deleting entity: %w", err)}
 	}
 
-	results <- BulkResult[R]{Action: BulkDeleted, Result: result}
+	return BulkResult[R]{Action: BulkDeleted, Result: result}
 }
