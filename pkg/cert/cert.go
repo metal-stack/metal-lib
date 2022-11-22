@@ -41,10 +41,10 @@ func GenerateCert(csr CSR, caKey *string, caCert *string) (key *string, cert *st
 		extKeyUsage []x509.ExtKeyUsage
 	)
 
-	if (csr.CertType == ServerCert || csr.CertType == ClientCert) && (caKey == nil && caCert == nil) {
+	if (csr.CertType == ServerCert || csr.CertType == ClientCert) && (caKey == nil || caCert == nil) {
 		return nil, nil, errors.New("requesting certificate without CA key/cert pair")
 	}
-	if (csr.CertType == CACert || csr.CertType == SelfSignedCert) && (caKey != nil && caCert != nil) {
+	if (csr.CertType == CACert || csr.CertType == SelfSignedCert) && (caKey != nil || caCert != nil) {
 		return nil, nil, errors.New("requesting selfsinged (CA) certificate, but CA key/cert pair is given")
 	}
 
@@ -90,7 +90,7 @@ func GenerateCert(csr CSR, caKey *string, caCert *string) (key *string, cert *st
 		BasicConstraintsValid: isCA,
 	}
 
-	if csr.CertType == CACert || csr.CertType == SelfSignedCert {
+	if isCA {
 		caKeyRaw = privkey
 		caCertRaw = newCert
 	} else {
