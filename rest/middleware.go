@@ -68,7 +68,7 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 
 		debug := isDebug(logger)
 
-		if debug {
+		if debug || rq.Method == http.MethodPost || rq.Method == http.MethodPut {
 			body, _ := httputil.DumpRequest(rq, true)
 			fields = append(fields, "body", string(body))
 		}
