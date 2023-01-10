@@ -20,6 +20,7 @@ type GenericCLI[C any, U any, R any] struct {
 
 	bulkPrint          bool
 	bulkSecurityPrompt *PromptConfig
+	timestamps         bool
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -70,18 +71,24 @@ func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCL
 }
 
 // WithBulkPrint prints results in a bulk at the end on multi-entity operations, the results are a list.
-// default is printing results intermediately during the operation, which causes single entities to be printed in sequence.
+// default is printing results intermediately during the bulk operation, which causes single entities to be printed in sequence.
 func (a *GenericCLI[C, U, R]) WithBulkPrint() *GenericCLI[C, U, R] {
 	a.bulkPrint = true
 	return a
 }
 
-// WithBulkSecurityPrompt prints interactive prompts before a multi-entity operation.
+// WithBulkSecurityPrompt prints interactive prompts before a multi-entity operation if there is a tty.
 func (a *GenericCLI[C, U, R]) WithBulkSecurityPrompt(in io.Reader, out io.Writer) *GenericCLI[C, U, R] {
 	a.bulkSecurityPrompt = &PromptConfig{
 		In:  in,
 		Out: out,
 	}
+	return a
+}
+
+// WithBulkTimestamps prints out the duration of an operation to stdout during a bulk operation.
+func (a *GenericCLI[C, U, R]) WithTimestamps() *GenericCLI[C, U, R] {
+	a.timestamps = true
 	return a
 }
 

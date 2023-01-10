@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mattn/go-isatty"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
@@ -30,9 +31,10 @@ type (
 	BulkAction string
 
 	BulkResult[R any] struct {
-		Result R
-		Action BulkAction
-		Error  error
+		Result   R
+		Action   BulkAction
+		Error    error
+		Duration time.Duration
 	}
 
 	BulkResults[R any] []BulkResult[R]
@@ -184,6 +186,13 @@ func intermediatePrintCallback[R any](p printers.Printer) func(BulkResult[R]) er
 	}
 }
 
+func timestampCallback[R any]() func(BulkResult[R]) error {
+	return func(mar BulkResult[R]) error {
+		fmt.Printf("took %s\n", mar.Duration.String())
+		return nil
+	}
+}
+
 func bulkPrintCallback[R any](p printers.Printer) func(BulkResults[R]) error {
 	return func(br BulkResults[R]) error {
 		return p.Print(br.ToList())
@@ -214,7 +223,11 @@ func (a *GenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOp
 }
 
 func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printer, op multiOperation[C, U, R]) error {
-	var beforeCallbacks []func(R) error
+	var (
+		beforeCallbacks []func(R) error
+		afterCallbacks  []func(BulkResult[R]) error
+	)
+
 	if a.bulkSecurityPrompt != nil {
 		in := a.bulkSecurityPrompt.In
 		if in == nil {
@@ -231,12 +244,17 @@ func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printe
 		}
 	}
 
+	if a.timestamps {
+		afterCallbacks = append(afterCallbacks, timestampCallback[R]())
+	}
+
 	if a.bulkPrint {
 		_, err := a.multiOperation(&multiOperationArgs[C, U, R]{
 			from:            from,
 			op:              op,
 			joinErrors:      true,
 			beforeCallbacks: beforeCallbacks,
+			afterCallbacks:  afterCallbacks,
 			afterAllCallbacks: []func(BulkResults[R]) error{
 				bulkPrintCallback[R](p),
 			},
@@ -249,9 +267,9 @@ func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printe
 		op:              op,
 		joinErrors:      false,
 		beforeCallbacks: beforeCallbacks,
-		afterCallbacks: []func(mar BulkResult[R]) error{
+		afterCallbacks: append([]func(mar BulkResult[R]) error{
 			intermediatePrintCallback[R](p),
-		},
+		}, afterCallbacks...),
 	})
 	return err
 }
@@ -289,7 +307,9 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C, U, R]) 
 			}
 		}
 
+		start := time.Now()
 		result := args.op.do(a.crud, docs[index])
+		result.Duration = time.Since(start)
 
 		results = append(results, result)
 

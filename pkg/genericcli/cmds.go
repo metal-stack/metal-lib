@@ -179,15 +179,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter())
 				}
 
-				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
-				}
-
-				p := c.DescribePrinter
-				if viper.GetBool("bulk-output") {
-					p = c.ListPrinter
-					c.GenericCLI = c.GenericCLI.WithBulkPrint()
-				}
+				p := c.evalBulkFlags()
 
 				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
@@ -196,6 +188,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("create"))
 		cmd.Flags().Bool("force", false, c.forceFlagText())
 		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
+		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 
 		if c.CreateCmdMutateFn != nil {
 			c.CreateCmdMutateFn(cmd)
@@ -218,15 +211,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.GenericCLI.UpdateAndPrint(rq, c.DescribePrinter())
 				}
 
-				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
-				}
-
-				p := c.DescribePrinter
-				if viper.GetBool("bulk-output") {
-					p = c.ListPrinter
-					c.GenericCLI = c.GenericCLI.WithBulkPrint()
-				}
+				p := c.evalBulkFlags()
 
 				return c.GenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), p())
 			},
@@ -236,6 +221,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("update"))
 		cmd.Flags().Bool("force", false, c.forceFlagText())
 		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
+		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 
 		if c.UpdateCmdMutateFn != nil {
 			c.UpdateCmdMutateFn(cmd)
@@ -259,15 +245,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.GenericCLI.DeleteAndPrint(id, c.DescribePrinter())
 				}
 
-				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
-				}
-
-				p := c.DescribePrinter
-				if viper.GetBool("bulk-output") {
-					p = c.ListPrinter
-					c.GenericCLI = c.GenericCLI.WithBulkPrint()
-				}
+				p := c.evalBulkFlags()
 
 				return c.GenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), p())
 			},
@@ -277,6 +255,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("delete"))
 		cmd.Flags().Bool("force", false, c.forceFlagText())
 		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
+		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 
 		if c.DeleteCmdMutateFn != nil {
 			c.DeleteCmdMutateFn(cmd)
@@ -294,11 +273,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
-				p := c.DescribePrinter
-				if viper.GetBool("bulk-output") {
-					p = c.ListPrinter
-					c.GenericCLI = c.GenericCLI.WithBulkPrint()
-				}
+				p := c.evalBulkFlags()
 
 				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), p())
 			},
@@ -308,6 +283,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		Must(cmd.MarkFlagRequired("file"))
 		cmd.Flags().Bool("force", false, c.forceFlagText())
 		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
+		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 
 		if c.ApplyCmdMutateFn != nil {
 			c.ApplyCmdMutateFn(cmd)
@@ -398,6 +374,24 @@ func (c *CmdsConfig[C, U, R]) validate() error {
 	return nil
 }
 
+func (c *CmdsConfig[C, U, R]) evalBulkFlags() func() printers.Printer {
+	if !viper.GetBool("force") {
+		c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
+	}
+
+	if viper.GetBool("timestamps") {
+		c.GenericCLI = c.GenericCLI.WithTimestamps()
+	}
+
+	p := c.DescribePrinter
+	if viper.GetBool("bulk-output") {
+		p = c.ListPrinter
+		c.GenericCLI = c.GenericCLI.WithBulkPrint()
+	}
+
+	return p
+}
+
 func (c *CmdsConfig[C, U, R]) fileFlagHelpText(command string) string {
 	return fmt.Sprintf(`filename of the create or update request in yaml format, or - for stdin.
 
@@ -418,5 +412,9 @@ func (c *CmdsConfig[C, U, R]) forceFlagText() string {
 }
 
 func (c *CmdsConfig[C, U, R]) bulkFlagText() string {
-	return "for bulk operations from file: prints results at the end as a list. default is printing results intermediately during the operation, which causes single entities to be printed in a row."
+	return "when used with --file (bulk operation): prints results at the end as a list. default is printing results intermediately during the operation, which causes single entities to be printed in a row."
+}
+
+func (c *CmdsConfig[C, U, R]) bulkTimestampsText() string {
+	return "when used with --file (bulk operation): prints timestamps in-between the operations"
 }
