@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -204,7 +205,7 @@ error creating entity: creation error for id 1
 				t.Errorf("error diff (+got -want):\n %s", diff)
 			}
 
-			if diff := cmp.Diff(tt.want, got, cmpopts.IgnoreInterfaces(struct{ printers.Printer }{}), testcommon.ErrorStringComparer()); diff != "" {
+			if diff := cmp.Diff(tt.want, got, cmpopts.IgnoreInterfaces(struct{ printers.Printer }{}), cmpopts.IgnoreTypes(time.Duration(0)), testcommon.ErrorStringComparer()); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
 			}
 
