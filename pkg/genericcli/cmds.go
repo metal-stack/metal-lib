@@ -2,6 +2,7 @@ package genericcli
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
@@ -42,6 +43,54 @@ func OnlyCmds(cmds ...DefaultCmd) map[DefaultCmd]bool {
 	}
 
 	return res
+}
+
+// CmdsConfig provides the configuration for the default commands.
+type CmdsConfig[C any, U any, R any] struct {
+	GenericCLI *GenericCLI[C, U, R]
+
+	// OnlyCmds defines which default commands to include from the generic cli. if empty, all default commands will be added.
+	OnlyCmds map[DefaultCmd]bool
+
+	// BinaryName is the name of the cli binary.
+	BinaryName string
+	// Singular, Plural is the name of the entity for which the default cmds are generated.
+	Singular, Plural string
+	// Description described the entity for which the default cmds are generated.
+	Description string
+	// Aliases provides additional aliases for the root cmd.
+	Aliases []string
+
+	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get intialized later in the game.
+	DescribePrinter func() printers.Printer
+	// ListPrinter is the printer that is used for listing multiple entities. It's a function because printers potentially get intialized later in the game.
+	ListPrinter func() printers.Printer
+
+	// CreateRequestFromCLI if not nil, this function uses the returned create request to create the entity.
+	CreateRequestFromCLI func() (C, error)
+	// UpdateRequestFromCLI if not nil, this function uses the returned update request to update the entity.
+	UpdateRequestFromCLI func(args []string) (U, error)
+
+	// Sorter allows sorting the results of list commands.
+	Sorter *multisort.Sorter[R]
+
+	// ValidArgsFn is a completion function that returns the valid command line arguments.
+	ValidArgsFn func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
+
+	// In defines from where input is read, defaults to stdin.
+	In io.Reader
+	// Out defines to where output is written, defaults to stdout.
+	Out io.Writer
+
+	// MutateFns can be used to customize default commands (adding additional CLI flags or something like that)
+	RootCmdMutateFn     func(cmd *cobra.Command)
+	ListCmdMutateFn     func(cmd *cobra.Command)
+	DescribeCmdMutateFn func(cmd *cobra.Command)
+	CreateCmdMutateFn   func(cmd *cobra.Command)
+	UpdateCmdMutateFn   func(cmd *cobra.Command)
+	DeleteCmdMutateFn   func(cmd *cobra.Command)
+	ApplyCmdMutateFn    func(cmd *cobra.Command)
+	EditCmdMutateFn     func(cmd *cobra.Command)
 }
 
 // NewCmds can be used to generate a new cobra/viper root cmd with a set of default cmds provided by the generic cli.
@@ -131,7 +180,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 				}
 
 				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
 				p := c.DescribePrinter
@@ -145,8 +194,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("create"))
-		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
-		cmd.Flags().Bool("bulk-output", false, `when creating from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during creation, which causes single entities to be printed sequentially.`)
+		cmd.Flags().Bool("force", false, c.forceFlagText())
+		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
 
 		if c.CreateCmdMutateFn != nil {
 			c.CreateCmdMutateFn(cmd)
@@ -170,7 +219,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 				}
 
 				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
 				p := c.DescribePrinter
@@ -185,8 +234,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("update"))
-		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
-		cmd.Flags().Bool("bulk-output", false, `when updating from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during update, which causes single entities to be printed sequentially.`)
+		cmd.Flags().Bool("force", false, c.forceFlagText())
+		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
 
 		if c.UpdateCmdMutateFn != nil {
 			c.UpdateCmdMutateFn(cmd)
@@ -211,7 +260,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 				}
 
 				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
 				p := c.DescribePrinter
@@ -226,8 +275,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("delete"))
-		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
-		cmd.Flags().Bool("bulk-output", false, `when deleting from file: prints results in a bulk at the end, the results are a list. default is printing results intermediately during deletion, which causes single entities to be printed sequentially.`)
+		cmd.Flags().Bool("force", false, c.forceFlagText())
+		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
 
 		if c.DeleteCmdMutateFn != nil {
 			c.DeleteCmdMutateFn(cmd)
@@ -242,7 +291,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if !viper.GetBool("force") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(nil, nil)
+					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
 				p := c.DescribePrinter
@@ -256,9 +305,9 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("apply"))
-		cmd.Flags().Bool("force", false, "skips security prompty for bulk operations")
 		Must(cmd.MarkFlagRequired("file"))
-		cmd.Flags().Bool("bulk-output", false, `prints results in a bulk at the end, the results are a list. default is printing results intermediately during apply, which causes single entities to be printed sequentially.`)
+		cmd.Flags().Bool("force", false, c.forceFlagText())
+		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
 
 		if c.ApplyCmdMutateFn != nil {
 			c.ApplyCmdMutateFn(cmd)
@@ -292,49 +341,6 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	rootCmd.AddCommand(additionalCmds...)
 
 	return rootCmd
-}
-
-// CmdsConfig provides the configuration for the default commands.
-type CmdsConfig[C any, U any, R any] struct {
-	GenericCLI *GenericCLI[C, U, R]
-
-	// OnlyCmds defines which default commands to include from the generic cli. if empty, all default commands will be added.
-	OnlyCmds map[DefaultCmd]bool
-
-	// BinaryName is the name of the cli binary.
-	BinaryName string
-	// Singular, Plural is the name of the entity for which the default cmds are generated.
-	Singular, Plural string
-	// Description described the entity for which the default cmds are generated.
-	Description string
-	// Aliases provides additional aliases for the root cmd.
-	Aliases []string
-
-	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get intialized later in the game.
-	DescribePrinter func() printers.Printer
-	// ListPrinter is the printer that is used for listing multiple entities. It's a function because printers potentially get intialized later in the game.
-	ListPrinter func() printers.Printer
-
-	// CreateRequestFromCLI if not nil, this function uses the returned create request to create the entity.
-	CreateRequestFromCLI func() (C, error)
-	// UpdateRequestFromCLI if not nil, this function uses the returned update request to update the entity.
-	UpdateRequestFromCLI func(args []string) (U, error)
-
-	// Sorter allows sorting the results of list commands.
-	Sorter *multisort.Sorter[R]
-
-	// ValidArgsFn is a completion function that returns the valid command line arguments.
-	ValidArgsFn func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
-
-	// MutateFns can be used to customize default commands (adding additional CLI flags or something like that)
-	RootCmdMutateFn     func(cmd *cobra.Command)
-	ListCmdMutateFn     func(cmd *cobra.Command)
-	DescribeCmdMutateFn func(cmd *cobra.Command)
-	CreateCmdMutateFn   func(cmd *cobra.Command)
-	UpdateCmdMutateFn   func(cmd *cobra.Command)
-	DeleteCmdMutateFn   func(cmd *cobra.Command)
-	ApplyCmdMutateFn    func(cmd *cobra.Command)
-	EditCmdMutateFn     func(cmd *cobra.Command)
 }
 
 func (c *CmdsConfig[C, U, R]) ParseSortFlags() (multisort.Keys, error) {
@@ -403,4 +409,12 @@ $ cat %[1]s.yaml | %[2]s %[1]s %[3]s -f -
 $ # or via file
 $ %[2]s %[1]s %[3]s -f %[1]s.yaml
 	`, c.Singular, c.BinaryName, command)
+}
+
+func (c *CmdsConfig[C, U, R]) forceFlagText() string {
+	return "skips security prompt for bulk operations"
+}
+
+func (c *CmdsConfig[C, U, R]) bulkFlagText() string {
+	return "for bulk operations from file: prints results at the end as a list. default is printing results intermediately during the operation, which causes single entities to be printed in a row."
 }
