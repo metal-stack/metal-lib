@@ -408,6 +408,8 @@ $ # either via stdin
 $ cat %[1]s.yaml | %[2]s %[1]s %[3]s -f -
 $ # or via file
 $ %[2]s %[1]s %[3]s -f %[1]s.yaml
+
+the file can also contain multiple documents and perform a bulk operation.
 	`, c.Singular, c.BinaryName, command)
 }
 
