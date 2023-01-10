@@ -3,8 +3,10 @@ package genericcli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/mattn/go-isatty"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"gopkg.in/yaml.v3"
 )
@@ -214,11 +216,19 @@ func (a *GenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOp
 func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printer, op multiOperation[C, U, R]) error {
 	var beforeCallbacks []func(R) error
 	if a.bulkSecurityPrompt != nil {
-		beforeCallbacks = append(beforeCallbacks, a.securityPromptCallback(&PromptConfig{
-			In:          a.bulkSecurityPrompt.In,
-			Out:         a.bulkSecurityPrompt.Out,
-			ShowAnswers: true,
-		}, op))
+		in := a.bulkSecurityPrompt.In
+		if in == nil {
+			in = os.Stdin
+		}
+		if f, ok := in.(*os.File); ok {
+			if isatty.IsTerminal(f.Fd()) {
+				beforeCallbacks = append(beforeCallbacks, a.securityPromptCallback(&PromptConfig{
+					In:          a.bulkSecurityPrompt.In,
+					Out:         a.bulkSecurityPrompt.Out,
+					ShowAnswers: true,
+				}, op))
+			}
+		}
 	}
 
 	if a.bulkPrint {
