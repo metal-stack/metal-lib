@@ -18,7 +18,8 @@ import (
 type Key int
 
 const (
-	RequestLoggerKey = Key(0)
+	RequestLoggerKey Key = iota
+	RequestIDKey
 )
 
 type loggingResponseWriter struct {
@@ -77,6 +78,7 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 		requestLogger := logger.With(fields...)
 
 		enrichedContext := context.WithValue(req.Request.Context(), RequestLoggerKey, requestLogger)
+		enrichedContext = context.WithValue(enrichedContext, RequestIDKey, requestID)
 		req.Request = req.Request.WithContext(enrichedContext)
 
 		t := time.Now()
