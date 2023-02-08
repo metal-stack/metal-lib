@@ -119,7 +119,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"ls"},
 			Short:   fmt.Sprintf("list all %s", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				sortKeys, err := c.ParseSortFlags()
+				sortKeys, err := ParseSortFlags()
 				if err != nil {
 					return err
 				}
@@ -316,7 +316,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	return rootCmd
 }
 
-func (c *CmdsConfig[C, U, R]) ParseSortFlags() (multisort.Keys, error) {
+func ParseSortFlags() (multisort.Keys, error) {
 	var keys multisort.Keys
 
 	for _, col := range viper.GetStringSlice("sort-by") {
