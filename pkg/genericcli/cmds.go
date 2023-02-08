@@ -129,10 +129,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		}
 
 		if c.Sorter != nil {
-			if sortKeys := c.Sorter.AvailableKeys(); len(sortKeys) > 0 {
-				cmd.Flags().StringSlice("sort-by", []string{}, fmt.Sprintf("sort by (comma separated) column(s), sort direction can be changed by appending :asc or :desc behind the column identifier. possible values: %s", strings.Join(sortKeys, "|")))
-				Must(cmd.RegisterFlagCompletionFunc("sort-by", cobra.FixedCompletions(c.Sorter.AvailableKeys(), cobra.ShellCompDirectiveNoFileComp)))
-			}
+			AddSortFlag(cmd, c.Sorter)
 		}
 
 		if c.ListCmdMutateFn != nil {
@@ -343,6 +340,13 @@ func (c *CmdsConfig[C, U, R]) ParseSortFlags() (multisort.Keys, error) {
 	}
 
 	return keys, nil
+}
+
+func AddSortFlag[R any](cmd *cobra.Command, sorter *multisort.Sorter[R]) {
+	if sortKeys := sorter.AvailableKeys(); len(sortKeys) > 0 {
+		cmd.Flags().StringSlice("sort-by", []string{}, fmt.Sprintf("sort by (comma separated) column(s), sort direction can be changed by appending :asc or :desc behind the column identifier. possible values: %s", strings.Join(sortKeys, "|")))
+		Must(cmd.RegisterFlagCompletionFunc("sort-by", cobra.FixedCompletions(sorter.AvailableKeys(), cobra.ShellCompDirectiveNoFileComp)))
+	}
 }
 
 func (c *CmdsConfig[C, U, R]) validate() error {
