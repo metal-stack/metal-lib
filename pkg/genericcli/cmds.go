@@ -182,10 +182,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			},
 		}
 
-		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("create"))
-		cmd.Flags().Bool("force", false, c.forceFlagText())
-		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
-		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
+		c.addFileFlags(cmd)
 
 		if c.CreateCmdMutateFn != nil {
 			c.CreateCmdMutateFn(cmd)
@@ -215,10 +212,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			ValidArgsFunction: c.ValidArgsFn,
 		}
 
-		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("update"))
-		cmd.Flags().Bool("force", false, c.forceFlagText())
-		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
-		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
+		c.addFileFlags(cmd)
 
 		if c.UpdateCmdMutateFn != nil {
 			c.UpdateCmdMutateFn(cmd)
@@ -249,10 +243,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			ValidArgsFunction: c.ValidArgsFn,
 		}
 
-		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("delete"))
-		cmd.Flags().Bool("force", false, c.forceFlagText())
-		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
-		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
+		c.addFileFlags(cmd)
 
 		if c.DeleteCmdMutateFn != nil {
 			c.DeleteCmdMutateFn(cmd)
@@ -276,11 +267,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			},
 		}
 
-		cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText("apply"))
+		c.addFileFlags(cmd)
 		Must(cmd.MarkFlagRequired("file"))
-		cmd.Flags().Bool("force", false, c.forceFlagText())
-		cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
-		cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 
 		if c.ApplyCmdMutateFn != nil {
 			c.ApplyCmdMutateFn(cmd)
@@ -347,6 +335,13 @@ func AddSortFlag[R any](cmd *cobra.Command, sorter *multisort.Sorter[R]) {
 		cmd.Flags().StringSlice("sort-by", []string{}, fmt.Sprintf("sort by (comma separated) column(s), sort direction can be changed by appending :asc or :desc behind the column identifier. possible values: %s", strings.Join(sortKeys, "|")))
 		Must(cmd.RegisterFlagCompletionFunc("sort-by", cobra.FixedCompletions(sorter.AvailableKeys(), cobra.ShellCompDirectiveNoFileComp)))
 	}
+}
+
+func (c *CmdsConfig[C, U, R]) addFileFlags(cmd *cobra.Command) {
+	cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText(cmd.Use))
+	cmd.Flags().Bool("force", false, c.forceFlagText())
+	cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
+	cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 }
 
 func (c *CmdsConfig[C, U, R]) validate() error {
