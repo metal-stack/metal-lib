@@ -55,7 +55,8 @@ func (m *BulkResult[R]) Print(p printers.Printer) {
 
 	err := p.Print(m.Error)
 	if err != nil {
-		m.Error = fmt.Errorf("error printing original error: %w, original error: %w", err, m.Error)
+		joined := errors.Join(err, m.Error)
+		m.Error = fmt.Errorf("error printing original error, original error: %w", joined)
 	}
 }
 
@@ -279,7 +280,8 @@ func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C, U, R]) 
 		callbackErr = func(err error) (BulkResults[R], error) {
 			bulkErr := results.ToError(args.joinErrors)
 			if bulkErr != nil {
-				return results, fmt.Errorf("aborting bulk operation: %w, errors already occurred along the way: %w", err, bulkErr)
+				joined := errors.Join(err, bulkErr)
+				return results, fmt.Errorf("aborting bulk operation, errors already occurred along the way: %w", joined)
 			}
 			return results, fmt.Errorf("aborting bulk operation: %w", err)
 		}
