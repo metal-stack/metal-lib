@@ -75,14 +75,14 @@ type Entry struct {
 	StatusCode int // only for `EntryDetailHTTP`
 
 	// Internal errors
-	Err error
+	Error error
 }
 
 func (e *Entry) NextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()
 	e.Body = nil
-	e.Err = nil
+	e.Error = nil
 
 	switch e.Phase {
 	case EntryPhaseRequest:

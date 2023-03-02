@@ -52,7 +52,7 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
 		if err != nil {
-			auditReqContext.Err = err
+			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Errorf("unable to index error: %v", err2)
@@ -93,7 +93,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 		auditReqContext.NextPhase()
 		err = handler(srv, ss)
 		if err != nil {
-			auditReqContext.Err = err
+			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Errorf("unable to index error: %v", err2)
@@ -164,7 +164,6 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			}
 		}
 
-		auditReqContext.NextPhase()
 		err := a.Index(auditReqContext)
 		if err != nil {
 			logger.Errorf("unable to index error: %v", err)
@@ -177,6 +176,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 		}
 		response.ResponseWriter = bufferedResponseWriter
 
+		auditReqContext.NextPhase()
 		chain.ProcessFilter(request, response)
 
 		auditReqContext.Phase = EntryPhaseResponse
@@ -186,6 +186,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 		err = json.Unmarshal(body, &auditReqContext.Body)
 		if err != nil {
 			auditReqContext.Body = strBody
+			auditReqContext.Error = err
 		}
 
 		err = a.Index(auditReqContext)

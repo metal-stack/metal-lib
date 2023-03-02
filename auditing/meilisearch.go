@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
+	"github.com/mitchellh/mapstructure"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -39,6 +40,10 @@ func New(c Config) (Auditing, error) {
 	if c.RotationInterval != "" {
 		index = client.Index(indexName(c.IndexPrefix, c.RotationInterval))
 	}
+	index.UpdateTypoTolerance(&meilisearch.TypoTolerance{
+		Enabled: false,
+	})
+	index.UpdateSortableAttributes(&[]string{"timestamp-unix", "timestamp"})
 
 	a := &meiliAuditing{
 		component:        c.Component,
@@ -79,7 +84,14 @@ func (a *meiliAuditing) Index(entry Entry) error {
 	if entry.Timestamp.IsZero() {
 		entry.Timestamp = time.Now()
 	}
-	documents := []Entry{entry}
+	var doc map[string]interface{}
+	if err := mapstructure.Decode(entry, &doc); err != nil {
+		a.log.Errorw("index", "error", err)
+		return err
+	}
+	doc["timestamp-unix"] = entry.Timestamp.Unix()
+
+	documents := []map[string]interface{}{doc}
 
 	task, err := a.index.AddDocuments(documents)
 	if err != nil {
