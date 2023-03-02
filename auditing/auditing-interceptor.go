@@ -3,6 +3,7 @@ package auditing
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -29,34 +30,36 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 		requestID := uuid.New().String()
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
-		auditReqContext := []any{
-			"rqid", requestID,
-			"method", info.FullMethod,
-			"kind", "grpc",
+		auditReqContext := Entry{
+			RequestId: requestID,
+			Type:      EntryTypeGRPC,
+			Detail:    EntryDetailGRPCUnary,
+			Path:      info.FullMethod,
+			Phase:     EntryPhaseRequest,
 		}
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
-			auditReqContext = append(
-				auditReqContext,
-				"user", user.EMail,
-				"tenant", user.Tenant,
-			)
+			auditReqContext.User = user.EMail
+			auditReqContext.Tenant = user.Tenant
 		}
-		err = a.Index(auditReqContext...)
+		err = a.Index(auditReqContext)
 		if err != nil {
 			return nil, err
 		}
+
+		auditReqContext.NextPhase()
 		resp, err = handler(childCtx, req)
+		auditReqContext.Phase = EntryPhaseResponse
+		auditReqContext.Body = resp
 		if err != nil {
-			auditRespContext := append(auditReqContext, "err", err)
-			err2 := a.Index(auditRespContext...)
+			auditReqContext.Err = err
+			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Errorf("unable to index error: %v", err2)
 			}
 			return nil, err
 		}
-		auditRespContext := append(auditReqContext, "resp", resp)
-		err = a.Index(auditRespContext...)
+		err = a.Index(auditReqContext)
 		return resp, err
 	}
 }
@@ -70,35 +73,35 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 			return handler(srv, ss)
 		}
 		requestID := uuid.New().String()
-		auditReqContext := []any{
-			"rqid", requestID,
-			"method", info.FullMethod,
-			"kind", "grpc-stream",
+		auditReqContext := Entry{
+			RequestId: requestID,
+			Detail:    EntryDetailGRPCStream,
+			Path:      info.FullMethod,
+			Phase:     EntryPhaseOpened,
+			Type:      EntryTypeGRPC,
 		}
 
 		user := security.GetUserFromContext(ss.Context())
 		if user != nil {
-			auditReqContext = append(
-				auditReqContext,
-				"user", user.EMail,
-				"tenant", user.Tenant,
-			)
+			auditReqContext.User = user.EMail
+			auditReqContext.Tenant = user.Tenant
 		}
-		err := a.Index(auditReqContext...)
+		err := a.Index(auditReqContext)
 		if err != nil {
 			return err
 		}
+		auditReqContext.NextPhase()
 		err = handler(srv, ss)
 		if err != nil {
-			auditRespContext := append(auditReqContext, "err", err)
-			err2 := a.Index(auditRespContext...)
+			auditReqContext.Err = err
+			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Errorf("unable to index error: %v", err2)
 			}
 			return err
 		}
-		auditRespContext := append(auditReqContext, "finished", true)
-		err = a.Index(auditRespContext...)
+		auditReqContext.Phase = EntryPhaseClosed
+		err = a.Index(auditReqContext)
 		return err
 	}
 }
@@ -125,24 +128,25 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			return
 		}
 
-		requestID := r.Context().Value(rest.RequestIDKey)
-		if requestID == nil {
+		var requestID string
+		if str, ok := r.Context().Value(rest.RequestIDKey).(string); ok {
+			requestID = str
+		}
+		if requestID == "" {
 			requestID = uuid.New().String()
 		}
-		auditReqContext := []any{
-			"rqid", requestID,
-			"method", r.Method,
-			"path", r.URL.Path,
-			"forwarded-for", request.HeaderParameter("x-forwarded-for"),
-			"remote-addr", r.RemoteAddr,
+		auditReqContext := Entry{
+			RequestId:    requestID,
+			Type:         EntryTypeHTTP,
+			Detail:       EntryDetail(r.Method),
+			Path:         r.URL.Path,
+			ForwardedFor: request.HeaderParameter("x-forwarded-for"),
+			RemoteAddr:   r.RemoteAddr,
 		}
 		user := security.GetUserFromContext(r.Context())
 		if user != nil {
-			auditReqContext = append(
-				auditReqContext,
-				"user", user.EMail,
-				"tenant", user.Tenant,
-			)
+			auditReqContext.User = user.EMail
+			auditReqContext.Tenant = user.Tenant
 		}
 
 		if r.Method != http.MethodGet && r.Body != nil {
@@ -154,10 +158,14 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 				response.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			auditReqContext = append(auditReqContext, "body", string(body))
+			err = json.Unmarshal(body, &auditReqContext.Body)
+			if err != nil {
+				auditReqContext.Body = string(body)
+			}
 		}
 
-		err := a.Index(auditReqContext...)
+		auditReqContext.NextPhase()
+		err := a.Index(auditReqContext)
 		if err != nil {
 			logger.Errorf("unable to index error: %v", err)
 			response.WriteHeader(http.StatusInternalServerError)
@@ -171,11 +179,16 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 
 		chain.ProcessFilter(request, response)
 
-		auditRespContext := append(auditReqContext,
-			"resp", bufferedResponseWriter.Content(),
-			"status-code", response.StatusCode(),
-		)
-		err = a.Index(auditRespContext...)
+		auditReqContext.Phase = EntryPhaseResponse
+		auditReqContext.StatusCode = response.StatusCode()
+		strBody := bufferedResponseWriter.Content()
+		body := []byte(strBody)
+		err = json.Unmarshal(body, &auditReqContext.Body)
+		if err != nil {
+			auditReqContext.Body = strBody
+		}
+
+		err = a.Index(auditReqContext)
 		if err != nil {
 			logger.Errorf("unable to index error: %v", err)
 			response.WriteHeader(http.StatusInternalServerError)

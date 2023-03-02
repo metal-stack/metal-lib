@@ -69,14 +69,17 @@ func New(c Config) (Auditing, error) {
 	return a, nil
 }
 
-func (a *meiliAuditing) Index(keysAndValues ...any) error {
-	e := a.toMap(keysAndValues)
-	a.log.Debugw("index", "entry", e)
-	id := uuid.NewString()
-	e["id"] = id
-	e["timestamp"] = time.Now()
-	e["component"] = a.component
-	documents := []map[string]any{e}
+func (a *meiliAuditing) Index(entry Entry) error {
+	if entry.Id == "" {
+		entry.Id = uuid.NewString()
+	}
+	if entry.Component == "" {
+		entry.Component = a.component
+	}
+	if entry.Timestamp.IsZero() {
+		entry.Timestamp = time.Now()
+	}
+	documents := []Entry{entry}
 
 	task, err := a.index.AddDocuments(documents)
 	if err != nil {
@@ -158,23 +161,4 @@ func indexName(prefix string, i Interval) string {
 
 	indexName := prefix + "-" + time.Now().Format(timeFormat)
 	return indexName
-}
-
-func (a *meiliAuditing) toMap(args []any) map[string]any {
-	if len(args) == 0 {
-		return nil
-	}
-	if len(args)%2 != 0 {
-		a.log.Errorf("meilisearch pairs of key,value must be provided:%v, not processing", args...)
-		return nil
-	}
-	fields := make(map[string]any)
-	for i := 0; i < len(args); {
-		key, val := args[i], args[i+1]
-		if keyStr, ok := key.(string); ok {
-			fields[keyStr] = val
-		}
-		i += 2
-	}
-	return fields
 }
