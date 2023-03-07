@@ -119,7 +119,6 @@ func Test_ReadOneProtoWithUnderscore(t *testing.T) {
 		{
 			name: "parsing yaml into proto message",
 			mockFn: func(fs afero.Fs) {
-				fmt.Println(string(mustMarshal(t, testObject)))
 				require.NoError(t, afero.WriteFile(fs, testFile, mustMarshal(t, testObject), 0755))
 			},
 			want: &testObject,
@@ -295,7 +294,7 @@ func Test_YamlIsEqual(t *testing.T) {
 			x:       []byte(`a: b`),
 			y:       []byte(`a: b: c`),
 			want:    false,
-			wantErr: errors.New("yaml: mapping values are not allowed in this context"),
+			wantErr: errors.New("error converting YAML to JSON: yaml: mapping values are not allowed in this context"),
 		},
 	}
 	for _, tt := range tests {
