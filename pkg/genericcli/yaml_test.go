@@ -284,13 +284,13 @@ func Test_YamlIsEqual(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "yaml is unequal ",
+			name: "yaml is unequal",
 			x:    []byte(`a: b`),
 			y:    []byte(`a: c`),
 			want: false,
 		},
 		{
-			name:    "yaml is invalid ",
+			name:    "yaml is invalid",
 			x:       []byte(`a: b`),
 			y:       []byte(`a: b: c`),
 			want:    false,
