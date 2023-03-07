@@ -39,10 +39,16 @@ func New(c Config) (Auditing, error) {
 	if c.RotationInterval != "" {
 		index = client.Index(indexName(c.IndexPrefix, c.RotationInterval))
 	}
-	index.UpdateTypoTolerance(&meilisearch.TypoTolerance{
+	_, err = index.UpdateTypoTolerance(&meilisearch.TypoTolerance{
 		Enabled: false,
 	})
-	index.UpdateSortableAttributes(&[]string{"timestamp-unix", "timestamp"})
+	if err != nil {
+		return nil, err
+	}
+	_, err = index.UpdateSortableAttributes(&[]string{"timestamp-unix", "timestamp"})
+	if err != nil {
+		return nil, err
+	}
 
 	a := &meiliAuditing{
 		component:        c.Component,
