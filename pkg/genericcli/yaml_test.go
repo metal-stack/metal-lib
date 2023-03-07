@@ -1,14 +1,17 @@
 package genericcli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type testYAML struct {
@@ -79,6 +82,67 @@ func Test_ReadAll(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("diff (+got -want):\n %s", diff)
+			}
+		})
+	}
+}
+
+func Test_ReadOneProtoWithUnderscore(t *testing.T) {
+	// the json field has an underscore which is not understood by the
+	// usual yaml v3 library from golang. this test ensures that we
+	// can also handle proto messages with json fields with underscores properly.
+
+	type testProto struct {
+		TimeWithUnderscore *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=time,json=time_at,proto3" json:"time_at,omitempty"`
+	}
+
+	const testFile = "/test.yaml"
+
+	now := time.Now()
+	testObject := testProto{
+		TimeWithUnderscore: timestamppb.New(now),
+	}
+
+	mustMarshal := func(t *testing.T, d any) []byte {
+		b, err := json.MarshalIndent(d, "", "    ")
+		require.NoError(t, err)
+		return b
+	}
+
+	tests := []struct {
+		name    string
+		mockFn  func(fs afero.Fs)
+		want    *testProto
+		wantErr error
+	}{
+		{
+			name: "parsing yaml into proto message",
+			mockFn: func(fs afero.Fs) {
+				fmt.Println(string(mustMarshal(t, testObject)))
+				require.NoError(t, afero.WriteFile(fs, testFile, mustMarshal(t, testObject), 0755))
+			},
+			want: &testObject,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			m := MultiDocumentYAML[*testProto]{
+				fs: afero.NewMemMapFs(),
+			}
+
+			if tt.mockFn != nil {
+				tt.mockFn(m.fs)
+			}
+
+			got, err := m.ReadOne(testFile)
+
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+
+			if diff := cmp.Diff(tt.want, got, testcommon.IgnoreUnexported()); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
 			}
 		})
