@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/rest"
@@ -106,6 +107,142 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 	}
 }
 
+type auditingConnectInterceptor struct {
+	auditing    Auditing
+	logger      *zap.SugaredLogger
+	shouldAudit func(fullMethod string) bool
+}
+
+// WrapStreamingClient implements connect.Interceptor
+func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
+		if !a.shouldAudit(s.Procedure) {
+			return next(ctx, s)
+		}
+		requestID := uuid.New().String()
+		auditReqContext := Entry{
+			RequestId: requestID,
+			Detail:    EntryDetailGRPCStream,
+			Path:      s.Procedure,
+			Phase:     EntryPhaseOpened,
+			Type:      EntryTypeGRPC,
+		}
+		user := security.GetUserFromContext(ctx)
+		if user != nil {
+			auditReqContext.User = user.EMail
+			auditReqContext.Tenant = user.Tenant
+		}
+		err := a.auditing.Index(auditReqContext)
+		if err != nil {
+			a.logger.Errorf("unable to index error: %v", err)
+		}
+		auditReqContext.NextPhase()
+		scc := next(ctx, s)
+		auditReqContext.Phase = EntryPhaseClosed
+		err = a.auditing.Index(auditReqContext)
+		if err != nil {
+			a.logger.Errorf("unable to index error: %v", err)
+		}
+		return scc
+	}
+}
+
+// WrapStreamingHandler implements connect.Interceptor
+func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return func(ctx context.Context, shc connect.StreamingHandlerConn) error {
+		if !a.shouldAudit(shc.Spec().Procedure) {
+			return next(ctx, shc)
+		}
+		requestID := uuid.New().String()
+		auditReqContext := Entry{
+			RequestId: requestID,
+			Detail:    EntryDetailGRPCStream,
+			Path:      shc.Spec().Procedure,
+			Phase:     EntryPhaseOpened,
+			Type:      EntryTypeGRPC,
+		}
+		user := security.GetUserFromContext(ctx)
+		if user != nil {
+			auditReqContext.User = user.EMail
+			auditReqContext.Tenant = user.Tenant
+		}
+		err := a.auditing.Index(auditReqContext)
+		if err != nil {
+			a.logger.Errorf("unable to index error: %v", err)
+		}
+		auditReqContext.NextPhase()
+		err = next(ctx, shc)
+		if err != nil {
+			auditReqContext.Error = err
+			err2 := a.auditing.Index(auditReqContext)
+			if err2 != nil {
+				a.logger.Errorf("unable to index error: %v", err2)
+			}
+			return err
+		}
+		auditReqContext.Phase = EntryPhaseClosed
+		err = a.auditing.Index(auditReqContext)
+		if err != nil {
+			a.logger.Errorf("unable to index error: %v", err)
+		}
+		return err
+	}
+}
+
+// WrapUnary implements connect.Interceptor
+func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, ar connect.AnyRequest) (connect.AnyResponse, error) {
+		if !i.shouldAudit(ar.Spec().Procedure) {
+			return next(ctx, ar)
+		}
+		requestID := uuid.New().String()
+		auditReqContext := Entry{
+			RequestId:  requestID,
+			Detail:     EntryDetailGRPCUnary,
+			Path:       ar.Spec().Procedure,
+			Phase:      EntryPhaseRequest,
+			Type:       EntryTypeGRPC,
+			Body:       ar.Any(),
+			RemoteAddr: ar.Peer().Addr,
+		}
+		user := security.GetUserFromContext(ctx)
+		if user != nil {
+			auditReqContext.User = user.EMail
+			auditReqContext.Tenant = user.Tenant
+		}
+		err := i.auditing.Index(auditReqContext)
+		if err != nil {
+			return nil, err
+		}
+
+		auditReqContext.NextPhase()
+		resp, err := next(ctx, ar)
+		auditReqContext.Phase = EntryPhaseResponse
+		auditReqContext.Body = resp
+		if err != nil {
+			auditReqContext.Error = err
+			err2 := i.auditing.Index(auditReqContext)
+			if err2 != nil {
+				i.logger.Errorf("unable to index error: %v", err2)
+			}
+			return nil, err
+		}
+		err = i.auditing.Index(auditReqContext)
+		return resp, err
+	}
+}
+
+func NewConnectInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit func(fullMethod string) bool) connect.Interceptor {
+	if a == nil {
+		logger.Fatal("cannot use nil auditing to create connect interceptor")
+	}
+	return auditingConnectInterceptor{
+		auditing:    a,
+		logger:      logger,
+		shouldAudit: shouldAudit,
+	}
+}
+
 func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 	if a == nil {
 		logger.Fatal("cannot use nil auditing to create http middleware")
@@ -140,6 +277,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			Type:         EntryTypeHTTP,
 			Detail:       EntryDetail(r.Method),
 			Path:         r.URL.Path,
+			Phase:        EntryPhaseRequest,
 			ForwardedFor: request.HeaderParameter("x-forwarded-for"),
 			RemoteAddr:   r.RemoteAddr,
 		}

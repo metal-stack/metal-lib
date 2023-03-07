@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
-	"github.com/mitchellh/mapstructure"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
@@ -84,22 +83,62 @@ func (a *meiliAuditing) Index(entry Entry) error {
 	if entry.Timestamp.IsZero() {
 		entry.Timestamp = time.Now()
 	}
-	var doc map[string]interface{}
-	if err := mapstructure.Decode(entry, &doc); err != nil {
-		a.log.Errorw("index", "error", err)
-		return err
+	doc := make(map[string]any)
+	doc["id"] = entry.Id
+	doc["component"] = entry.Component
+	if entry.Type != "" {
+		doc["type"] = string(entry.Type)
 	}
+	doc["timestamp"] = entry.Timestamp.Format(time.RFC3339)
 	doc["timestamp-unix"] = entry.Timestamp.Unix()
+	if entry.User != "" {
+		doc["user"] = entry.User
+	}
+	if entry.Tenant != "" {
+		doc["tenant"] = entry.Tenant
+	}
+	if entry.RequestId != "" {
+		doc["rqid"] = entry.RequestId
+	}
+	if entry.Detail != "" {
+		doc["detail"] = string(entry.Detail)
+	}
+	if entry.Phase != "" {
+		doc["phase"] = string(entry.Phase)
+	}
+	if entry.Path != "" {
+		doc["path"] = entry.Path
+	}
+	if entry.ForwardedFor != "" {
+		doc["forwarded-for"] = entry.ForwardedFor
+	}
+	if entry.RemoteAddr != "" {
+		doc["remote-addr"] = entry.RemoteAddr
+	}
+	if entry.StatusCode != 0 {
+		doc["status-code"] = entry.StatusCode
+	}
+	if entry.Error != nil {
+		doc["error"] = entry.Error.Error()
+	}
+	if entry.Body != nil {
+		doc["body"] = entry.Body
+	}
 
-	documents := []map[string]interface{}{doc}
+	for k, v := range doc {
+		a.log.Debugw("index", "key", k, "value", v, "type", fmt.Sprintf("%T", v))
+	}
 
-	task, err := a.index.AddDocuments(documents)
+	documents := []map[string]any{doc}
+
+	task, err := a.index.AddDocuments(documents, "id")
 	if err != nil {
 		a.log.Errorw("index", "error", err)
 		return err
 	}
 	stats, _ := a.index.GetStats()
 	a.log.Debugw("index", "task status", task.Status, "index stats", stats)
+
 	return nil
 }
 
