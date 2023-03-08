@@ -131,9 +131,7 @@ func (a *meiliAuditing) Index(entry Entry) error {
 		doc["body"] = entry.Body
 	}
 
-	for k, v := range doc {
-		a.log.Debugw("index", "key", k, "value", v, "type", fmt.Sprintf("%T", v))
-	}
+	a.log.Debugw("debug", "doc", doc)
 
 	documents := []map[string]any{doc}
 

@@ -48,7 +48,7 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 			return nil, err
 		}
 
-		auditReqContext.NextPhase()
+		auditReqContext.prepareForNextPhase()
 		resp, err = handler(childCtx, req)
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
@@ -91,7 +91,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 		if err != nil {
 			return err
 		}
-		auditReqContext.NextPhase()
+		auditReqContext.prepareForNextPhase()
 		err = handler(srv, ss)
 		if err != nil {
 			auditReqContext.Error = err
@@ -136,7 +136,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		if err != nil {
 			a.logger.Errorf("unable to index error: %v", err)
 		}
-		auditReqContext.NextPhase()
+		auditReqContext.prepareForNextPhase()
 		scc := next(ctx, s)
 		auditReqContext.Phase = EntryPhaseClosed
 		err = a.auditing.Index(auditReqContext)
@@ -170,7 +170,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		if err != nil {
 			a.logger.Errorf("unable to index error: %v", err)
 		}
-		auditReqContext.NextPhase()
+		auditReqContext.prepareForNextPhase()
 		err = next(ctx, shc)
 		if err != nil {
 			auditReqContext.Error = err
@@ -215,7 +215,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			return nil, err
 		}
 
-		auditReqContext.NextPhase()
+		auditReqContext.prepareForNextPhase()
 		resp, err := next(ctx, ar)
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
@@ -314,7 +314,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 		}
 		response.ResponseWriter = bufferedResponseWriter
 
-		auditReqContext.NextPhase()
+		auditReqContext.prepareForNextPhase()
 		chain.ProcessFilter(request, response)
 
 		auditReqContext.Phase = EntryPhaseResponse

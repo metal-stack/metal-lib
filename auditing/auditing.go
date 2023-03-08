@@ -71,14 +71,14 @@ type Entry struct {
 	ForwardedFor string
 	RemoteAddr   string
 
-	Body       any // JSON, string or []byte
+	Body       any // JSON, string or numbers
 	StatusCode int // only for `EntryDetailHTTP`
 
 	// Internal errors
 	Error error
 }
 
-func (e *Entry) NextPhase() {
+func (e *Entry) prepareForNextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()
 	e.Body = nil
