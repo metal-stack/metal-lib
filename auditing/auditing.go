@@ -89,7 +89,11 @@ func (e *Entry) prepareForNextPhase() {
 		e.Phase = EntryPhaseResponse
 	case EntryPhaseOpened:
 		e.Phase = EntryPhaseClosed
-	default: // keep the phase
+	case EntryPhaseResponse,
+		EntryPhaseSingle,
+		EntryPhaseError,
+		EntryPhaseClosed:
+		// keep the phase
 	}
 }
 
