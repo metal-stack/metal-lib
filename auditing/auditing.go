@@ -42,12 +42,12 @@ const (
 type EntryPhase string
 
 const (
-	EntryPhaseRequest  = "request"
-	EntryPhaseResponse = "response"
-	EntryPhaseSingle   = "single"
-	EntryPhaseError    = "error"
-	EntryPhaseOpened   = "opened"
-	EntryPhaseClosed   = "closed"
+	EntryPhaseRequest  EntryPhase = "request"
+	EntryPhaseResponse EntryPhase = "response"
+	EntryPhaseSingle   EntryPhase = "single"
+	EntryPhaseError    EntryPhase = "error"
+	EntryPhaseOpened   EntryPhase = "opened"
+	EntryPhaseClosed   EntryPhase = "closed"
 )
 
 type Entry struct {
