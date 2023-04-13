@@ -124,7 +124,14 @@ type EntryFilter struct {
 }
 
 type Auditing interface {
+	// Commits all pending entries to the index.
+	// Should be called before shutting down the application.
 	Flush() error
+	// Adds the given entry to the index.
+	// Some fields like `Id`, `Component` and `Timestamp` will be filled by the auditing driver if not given.
 	Index(Entry) error
+	// Searches for entries matching the given filter.
+	// By default only recent entries will be returned.
+	// The returned entries will be sorted by timestamp in descending order.
 	Search(EntryFilter) ([]Entry, error)
 }
