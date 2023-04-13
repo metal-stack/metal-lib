@@ -97,6 +97,34 @@ func (e *Entry) prepareForNextPhase() {
 	}
 }
 
+type EntryFilter struct {
+	// In range
+	From time.Time // default time.Now() - 1h
+	To   time.Time // default now
+
+	Id        string    // exact match
+	Component string    // exact match
+	RequestId string    // starts with
+	Type      EntryType // exact match
+
+	User   string // exact match
+	Tenant string // exact match
+
+	Detail EntryDetail // exact match
+	Phase  EntryPhase  // exact match
+
+	Path         string // free text
+	ForwardedFor string // free text
+	RemoteAddr   string // free text
+
+	Body       string // free text
+	StatusCode int    // exact match
+
+	Error string // free text
+}
+
 type Auditing interface {
+	Flush() error
 	Index(Entry) error
+	Search(EntryFilter) ([]Entry, error)
 }
