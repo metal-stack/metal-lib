@@ -123,9 +123,6 @@ func (a *meiliAuditing) Index(entry Entry) error {
 
 func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	predicates := make([]string, 0)
-	if filter.Id != "" {
-		predicates = append(predicates, fmt.Sprintf("id = %q", filter.Id))
-	}
 	if filter.Component != "" {
 		predicates = append(predicates, fmt.Sprintf("component = %q", filter.Component))
 	}
@@ -172,10 +169,15 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	}
 	predicates = append(predicates, fmt.Sprintf("timestamp-unix <= %d", filter.To.Unix()))
 
+	if filter.Limit == 0 {
+		filter.Limit = 100
+	}
+
 	reqProto := meilisearch.SearchRequest{
 		Filter: predicates,
 		Query:  filter.Body,
 		Sort:   []string{"timestamp-unix:desc", "sort-weight:desc"},
+		Limit:  filter.Limit,
 	}
 	req := &meilisearch.MultiSearchRequest{}
 

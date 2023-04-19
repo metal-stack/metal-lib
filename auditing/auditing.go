@@ -98,29 +98,30 @@ func (e *Entry) prepareForNextPhase() {
 }
 
 type EntryFilter struct {
+	Limit int64 `json:"limit" optional:"true"` // default 100
+
 	// In range
-	From time.Time // default time.Now() - 1h
-	To   time.Time // default now
+	From time.Time `json:"from" optional:"true"` // default time.Now() - 1h
+	To   time.Time `json:"to" optional:"true"`   // default now
 
-	Id        string    // exact match
-	Component string    // exact match
-	RequestId string    // starts with
-	Type      EntryType // exact match
+	Component string    `json:"component" optional:"true"` // exact match
+	RequestId string    `json:"rqid" optional:"true"`      // starts with
+	Type      EntryType `json:"type" optional:"true"`      // exact match
 
-	User   string // exact match
-	Tenant string // exact match
+	User   string `json:"user" optional:"true"`   // exact match
+	Tenant string `json:"tenant" optional:"true"` // exact match
 
-	Detail EntryDetail // exact match
-	Phase  EntryPhase  // exact match
+	Detail EntryDetail `json:"detail" optional:"true"` // exact match
+	Phase  EntryPhase  `json:"phase" optional:"true"`  // exact match
 
-	Path         string // free text
-	ForwardedFor string // free text
-	RemoteAddr   string // free text
+	Path         string `json:"path" optional:"true"`          // free text
+	ForwardedFor string `json:"forwarded_for" optional:"true"` // free text
+	RemoteAddr   string `json:"remote_addr" optional:"true"`   // free text
 
-	Body       string // free text
-	StatusCode int    // exact match
+	Body       string `json:"body" optional:"true"`        // free text
+	StatusCode int    `json:"status_code" optional:"true"` // exact match
 
-	Error string // free text
+	Error string `json:"error" optional:"true"` // free text
 }
 
 type Auditing interface {
