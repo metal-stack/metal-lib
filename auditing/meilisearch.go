@@ -160,14 +160,12 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		predicates = append(predicates, fmt.Sprintf("error = %q", filter.Error))
 	}
 
-	if filter.From.IsZero() {
-		filter.From = time.Now().Add(-time.Hour)
+	if !filter.From.IsZero() {
+		predicates = append(predicates, fmt.Sprintf("timestamp-unix >= %d", filter.From.Unix()))
 	}
-	predicates = append(predicates, fmt.Sprintf("timestamp-unix >= %d", filter.From.Unix()))
-	if filter.To.IsZero() {
-		filter.To = time.Now()
+	if !filter.To.IsZero() {
+		predicates = append(predicates, fmt.Sprintf("timestamp-unix <= %d", filter.To.Unix()))
 	}
-	predicates = append(predicates, fmt.Sprintf("timestamp-unix <= %d", filter.To.Unix()))
 
 	if filter.Limit == 0 {
 		filter.Limit = 100
@@ -186,9 +184,6 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		return nil, err
 	}
 	for _, index := range indexes.Results {
-		if !strings.HasPrefix(index.UID, a.indexPrefix) {
-			continue
-		}
 		indexQuery := reqProto
 		indexQuery.IndexUID = index.UID
 		req.Queries = append(req.Queries, indexQuery)
