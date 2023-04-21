@@ -101,8 +101,8 @@ type EntryFilter struct {
 	Limit int64 `json:"limit" optional:"true"` // default 100
 
 	// In range
-	From time.Time `json:"from" optional:"true"` // default time.Now() - 1h
-	To   time.Time `json:"to" optional:"true"`   // default now
+	From time.Time `json:"from" optional:"true"`
+	To   time.Time `json:"to" optional:"true"`
 
 	Component string    `json:"component" optional:"true"` // exact match
 	RequestId string    `json:"rqid" optional:"true"`      // starts with
