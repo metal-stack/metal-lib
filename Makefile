@@ -14,6 +14,10 @@ vendor:
 test:
 	go test -coverprofile cover.out -cover -race ./... && go tool cover -func cover.out
 
+.PHONY: test-integration
+test-integration:
+	go test -tags=integration -timeout 60s -coverprofile cover.out -cover -race ./... && go tool cover -func cover.out
+
 .PHONY: bustest
 bustest: gofmt
 	cd bus/testenv && make
