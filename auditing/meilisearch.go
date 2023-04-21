@@ -168,7 +168,7 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	}
 
 	if filter.Limit == 0 {
-		filter.Limit = 100
+		filter.Limit = EntryFilterDefaultLimit
 	}
 
 	reqProto := meilisearch.SearchRequest{

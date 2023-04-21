@@ -50,6 +50,8 @@ const (
 	EntryPhaseClosed   EntryPhase = "closed"
 )
 
+const EntryFilterDefaultLimit int64 = 100
+
 type Entry struct {
 	Id        string // filled by the auditing driver
 	Component string
@@ -98,7 +100,7 @@ func (e *Entry) prepareForNextPhase() {
 }
 
 type EntryFilter struct {
-	Limit int64 `json:"limit" optional:"true"` // default 100
+	Limit int64 `json:"limit" optional:"true"` // default `EntryFilterDefaultLimit`
 
 	// In range
 	From time.Time `json:"from" optional:"true"`
