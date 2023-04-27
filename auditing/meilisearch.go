@@ -335,11 +335,31 @@ func (a *meiliAuditing) newIndex() error {
 	if err != nil {
 		return err
 	}
-	tSort, err := a.index.UpdateSortableAttributes(&[]string{"timestamp-unix", "sort-weight"})
+	tSort, err := a.index.UpdateSortableAttributes(&[]string{
+		"timestamp-unix",
+		"sort-weight",
+	})
 	if err != nil {
 		return err
 	}
-	tFilter, err := a.index.UpdateFilterableAttributes(&[]string{"component", "type", "user", "tenant", "rqid", "detail", "phase", "path", "forwarded-for", "remote-addr", "timestamp-unix", "body"})
+	tFilter, err := a.index.UpdateFilterableAttributes(&[]string{
+		"id",
+		"component",
+		"rqid",
+		"type",
+		"timestamp-unix",
+		"timestamp",
+		"user",
+		"tenant",
+		"detail",
+		"phase",
+		"path",
+		"forwarded-for",
+		"remote-addr",
+		"body",
+		"status-code",
+		"error",
+	})
 	if err != nil {
 		return err
 	}
