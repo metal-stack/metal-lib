@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
-	"github.com/robfig/cron"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
@@ -18,11 +18,13 @@ import (
 type meiliAuditing struct {
 	component        string
 	client           *meilisearch.Client
-	index            *meilisearch.Index
 	log              *zap.SugaredLogger
 	indexPrefix      string
 	rotationInterval Interval
 	keep             int64
+
+	indexLock sync.RWMutex
+	index     *meilisearch.Index
 }
 
 func New(c Config) (Auditing, error) {
@@ -52,25 +54,6 @@ func New(c Config) (Auditing, error) {
 		rotationInterval: c.RotationInterval,
 		keep:             c.Keep,
 	}
-	err = a.newIndex()
-	if err != nil {
-		return nil, err
-	}
-
-	if c.RotationInterval != "" {
-		// create a new Index every interval
-		cn := cron.New()
-		err := cn.AddFunc(string(c.RotationInterval), func() {
-			err := a.newIndex()
-			if err != nil {
-				a.log.Errorw("index rotation", "error", err)
-			}
-		})
-		if err != nil {
-			return nil, err
-		}
-		cn.Start()
-	}
 	return a, nil
 }
 
@@ -96,6 +79,10 @@ func (a *meiliAuditing) Flush() error {
 }
 
 func (a *meiliAuditing) Index(entry Entry) error {
+	index, err := a.getLatestIndex()
+	if err != nil {
+		return err
+	}
 	if entry.Id == "" {
 		entry.Id = uuid.NewString()
 	}
@@ -109,15 +96,12 @@ func (a *meiliAuditing) Index(entry Entry) error {
 	doc := a.encodeEntry(entry)
 	documents := []map[string]any{doc}
 
-	task, err := a.index.AddDocuments(documents, "id")
+	task, err := index.AddDocuments(documents, "id")
 	if err != nil {
 		a.log.Errorw("index", "error", err)
 		return err
 	}
-	a.log.Debugw("index", "task", task.TaskUID, "index", a.index.UID)
-
-	stats, _ := a.index.GetStats()
-	a.log.Debugw("index", "task status", task.Status, "index stats", stats)
+	a.log.Debugw("index", "task", task.TaskUID, "index", index.UID)
 	return nil
 }
 
@@ -177,16 +161,31 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		Sort:   []string{"timestamp-unix:desc", "sort-weight:desc"},
 		Limit:  filter.Limit,
 	}
-	req := &meilisearch.MultiSearchRequest{}
+	req := &meilisearch.MultiSearchRequest{
+		Queries: []meilisearch.SearchRequest{},
+	}
 
+	_, err := a.getLatestIndex()
+	if err != nil {
+		return nil, err
+	}
 	indexes, err := a.client.GetIndexes(&meilisearch.IndexesQuery{})
 	if err != nil {
 		return nil, err
+	}
+	if indexes.Total == 0 {
+		return nil, nil
 	}
 	for _, index := range indexes.Results {
 		indexQuery := reqProto
 		indexQuery.IndexUID = index.UID
 		req.Queries = append(req.Queries, indexQuery)
+
+		i := index
+		err = a.migrateIndexSettings(&i)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	resp, err := a.client.MultiSearch(req)
@@ -325,56 +324,115 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 
 }
 
-func (a *meiliAuditing) newIndex() error {
-	a.log.Debugw("auditing", "create new index", a.rotationInterval)
-	a.index = a.client.Index(indexName(a.indexPrefix, a.rotationInterval))
+func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
+	a.indexLock.RLock()
+	indexUid := indexName(a.indexPrefix, a.rotationInterval)
+	if a.index != nil && a.index.UID == indexUid {
+		a.indexLock.RUnlock()
+		return a.index, nil
+	}
+	a.indexLock.RUnlock()
+	a.indexLock.Lock()
+	defer a.indexLock.Unlock()
 
-	tTypo, err := a.index.UpdateTypoTolerance(&meilisearch.TypoTolerance{
-		Enabled: false,
+	a.log.Debugw("auditing", "create new index", a.rotationInterval, "index", indexUid)
+	creationTask, err := a.client.CreateIndex(&meilisearch.IndexConfig{
+		Uid:        indexUid,
+		PrimaryKey: "id",
 	})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to request create index (%s): %w", indexUid, err)
 	}
-	tSort, err := a.index.UpdateSortableAttributes(&[]string{
-		"timestamp-unix",
-		"sort-weight",
-	})
+	_, err = a.client.WaitForTask(creationTask.TaskUID)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to execute create index (%s): %w", indexUid, err)
 	}
-	tFilter, err := a.index.UpdateFilterableAttributes(&[]string{
-		"id",
-		"component",
-		"rqid",
-		"type",
-		"timestamp-unix",
-		"timestamp",
-		"user",
-		"tenant",
-		"detail",
-		"phase",
-		"path",
-		"forwarded-for",
-		"remote-addr",
-		"body",
-		"status-code",
-		"error",
-	})
+
+	a.index = a.client.Index(indexUid)
+	err = a.migrateIndexSettings(a.index)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to migrate index settings (%s): %w", indexUid, err)
 	}
-	var errs []error
-	for _, task := range []*meilisearch.TaskInfo{tTypo, tSort, tFilter} {
-		_, err = a.client.WaitForTask(task.TaskUID)
+
+	go func() {
+		err = a.cleanUpIndexes()
 		if err != nil {
-			errs = append(errs, err)
+			a.log.Errorw("auditing", "failed to clean up indexes", err)
 		}
+	}()
+	return a.index, nil
+}
+
+func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
+	current, err := index.GetSettings()
+	if err != nil {
+		return fmt.Errorf("failed to request settings for index (%s): %w", index.UID, err)
 	}
-	if len(errs) > 0 {
-		a.log.Errorw("unable to update index settings", "err", errs)
-		return errors.Join(errs...)
+	changesRequired := false
+	desired := &meilisearch.Settings{
+		TypoTolerance: &meilisearch.TypoTolerance{
+			Enabled: false,
+		},
+		SortableAttributes: []string{
+			"timestamp-unix",
+			"sort-weight",
+		},
+		SearchableAttributes: []string{
+			"body",
+			"path",
+			"error",
+		},
+		FilterableAttributes: []string{
+			"id",
+			"component",
+			"rqid",
+			"type",
+			"timestamp-unix",
+			"timestamp",
+			"user",
+			"tenant",
+			"detail",
+			"phase",
+			"path",
+			"forwarded-for",
+			"remote-addr",
+			"body",
+			"status-code",
+			"error",
+		},
 	}
-	return a.cleanUpIndexes()
+	diff := &meilisearch.Settings{}
+
+	if current.TypoTolerance != nil && current.TypoTolerance.Enabled != desired.TypoTolerance.Enabled {
+		changesRequired = true
+		diff.TypoTolerance = desired.TypoTolerance
+	}
+
+	if !slices.Equal(current.SortableAttributes, desired.SortableAttributes) {
+		changesRequired = true
+		diff.SortableAttributes = desired.SortableAttributes
+	}
+	if !slices.Equal(current.SearchableAttributes, desired.SearchableAttributes) {
+		changesRequired = true
+		diff.SearchableAttributes = desired.SearchableAttributes
+	}
+	if !slices.Equal(current.FilterableAttributes, desired.FilterableAttributes) {
+		changesRequired = true
+		diff.FilterableAttributes = desired.FilterableAttributes
+	}
+	if !changesRequired {
+		return nil
+	}
+
+	settingsTask, err := index.UpdateSettings(diff)
+	if err != nil {
+		return fmt.Errorf("failed to request update settings for index (%s): %w", index.UID, err)
+	}
+	_, err = a.client.WaitForTask(settingsTask.TaskUID)
+	if err != nil {
+		return fmt.Errorf("failed to execute update settings for index (%s): %w", index.UID, err)
+	}
+	return nil
 }
 
 func (a *meiliAuditing) cleanUpIndexes() error {
