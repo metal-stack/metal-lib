@@ -23,7 +23,7 @@ type meiliAuditing struct {
 	rotationInterval Interval
 	keep             int64
 
-	indexLock sync.RWMutex
+	indexLock sync.Mutex
 	index     *meilisearch.Index
 }
 
@@ -325,15 +325,12 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 }
 
 func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
-	a.indexLock.RLock()
-	indexUid := indexName(a.indexPrefix, a.rotationInterval)
-	if a.index != nil && a.index.UID == indexUid {
-		a.indexLock.RUnlock()
-		return a.index, nil
-	}
-	a.indexLock.RUnlock()
 	a.indexLock.Lock()
 	defer a.indexLock.Unlock()
+	indexUid := indexName(a.indexPrefix, a.rotationInterval)
+	if a.index != nil && a.index.UID == indexUid {
+		return a.index, nil
+	}
 
 	a.log.Debugw("auditing", "create new index", a.rotationInterval, "index", indexUid)
 	creationTask, err := a.client.CreateIndex(&meilisearch.IndexConfig{
