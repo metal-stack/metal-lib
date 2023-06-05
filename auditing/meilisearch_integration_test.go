@@ -24,7 +24,7 @@ type ConnectionDetails struct {
 }
 
 func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *ConnectionDetails, err error) {
-	meilisearchMasterKey := "meili" // TODO: is this accepted?
+	meilisearchMasterKey := "meili"
 
 	ctx := context.Background()
 	var log testcontainers.Logging
@@ -34,7 +34,7 @@ func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *Conn
 
 	meiliContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "getmeili/meilisearch:v1.1.0",
+			Image:        "getmeili/meilisearch:v1.1.1",
 			ExposedPorts: []string{"7700/tcp"},
 			Env: map[string]string{
 				"MEILI_MASTER_KEY":   meilisearchMasterKey,
