@@ -68,6 +68,21 @@ func (c *Cache[K, O]) Get(ctx context.Context, key K) (O, error) {
 	return entry.value, nil
 }
 
+// Refresh the entry with given key regardless expiration
+func (c *Cache[K, O]) Refresh(ctx context.Context, key K) (O, error) {
+	o, err := c.fetch(ctx, key)
+	if err != nil {
+		var zero O
+		return zero, fmt.Errorf("error refresh cache entry: %w", err)
+	}
+
+	entry := newEntry(o, c.expiration)
+
+	c.entries.Store(key, entry)
+
+	return entry.value, nil
+}
+
 func newEntry[O any](o O, expiration time.Duration) *entry[O] {
 	return &entry[O]{
 		value:     o,
