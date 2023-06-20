@@ -1,13 +1,13 @@
 package printers
 
 import (
-	"bytes"
 	"encoding/csv"
-	"fmt"
 	"io"
 
 	"github.com/jszwec/csvutil"
 )
+
+const defaultDelimiter = ';'
 
 type CSVPrinter struct {
 	c   *CSVPrinterConfig
@@ -22,8 +22,6 @@ type CSVPrinterConfig struct {
 }
 
 func NewCSVPrinter(config *CSVPrinterConfig) *CSVPrinter {
-	const defaultDelimiter = ';'
-
 	if config.Delimiter == 0 {
 		config.Delimiter = defaultDelimiter
 	}
@@ -40,8 +38,6 @@ func (cp *CSVPrinter) WithOut(out io.Writer) *CSVPrinter {
 }
 
 func (cp *CSVPrinter) Print(data any) error {
-	var buf bytes.Buffer
-
 	w := csv.NewWriter(cp.out)
 	w.Comma = cp.c.Delimiter
 
@@ -55,11 +51,9 @@ func (cp *CSVPrinter) Print(data any) error {
 
 	w.Flush()
 
-	if err := w.Error(); err != nil {
+	if err != nil {
 		return err
 	}
-
-	fmt.Fprintf(cp.out, "%s\n", buf.String())
 
 	return nil
 }

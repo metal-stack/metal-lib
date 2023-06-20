@@ -31,11 +31,9 @@ var (
 	expectationWithHeader = `FirstName;LastName;Username
 John;Deere;jd
 New;Holland;nh
-
 `
 	expectationWithOutHeader = `John;Deere;jd
 New;Holland;nh
-
 `
 	delimiter = ';' // rune(59) ≙ ';'
 
