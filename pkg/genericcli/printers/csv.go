@@ -51,9 +51,5 @@ func (cp *CSVPrinter) Print(data any) error {
 
 	w.Flush()
 
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
