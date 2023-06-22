@@ -257,7 +257,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Use:   "apply",
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				if !viper.GetBool("force") {
+				if !viper.GetBool("skip-security-prompts") {
 					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
@@ -339,7 +339,7 @@ func AddSortFlag[R any](cmd *cobra.Command, sorter *multisort.Sorter[R]) {
 
 func (c *CmdsConfig[C, U, R]) addFileFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText(cmd.Use))
-	cmd.Flags().Bool("force", false, c.forceFlagText())
+	cmd.Flags().Bool("skip-security-prompts", false, c.skipPromptsFlagText())
 	cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
 	cmd.Flags().Bool("timestamps", false, c.bulkTimestampsText())
 }
@@ -374,7 +374,7 @@ func (c *CmdsConfig[C, U, R]) validate() error {
 }
 
 func (c *CmdsConfig[C, U, R]) evalBulkFlags() func() printers.Printer {
-	if !viper.GetBool("force") {
+	if !viper.GetBool("skip-security-prompts") {
 		c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 	}
 
@@ -406,7 +406,7 @@ the file can also contain multiple documents and perform a bulk operation.
 	`, c.Singular, c.BinaryName, command)
 }
 
-func (c *CmdsConfig[C, U, R]) forceFlagText() string {
+func (c *CmdsConfig[C, U, R]) skipPromptsFlagText() string {
 	return "skips security prompt for bulk operations"
 }
 
