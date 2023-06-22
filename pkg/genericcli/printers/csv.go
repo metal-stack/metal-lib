@@ -3,6 +3,7 @@ package printers
 import (
 	"encoding/csv"
 	"io"
+	"os"
 
 	"github.com/jszwec/csvutil"
 )
@@ -19,9 +20,21 @@ type CSVPrinterConfig struct {
 	AutoHeader bool
 	// Delimiter the char to separate the columns, default is ";"
 	Delimiter rune
+	// Out defines the output writer for the printer, will default to os.stdout
+	Out io.Writer
+	// Tag sets the struct field tag used for printing (default: json)
+	Tag string
 }
 
 func NewCSVPrinter(config *CSVPrinterConfig) *CSVPrinter {
+	if config.Out == nil {
+		config.Out = os.Stdout
+	}
+
+	if config.Tag == "" {
+		config.Tag = "json"
+	}
+
 	if config.Delimiter == 0 {
 		config.Delimiter = defaultDelimiter
 	}
@@ -43,6 +56,7 @@ func (cp *CSVPrinter) Print(data any) error {
 
 	enc := csvutil.NewEncoder(w)
 	enc.AutoHeader = cp.c.AutoHeader
+	enc.Tag = cp.c.Tag
 
 	err := enc.Encode(data)
 	if err != nil {

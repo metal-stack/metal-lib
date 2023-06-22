@@ -28,7 +28,7 @@ var (
 			Username:  "nh",
 		},
 	}
-	expectationWithHeader = `FirstName;LastName;Username
+	expectationWithHeader = `first_name;last_name;username
 John;Deere;jd
 New;Holland;nh
 `
