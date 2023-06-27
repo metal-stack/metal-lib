@@ -20,7 +20,9 @@ type testYAML struct {
 }
 
 var (
-	testYAMLRaw = `---
+	testYAMLRaw = `
+
+---
 id: a
 labels:
   - a
