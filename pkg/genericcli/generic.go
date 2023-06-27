@@ -1,6 +1,8 @@
 package genericcli
 
 import (
+	"io"
+
 	"github.com/metal-stack/metal-lib/pkg/multisort"
 	"github.com/spf13/afero"
 )
@@ -15,6 +17,10 @@ type GenericCLI[C any, U any, R any] struct {
 	crud   CRUD[C, U, R]
 	parser MultiDocumentYAML[R]
 	sorter *multisort.Sorter[R]
+
+	bulkPrint          bool
+	bulkSecurityPrompt *PromptConfig
+	timestamps         bool
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -33,12 +39,9 @@ type CRUD[C any, U any, R any] interface {
 	Update(rq U) (R, error)
 	// Delete tries to delete the entity with the given id and returns the deleted entity.
 	Delete(id string) (R, error)
-	// ToCreate transforms an entity's response object to its create request.
-	// This is required for capabilities like creation from file of response objects.
-	ToCreate(r R) (C, error)
-	// ToUpdate transforms an entity's response object to its update request.
-	// This is required for capabilities like update from file of response objects or edit.
-	ToUpdate(r R) (U, error)
+	// Convert converts an entity's response object to best possible create and update requests and additionally returns the entities ID.
+	// This is required for capabilities like creation/update/deletion from a file of response objects.
+	Convert(r R) (string, C, U, error)
 }
 
 // NewGenericCLI returns a new generic cli.
@@ -49,9 +52,10 @@ type CRUD[C any, U any, R any] interface {
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
 	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		crud:   crud,
-		fs:     fs,
-		parser: MultiDocumentYAML[R]{fs: fs},
+		crud:      crud,
+		fs:        fs,
+		parser:    MultiDocumentYAML[R]{fs: fs},
+		bulkPrint: false,
 	}
 }
 
@@ -63,6 +67,28 @@ func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
 
 func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCLI[C, U, R] {
 	a.sorter = sorter
+	return a
+}
+
+// WithBulkPrint prints results in a bulk at the end on multi-entity operations, the results are a list.
+// default is printing results intermediately during the bulk operation, which causes single entities to be printed in sequence.
+func (a *GenericCLI[C, U, R]) WithBulkPrint() *GenericCLI[C, U, R] {
+	a.bulkPrint = true
+	return a
+}
+
+// WithBulkSecurityPrompt prints interactive prompts before a multi-entity operation if there is a tty.
+func (a *GenericCLI[C, U, R]) WithBulkSecurityPrompt(in io.Reader, out io.Writer) *GenericCLI[C, U, R] {
+	a.bulkSecurityPrompt = &PromptConfig{
+		In:  in,
+		Out: out,
+	}
+	return a
+}
+
+// WithBulkTimestamps prints out the duration of an operation to stdout during a bulk operation.
+func (a *GenericCLI[C, U, R]) WithTimestamps() *GenericCLI[C, U, R] {
+	a.timestamps = true
 	return a
 }
 
@@ -85,8 +111,7 @@ type (
 		Create(rq *testCreate) (*testResponse, error)
 		Update(rq *testUpdate) (*testResponse, error)
 		Delete(id string) (*testResponse, error)
-		ToCreate(r *testResponse) (*testCreate, error)
-		ToUpdate(r *testResponse) (*testUpdate, error)
+		Convert(r *testResponse) (string, *testCreate, *testUpdate, error)
 	}
 	testCRUD   struct{ client testClient }
 	testCreate struct {
