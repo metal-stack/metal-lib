@@ -108,6 +108,10 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 			return zero, fmt.Errorf("decode error: %w", err)
 		}
 
+		if pointer.IsZero(data) {
+			continue
+		}
+
 		if count == index {
 			return data, nil
 		}
