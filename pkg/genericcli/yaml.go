@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/spf13/afero"
 
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -49,6 +50,10 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 				break
 			}
 			return nil, fmt.Errorf("decode error: %w", err)
+		}
+
+		if pointer.IsZero(data) {
+			continue
 		}
 
 		docs = append(docs, data)
@@ -101,6 +106,10 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 				return zero, fmt.Errorf("index not found in document: %d", index)
 			}
 			return zero, fmt.Errorf("decode error: %w", err)
+		}
+
+		if pointer.IsZero(data) {
+			continue
 		}
 
 		if count == index {
