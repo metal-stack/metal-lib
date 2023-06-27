@@ -9,6 +9,45 @@ type mockTestClient struct {
 	mock.Mock
 }
 
+// Convert provides a mock function with given fields: r
+func (_m *mockTestClient) Convert(r *testResponse) (string, *testCreate, *testUpdate, error) {
+	ret := _m.Called(r)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(*testResponse) string); ok {
+		r0 = rf(r)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 *testCreate
+	if rf, ok := ret.Get(1).(func(*testResponse) *testCreate); ok {
+		r1 = rf(r)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*testCreate)
+		}
+	}
+
+	var r2 *testUpdate
+	if rf, ok := ret.Get(2).(func(*testResponse) *testUpdate); ok {
+		r2 = rf(r)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).(*testUpdate)
+		}
+	}
+
+	var r3 error
+	if rf, ok := ret.Get(3).(func(*testResponse) error); ok {
+		r3 = rf(r)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
+}
+
 // Create provides a mock function with given fields: rq
 func (_m *mockTestClient) Create(rq *testCreate) (*testResponse, error) {
 	ret := _m.Called(rq)
@@ -94,52 +133,6 @@ func (_m *mockTestClient) List() ([]*testResponse, error) {
 	var r1 error
 	if rf, ok := ret.Get(1).(func() error); ok {
 		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ToCreate provides a mock function with given fields: r
-func (_m *mockTestClient) ToCreate(r *testResponse) (*testCreate, error) {
-	ret := _m.Called(r)
-
-	var r0 *testCreate
-	if rf, ok := ret.Get(0).(func(*testResponse) *testCreate); ok {
-		r0 = rf(r)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*testCreate)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*testResponse) error); ok {
-		r1 = rf(r)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ToUpdate provides a mock function with given fields: r
-func (_m *mockTestClient) ToUpdate(r *testResponse) (*testUpdate, error) {
-	ret := _m.Called(r)
-
-	var r0 *testUpdate
-	if rf, ok := ret.Get(0).(func(*testResponse) *testUpdate); ok {
-		r0 = rf(r)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*testUpdate)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*testResponse) error); ok {
-		r1 = rf(r)
 	} else {
 		r1 = ret.Error(1)
 	}

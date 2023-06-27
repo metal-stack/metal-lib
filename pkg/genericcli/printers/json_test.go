@@ -2,6 +2,7 @@ package printers_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -43,6 +44,20 @@ func TestJsonSuccess(t *testing.T) {
     }
 }
 `
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+}
+
+func TestJsonPrintError(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	printer := printers.NewJSONPrinter().WithOut(buffer)
+	err := printer.Print(fmt.Errorf("Test"))
+	if err != nil {
+		t.Error(err)
+	}
+	got := buffer.String()
+	want := "Test\n"
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
 	}

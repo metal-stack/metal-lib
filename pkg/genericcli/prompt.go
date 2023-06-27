@@ -16,6 +16,7 @@ type PromptConfig struct {
 	AcceptedAnswers []string
 	ShowAnswers     bool
 	In              io.Reader
+	Out             io.Writer
 }
 
 func PromptDefaultQuestion() string {
@@ -39,21 +40,27 @@ func Prompt() error {
 // PromptCustomAnswers the user to given compare text
 // "no" can be an empty string, "yes" is the list of accepted yes answers.
 func PromptCustom(c *PromptConfig) error {
-	if c.Message == "" || len(c.AcceptedAnswers) == 0 {
+	if c.Message == "" {
 		panic("internal error: prompt not properly configured")
+	}
+	if len(c.AcceptedAnswers) == 0 {
+		c.AcceptedAnswers = PromptDefaultAnswers()
 	}
 	if c.In == nil {
 		c.In = os.Stdin
 	}
+	if c.Out == nil {
+		c.Out = os.Stdout
+	}
 
 	if c.ShowAnswers {
 		if c.No == "" {
-			fmt.Printf("%s [%s] ", c.Message, pointer.FirstOrZero(c.AcceptedAnswers))
+			fmt.Fprintf(c.Out, "%s [%s] ", c.Message, pointer.FirstOrZero(c.AcceptedAnswers))
 		} else {
-			fmt.Printf("%s [%s/%s] ", c.Message, pointer.FirstOrZero(c.AcceptedAnswers), c.No)
+			fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, pointer.FirstOrZero(c.AcceptedAnswers), c.No)
 		}
 	} else {
-		fmt.Printf("%s ", c.Message)
+		fmt.Fprintf(c.Out, "%s ", c.Message)
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)

@@ -29,6 +29,8 @@ type TablePrinterConfig struct {
 	Out io.Writer
 	// CustomPadding defines the table padding, defaults to three whitespaces
 	CustomPadding *string
+	// DisableDefaultErrorPrinter disables the default error printer when the given print data is of type error.
+	DisableDefaultErrorPrinter bool
 }
 
 func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
@@ -55,6 +57,11 @@ func (p *TablePrinter) MutateTable(mutateFn func(table *tablewriter.Table)) {
 }
 
 func (p *TablePrinter) Print(data any) error {
+	if err, ok := data.(error); ok && !p.c.DisableDefaultErrorPrinter {
+		fmt.Fprintf(p.c.Out, "%s\n", err)
+		return nil
+	}
+
 	if err := p.initTable(); err != nil {
 		return err
 	}

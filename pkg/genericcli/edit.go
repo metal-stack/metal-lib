@@ -36,7 +36,7 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 		return zero, err
 	}
 
-	updateDoc, err := a.crud.ToUpdate(doc)
+	_, _, updateDoc, err := a.crud.Convert(doc)
 	if err != nil {
 		return zero, err
 	}
