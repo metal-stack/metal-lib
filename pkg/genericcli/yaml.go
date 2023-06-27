@@ -8,7 +8,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v3"
+
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/yaml"
 )
 
 // MultiDocumentYAML offers functions on multidocument YAML files
@@ -36,7 +38,7 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 
 	var docs []D
 
-	dec := yaml.NewDecoder(reader)
+	dec := utilyaml.NewYAMLToJSONDecoder(reader)
 
 	for {
 		var data D
@@ -88,7 +90,7 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 		return zero, err
 	}
 
-	dec := yaml.NewDecoder(reader)
+	dec := utilyaml.NewYAMLToJSONDecoder(reader)
 
 	count := 0
 	for {

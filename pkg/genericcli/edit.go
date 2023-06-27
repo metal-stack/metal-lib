@@ -7,7 +7,7 @@ import (
 
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
