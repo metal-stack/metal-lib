@@ -28,7 +28,14 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 		if !shouldAudit(info.FullMethod) {
 			return handler(ctx, req)
 		}
-		requestID := uuid.New().String()
+		var requestID string
+		if str, ok := ctx.Value(rest.RequestIDKey).(string); ok {
+			requestID = str
+		}
+		if requestID == "" {
+			requestID = uuid.New().String()
+		}
+
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
@@ -73,7 +80,19 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 		if !shouldAudit(info.FullMethod) {
 			return handler(srv, ss)
 		}
-		requestID := uuid.New().String()
+		var requestID string
+		if str, ok := ss.Context().Value(rest.RequestIDKey).(string); ok {
+			requestID = str
+		}
+		if requestID == "" {
+			requestID = uuid.New().String()
+		}
+		childCtx := context.WithValue(ss.Context(), rest.RequestIDKey, requestID)
+		childSS := grpcServerStreamWithContext{
+			ServerStream: ss,
+			ctx:          childCtx,
+		}
+
 		auditReqContext := Entry{
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
@@ -92,7 +111,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 			return err
 		}
 		auditReqContext.prepareForNextPhase()
-		err = handler(srv, ss)
+		err = handler(srv, childSS)
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
@@ -119,7 +138,15 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		if !a.shouldAudit(s.Procedure) {
 			return next(ctx, s)
 		}
-		requestID := uuid.New().String()
+		var requestID string
+		if str, ok := ctx.Value(rest.RequestIDKey).(string); ok {
+			requestID = str
+		}
+		if requestID == "" {
+			requestID = uuid.New().String()
+		}
+		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
+
 		auditReqContext := Entry{
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
@@ -137,7 +164,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			a.logger.Errorf("unable to index error: %v", err)
 		}
 		auditReqContext.prepareForNextPhase()
-		scc := next(ctx, s)
+		scc := next(childCtx, s)
 		auditReqContext.Phase = EntryPhaseClosed
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
@@ -153,7 +180,15 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		if !a.shouldAudit(shc.Spec().Procedure) {
 			return next(ctx, shc)
 		}
-		requestID := uuid.New().String()
+		var requestID string
+		if str, ok := ctx.Value(rest.RequestIDKey).(string); ok {
+			requestID = str
+		}
+		if requestID == "" {
+			requestID = uuid.New().String()
+		}
+		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
+
 		auditReqContext := Entry{
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
@@ -171,7 +206,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			a.logger.Errorf("unable to index error: %v", err)
 		}
 		auditReqContext.prepareForNextPhase()
-		err = next(ctx, shc)
+		err = next(childCtx, shc)
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.auditing.Index(auditReqContext)
@@ -195,7 +230,15 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		if !i.shouldAudit(ar.Spec().Procedure) {
 			return next(ctx, ar)
 		}
-		requestID := uuid.New().String()
+		var requestID string
+		if str, ok := ctx.Value(rest.RequestIDKey).(string); ok {
+			requestID = str
+		}
+		if requestID == "" {
+			requestID = uuid.New().String()
+		}
+		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
+
 		auditReqContext := Entry{
 			RequestId:  requestID,
 			Detail:     EntryDetailGRPCUnary,
@@ -216,7 +259,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		}
 
 		auditReqContext.prepareForNextPhase()
-		resp, err := next(ctx, ar)
+		resp, err := next(childCtx, ar)
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
 		if err != nil {
@@ -359,4 +402,14 @@ func (w *bufferedHttpResponseWriter) WriteHeader(h int) {
 
 func (w *bufferedHttpResponseWriter) Content() string {
 	return w.buf.String()
+}
+
+type grpcServerStreamWithContext struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+// Context implements grpc.ServerStream
+func (s grpcServerStreamWithContext) Context() context.Context {
+	return s.ctx
 }
