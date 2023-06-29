@@ -202,7 +202,7 @@ func oidcFlow(appModel *app) error {
 	}
 
 	// generate state
-	appModel.state = uuid.New().String()
+	appModel.state = uuid.NewString()
 
 	clientCtx := oidc.ClientContext(context.Background(), appModel.client)
 
