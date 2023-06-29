@@ -33,7 +33,7 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
