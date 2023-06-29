@@ -56,7 +56,7 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 
 		requestID := req.HeaderParameter("X-Request-Id")
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 
 		fields := []any{

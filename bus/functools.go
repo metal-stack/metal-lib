@@ -86,7 +86,7 @@ func (e *Endpoints) Unique(name string, fn interface{}) (*Function, Func, string
 	if fn == nil {
 		return nil, nil, "", fmt.Errorf("unique function without func is not allowed")
 	}
-	id := uuid.New().String()
+	id := uuid.NewString()
 	topic := name + "-" + id + "#ephemeral"
 	fnc, f, err := e.function(topic, "function#ephemeral", fn)
 	return fnc, f, topic, err

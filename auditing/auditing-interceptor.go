@@ -85,7 +85,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 		childCtx := context.WithValue(ss.Context(), rest.RequestIDKey, requestID)
 		childSS := grpcServerStreamWithContext{
@@ -143,7 +143,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
@@ -185,7 +185,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
@@ -235,7 +235,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
@@ -313,7 +313,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.New().String()
+			requestID = uuid.NewString()
 		}
 		auditReqContext := Entry{
 			RequestId:    requestID,
