@@ -405,15 +405,15 @@ func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
 		diff.TypoTolerance = desired.TypoTolerance
 	}
 
-	if !slices.Equal(current.SortableAttributes, desired.SortableAttributes) {
+	if !slicesUnorderedEqual(current.SortableAttributes, desired.SortableAttributes) {
 		changesRequired = true
 		diff.SortableAttributes = desired.SortableAttributes
 	}
-	if !slices.Equal(current.SearchableAttributes, desired.SearchableAttributes) {
+	if !slicesUnorderedEqual(current.SearchableAttributes, desired.SearchableAttributes) {
 		changesRequired = true
 		diff.SearchableAttributes = desired.SearchableAttributes
 	}
-	if !slices.Equal(current.FilterableAttributes, desired.FilterableAttributes) {
+	if !slicesUnorderedEqual(current.FilterableAttributes, desired.FilterableAttributes) {
 		changesRequired = true
 		diff.FilterableAttributes = desired.FilterableAttributes
 	}
@@ -502,4 +502,21 @@ func indexName(prefix string, i Interval) string {
 
 	indexName := prefix + "-" + time.Now().Format(timeFormat)
 	return indexName
+}
+
+func slicesUnorderedEqual[T comparable](lhs, rhs []T) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+	lvals := make(map[T]int, len(lhs))
+	for _, l := range lhs {
+		lvals[l]++
+	}
+	for _, r := range rhs {
+		if lvals[r] == 0 {
+			return false
+		}
+		lvals[r]--
+	}
+	return true
 }
