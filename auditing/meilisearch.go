@@ -409,15 +409,21 @@ func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
 	// 	diff.TypoTolerance = desired.TypoTolerance
 	// }
 
-	if !slicesUnorderedEqual(current.SortableAttributes, desired.SortableAttributes) {
+	slices.Sort(current.SortableAttributes)
+	slices.Sort(desired.SortableAttributes)
+	if !slices.Equal(current.SortableAttributes, desired.SortableAttributes) {
 		changesRequired = true
 		diff.SortableAttributes = desired.SortableAttributes
 	}
-	if !slicesUnorderedEqual(current.SearchableAttributes, desired.SearchableAttributes) {
+	slices.Sort(current.SearchableAttributes)
+	slices.Sort(desired.SearchableAttributes)
+	if !slices.Equal(current.SearchableAttributes, desired.SearchableAttributes) {
 		changesRequired = true
 		diff.SearchableAttributes = desired.SearchableAttributes
 	}
-	if !slicesUnorderedEqual(current.FilterableAttributes, desired.FilterableAttributes) {
+	slices.Sort(current.FilterableAttributes)
+	slices.Sort(desired.FilterableAttributes)
+	if !slices.Equal(current.FilterableAttributes, desired.FilterableAttributes) {
 		changesRequired = true
 		diff.FilterableAttributes = desired.FilterableAttributes
 	}
