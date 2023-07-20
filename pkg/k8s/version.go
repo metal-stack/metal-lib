@@ -23,11 +23,10 @@ func LessThan(actual string, target *semver.Version) (bool, error) {
 
 	return v.LessThan(target), nil
 }
-func GreaterThan(actual string, target *semver.Version) (bool, error) {
-	v, err := semver.NewVersion(actual)
+func GreaterThanOrEqual(actual string, target *semver.Version) (bool, error) {
+	l, err := LessThan(actual, target)
 	if err != nil {
 		return false, err
 	}
-
-	return v.GreaterThan(target), nil
+	return !l, nil
 }

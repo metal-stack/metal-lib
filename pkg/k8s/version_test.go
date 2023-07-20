@@ -29,6 +29,13 @@ func TestLessThan(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "1.19",
+			actual:  "1.19.0",
+			target:  KubernetesV119,
+			want:    false,
+			wantErr: false,
+		},
+		{
 			name:    "1.20",
 			actual:  "v1.20.5",
 			target:  KubernetesV119,
@@ -94,6 +101,13 @@ func TestGreaterThan(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "1.19",
+			actual:  "1.19.0",
+			target:  KubernetesV119,
+			want:    true,
+			wantErr: false,
+		},
+		{
 			name:    "wrong version",
 			actual:  "ab.1.c",
 			target:  KubernetesV119,
@@ -103,7 +117,7 @@ func TestGreaterThan(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GreaterThan(tt.actual, tt.target)
+			got, err := GreaterThanOrEqual(tt.actual, tt.target)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GreaterThan() error = %v, wantErr %v", err, tt.wantErr)
 				return
