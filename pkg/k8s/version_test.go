@@ -87,6 +87,13 @@ func TestGreaterThan(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "1.20",
+			actual:  "v1.20.0",
+			target:  KubernetesV119,
+			want:    true,
+			wantErr: false,
+		},
+		{
 			name:    "wrong version",
 			actual:  "ab.1.c",
 			target:  KubernetesV119,
