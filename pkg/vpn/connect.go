@@ -16,7 +16,7 @@ import (
 )
 
 type VPN struct {
-	conn     net.Conn
+	Conn     net.Conn
 	server   *tsnet.Server
 	tempDir  string
 	TargetIP string
@@ -80,7 +80,7 @@ func Connect(target, controllerURL, authkey string) (*VPN, error) {
 	s.Logf = func(format string, args ...any) {}
 
 	conn, err := lc.DialTCP(ctx, firewallVPNIP.String(), 22)
-	return &VPN{conn: conn, server: s, tempDir: tempDir, TargetIP: firewallVPNIP.String()}, err
+	return &VPN{Conn: conn, server: s, tempDir: tempDir, TargetIP: firewallVPNIP.String()}, err
 }
 
 func (v *VPN) Close() error {
