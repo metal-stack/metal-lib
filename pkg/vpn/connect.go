@@ -22,7 +22,7 @@ type VPN struct {
 	TargetIP string
 }
 
-func Connect(target, controllerURL, authkey string) (*VPN, error) {
+func Connect(ctx context.Context, target, controllerURL, authkey string) (*VPN, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -51,7 +51,6 @@ func Connect(target, controllerURL, authkey string) (*VPN, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.Background()
 	var firewallVPNIP netip.Addr
 	err = retry.Do(
 		func() error {

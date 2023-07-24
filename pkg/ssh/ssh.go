@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -13,10 +14,7 @@ import (
 type Client struct {
 	*ssh.Client
 }
-type Env struct {
-	Key   string
-	Value string
-}
+type Env map[string]string
 
 func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn) (*Client, error) {
 	sshConfig, err := getSSHConfig(user, privateKey)
@@ -54,9 +52,12 @@ func (c *Client) Connect(env *Env) error {
 	defer session.Close()
 
 	if env != nil {
-		err = session.Setenv(env.Key, env.Value)
-		if err != nil {
-			return err
+		var errs []error
+		for key, value := range *env {
+			errs = append(errs, session.Setenv(key, value))
+		}
+		if len(errs) > 0 {
+			return errors.Join(errs...)
 		}
 	}
 	// Set IO
