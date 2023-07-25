@@ -400,19 +400,29 @@ func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
 	}
 	diff := &meilisearch.Settings{}
 
-	if current.TypoTolerance != nil && current.TypoTolerance.Enabled != desired.TypoTolerance.Enabled {
-		changesRequired = true
-		diff.TypoTolerance = desired.TypoTolerance
-	}
+	// We'd like to disable the typo tolerance completely, but that's not possible, yet.
+	// TypoTolerance.Enabled is marked as omitempty and therefore prevents overriding true with false.
+	// https://github.com/meilisearch/meilisearch-go/issues/452
+	//
+	// if current.TypoTolerance != nil && current.TypoTolerance.Enabled != desired.TypoTolerance.Enabled {
+	// 	changesRequired = true
+	// 	diff.TypoTolerance = desired.TypoTolerance
+	// }
 
+	slices.Sort(current.SortableAttributes)
+	slices.Sort(desired.SortableAttributes)
 	if !slices.Equal(current.SortableAttributes, desired.SortableAttributes) {
 		changesRequired = true
 		diff.SortableAttributes = desired.SortableAttributes
 	}
+	slices.Sort(current.SearchableAttributes)
+	slices.Sort(desired.SearchableAttributes)
 	if !slices.Equal(current.SearchableAttributes, desired.SearchableAttributes) {
 		changesRequired = true
 		diff.SearchableAttributes = desired.SearchableAttributes
 	}
+	slices.Sort(current.FilterableAttributes)
+	slices.Sort(desired.FilterableAttributes)
 	if !slices.Equal(current.FilterableAttributes, desired.FilterableAttributes) {
 		changesRequired = true
 		diff.FilterableAttributes = desired.FilterableAttributes
