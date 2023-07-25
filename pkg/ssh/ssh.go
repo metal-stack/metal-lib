@@ -16,6 +16,11 @@ type Client struct {
 }
 type Env map[string]string
 
+// NewClientWithConnection connects via ssh to host with the given user and authenticates with the privateKey.
+// a already created net.Conn must be provided.
+// see vpn.Connect howto create such a connection via tailscale VPN
+//
+// Call client.Connect() to actually get the ssh session
 func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn) (*Client, error) {
 	sshConfig, err := getSSHConfig(user, privateKey)
 	if err != nil {
@@ -33,6 +38,9 @@ func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn
 	return &Client{client}, nil
 }
 
+// NewClient connects via ssh to host with the given user and authenticates with the privateKey.
+//
+// Call client.Connect() to actually get the ssh session
 func NewClient(user, host string, privateKey []byte, port int) (*Client, error) {
 	fmt.Printf("ssh to %s@%s:%d\n", user, host, port)
 	sshConfig, err := getSSHConfig(user, privateKey)
@@ -44,6 +52,7 @@ func NewClient(user, host string, privateKey []byte, port int) (*Client, error) 
 	return &Client{client}, err
 }
 
+// Connect once a ssh.Client was created, you can connect to it, this call blocks until session is terminated.
 func (c *Client) Connect(env *Env) error {
 	session, err := c.NewSession()
 	if err != nil {

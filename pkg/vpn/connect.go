@@ -15,14 +15,16 @@ import (
 	"tailscale.com/tsnet"
 )
 
-type VPN struct {
-	Conn     net.Conn
+type vpn struct {
+	net.Conn
 	server   *tsnet.Server
 	tempDir  string
 	TargetIP string
 }
 
-func Connect(ctx context.Context, target, controllerURL, authkey string) (*VPN, error) {
+// Connect to the given target host with tailscale, controllerURL specifies the URL where the coordination server lives
+// authKey is the key to authenticate to the vpn.
+func Connect(ctx context.Context, target, controllerURL, authkey string) (*vpn, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -79,10 +81,11 @@ func Connect(ctx context.Context, target, controllerURL, authkey string) (*VPN, 
 	s.Logf = func(format string, args ...any) {}
 
 	conn, err := lc.DialTCP(ctx, firewallVPNIP.String(), 22)
-	return &VPN{Conn: conn, server: s, tempDir: tempDir, TargetIP: firewallVPNIP.String()}, err
+	return &vpn{Conn: conn, server: s, tempDir: tempDir, TargetIP: firewallVPNIP.String()}, err
 }
 
-func (v *VPN) Close() error {
+// Close all open connections after vpn was used.
+func (v *vpn) Close() error {
 	var errs []error
 
 	err := v.server.Close()
