@@ -54,7 +54,10 @@ func (c *Client) Connect(env *Env) error {
 	if env != nil {
 		var errs []error
 		for key, value := range *env {
-			errs = append(errs, session.Setenv(key, value))
+			err := session.Setenv(key, value)
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 		if len(errs) > 0 {
 			return errors.Join(errs...)

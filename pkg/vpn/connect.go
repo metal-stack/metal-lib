@@ -85,8 +85,14 @@ func Connect(ctx context.Context, target, controllerURL, authkey string) (*VPN, 
 func (v *VPN) Close() error {
 	var errs []error
 
-	errs = append(errs, v.server.Close())
-	errs = append(errs, os.RemoveAll(v.tempDir))
+	err := v.server.Close()
+	if err != nil {
+		errs = append(errs, err)
+	}
+	err = os.RemoveAll(v.tempDir)
+	if err != nil {
+		errs = append(errs, err)
+	}
 
 	return errors.Join(errs...)
 }
