@@ -181,7 +181,6 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	}
 	for _, index := range indexes.Results {
 		if !isIndexRelevantForSearchRange(index.UID, filter.From, filter.To) {
-			panic(fmt.Sprintf("index %s, from %s, to %s", index.UID, filter.From, filter.To))
 			continue
 		}
 
