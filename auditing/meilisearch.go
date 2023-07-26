@@ -466,8 +466,15 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 	a.log.Debugw("indexes listed", "count", indexListResponse.Total, "keep", a.keep)
 
 	// Sort the indexes descending by creation date
-	slices.SortStableFunc(indexListResponse.Results, func(a, b meilisearch.Index) bool {
-		return a.CreatedAt.After(b.CreatedAt)
+	slices.SortStableFunc(indexListResponse.Results, func(a, b meilisearch.Index) int {
+		switch {
+		case a.CreatedAt.After(b.CreatedAt):
+			return -1
+		case a.CreatedAt.Before(b.CreatedAt):
+			return 1
+		default:
+			return 0
+		}
 	})
 
 	deleted := 0
