@@ -58,7 +58,7 @@ func (s *Sorter[E]) SortBy(data []E, keys ...Key) error {
 				return 1
 			}
 		}
-		return -1
+		return 0
 	})
 
 	return nil
