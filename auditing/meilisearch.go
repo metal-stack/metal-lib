@@ -179,6 +179,7 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	}
 	for _, index := range indexes.Results {
 		if !isIndexRelevantForSearchRange(index.UID, filter.From, filter.To) {
+			panic(fmt.Sprintf("index %s, from %s, to %s", index.UID, filter.From, filter.To))
 			continue
 		}
 
@@ -191,6 +192,10 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(req.Queries) == 0 {
+		return nil, nil
 	}
 
 	resp, err := a.client.MultiSearch(req)
@@ -550,8 +555,14 @@ func isIndexRelevantForSearchRange(indexName string, from, to time.Time) bool {
 		if end.Equal(from) || end.Equal(to) {
 			return true
 		}
+		if from.IsZero() && (start.Before(to) || end.Before(to)) {
+			return true
+		}
+		if to.IsZero() && (start.After(from) || end.After(from)) {
+			return true
+		}
 
 		return !start.After(to) && !end.Before(from)
 	}
-	return true
+	return false
 }
