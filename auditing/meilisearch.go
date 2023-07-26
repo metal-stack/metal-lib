@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,8 @@ type meiliAuditing struct {
 	indexLock sync.Mutex
 	index     *meilisearch.Index
 }
+
+const meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
 
 func New(c Config) (Auditing, error) {
 	if c.Component == "" {
@@ -177,6 +180,10 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		return nil, nil
 	}
 	for _, index := range indexes.Results {
+		if !isIndexRelevantForSearchRange(index.UID, filter.From, filter.To) {
+			continue
+		}
+
 		indexQuery := reqProto
 		indexQuery.IndexUID = index.UID
 		req.Queries = append(req.Queries, indexQuery)
@@ -186,6 +193,10 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(req.Queries) == 0 {
+		return nil, nil
 	}
 
 	resp, err := a.client.MultiSearch(req)
@@ -512,4 +523,47 @@ func indexName(prefix string, i Interval) string {
 
 	indexName := prefix + "-" + time.Now().Format(timeFormat)
 	return indexName
+}
+
+func isIndexRelevantForSearchRange(indexName string, from, to time.Time) bool {
+	intervalRe := regexp.MustCompile(meiliIndexNameTimeSuffixSchema)
+	interval := intervalRe.FindString(indexName)
+	formats := map[Interval]string{
+		HourlyInterval:  "2006-01-02_15",
+		DailyInterval:   "2006-01-02",
+		MonthlyInterval: "2006-01",
+	}
+	for inter, layout := range formats {
+		start, err := time.Parse(layout, interval)
+		if err != nil {
+			continue
+		}
+
+		if start.Equal(from) || start.Equal(to) {
+			return true
+		}
+
+		var end time.Time
+		switch inter {
+		case HourlyInterval:
+			end = start.Add(time.Hour).Add(-time.Nanosecond)
+		case DailyInterval:
+			end = start.AddDate(0, 0, 1).Add(-time.Nanosecond)
+		case MonthlyInterval:
+			end = start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		}
+
+		if end.Equal(from) || end.Equal(to) {
+			return true
+		}
+		if from.IsZero() && (start.Before(to) || end.Before(to)) {
+			return true
+		}
+		if to.IsZero() && (start.After(from) || end.After(from)) {
+			return true
+		}
+
+		return !start.After(to) && !end.Before(from)
+	}
+	return false
 }
