@@ -28,6 +28,8 @@ type meiliAuditing struct {
 	index     *meilisearch.Index
 }
 
+const meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
+
 func New(c Config) (Auditing, error) {
 	if c.Component == "" {
 		ex, err := os.Executable()
@@ -525,7 +527,7 @@ func indexName(prefix string, i Interval) string {
 }
 
 func isIndexRelevantForSearchRange(indexName string, from, to time.Time) bool {
-	intervalRe := regexp.MustCompile("\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?")
+	intervalRe := regexp.MustCompile(meiliIndexNameTimeSuffixSchema)
 	interval := intervalRe.FindString(indexName)
 	formats := map[Interval]string{
 		HourlyInterval:  "2006-01-02_15",
