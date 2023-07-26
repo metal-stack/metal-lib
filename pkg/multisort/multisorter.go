@@ -47,18 +47,18 @@ func (s *Sorter[E]) SortBy(data []E, keys ...Key) error {
 		return err
 	}
 
-	slices.SortStableFunc(data, func(a, b E) bool {
+	slices.SortStableFunc(data, func(a, b E) int {
 		for _, key := range keys {
 			f := s.fields[key.ID]
 
 			switch f(a, b, key.Descending) {
 			case Less:
-				return true
+				return -1
 			case NotEqual:
-				return false
+				return 1
 			}
 		}
-		return false
+		return -1
 	})
 
 	return nil
