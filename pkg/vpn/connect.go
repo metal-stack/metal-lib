@@ -41,8 +41,10 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 
 	for _, opt := range opts {
 		switch o := opt.(type) {
-		case *connectOptOutputWriter:
+		case connectOptOutputWriter:
 			out = o.out
+		default:
+			return nil, fmt.Errorf("unknown connect opt: %T", opt)
 		}
 	}
 
