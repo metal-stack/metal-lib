@@ -3,6 +3,7 @@ package ssh
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"time"
@@ -11,8 +12,19 @@ import (
 	"golang.org/x/term"
 )
 
+type ConnectOpt any
+
+type connectOptOutputWriter struct {
+	out io.Writer
+}
+
+func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
+	return connectOptOutputWriter{out: out}
+}
+
 type Client struct {
 	*ssh.Client
+	out io.Writer
 }
 type Env map[string]string
 
@@ -21,35 +33,71 @@ type Env map[string]string
 // see vpn.Connect howto create such a connection via tailscale VPN
 //
 // Call client.Connect() to actually get the ssh session
-func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn) (*Client, error) {
+func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn, opts ...ConnectOpt) (*Client, error) {
 	sshConfig, err := getSSHConfig(user, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SSH config: %w", err)
+	}
+
+	var out io.Writer
+	out = os.Stdout
+
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case connectOptOutputWriter:
+			out = o.out
+		default:
+			return nil, fmt.Errorf("unknown connect opt: %T", opt)
+		}
 	}
 
 	sshConn, sshChan, req, err := ssh.NewClientConn(conn, host, sshConfig)
 	if err != nil {
 		return nil, err
 	}
+
 	client := ssh.NewClient(sshConn, sshChan, req)
 	if err != nil {
 		return nil, err
 	}
-	return &Client{client}, nil
+
+	return &Client{
+		Client: client,
+		out:    out,
+	}, nil
 }
 
 // NewClient connects via ssh to host with the given user and authenticates with the privateKey.
 //
 // Call client.Connect() to actually get the ssh session
-func NewClient(user, host string, privateKey []byte, port int) (*Client, error) {
-	fmt.Printf("ssh to %s@%s:%d\n", user, host, port)
+func NewClient(user, host string, privateKey []byte, port int, opts ...ConnectOpt) (*Client, error) {
+	var out io.Writer
+	out = os.Stdout
+
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case *connectOptOutputWriter:
+			out = o.out
+		}
+	}
+
+	fmt.Fprintf(out, "ssh to %s@%s:%d\n", user, host, port)
+
 	sshConfig, err := getSSHConfig(user, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SSH config: %w", err)
 	}
+
 	sshServerAddress := fmt.Sprintf("%s:%d", host, port)
 	client, err := ssh.Dial("tcp", sshServerAddress, sshConfig)
-	return &Client{client}, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		Client: client,
+		out:    out,
+	}, nil
 }
 
 // Connect once a ssh.Client was created, you can connect to it, this call blocks until session is terminated.
@@ -98,7 +146,7 @@ func (c *Client) Connect(env *Env) error {
 		defer func() {
 			err = term.Restore(fileDescriptor, originalState)
 			if err != nil {
-				fmt.Printf("error restoring ssh terminal:%v\n", err)
+				fmt.Fprintf(c.out, "error restoring ssh terminal:%v\n", err)
 			}
 		}()
 
