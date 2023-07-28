@@ -18,7 +18,7 @@ type connectOptOutputWriter struct {
 	out io.Writer
 }
 
-func ConnectionOptOutputWriter(out io.Writer) ConnectOpt {
+func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
 	return connectOptOutputWriter{out: out}
 }
 
