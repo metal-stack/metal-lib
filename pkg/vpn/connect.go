@@ -16,7 +16,7 @@ import (
 	"tailscale.com/tsnet"
 )
 
-type ConnectOpt interface{}
+type ConnectOpt any
 
 type connectOptOutputWriter struct {
 	out io.Writer

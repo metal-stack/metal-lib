@@ -12,7 +12,7 @@ import (
 	"golang.org/x/term"
 )
 
-type ConnectOpt interface{}
+type ConnectOpt any
 
 type connectOptOutputWriter struct {
 	out io.Writer
