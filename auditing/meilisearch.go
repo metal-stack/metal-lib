@@ -511,7 +511,7 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 		deleted++
 		a.log.Debugw("deleted index", "uid", index.UID, "created", index.CreatedAt, "info", deleteInfo)
 	}
-	a.log.Infof("cleanup finished", "deletes", deleted, "keep", a.keep, "errs", len(errs))
+	a.log.Infow("cleanup finished", "deletes", deleted, "keep", a.keep, "errs", len(errs))
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
