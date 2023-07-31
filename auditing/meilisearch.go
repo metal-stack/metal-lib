@@ -28,7 +28,10 @@ type meiliAuditing struct {
 	index     *meilisearch.Index
 }
 
-const meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
+const (
+	meiliIndexNameTimeSuffixSchema        = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
+	defaultRelevantIndexSearchLimit int64 = 30
+)
 
 func New(c Config) (Auditing, error) {
 	if c.Component == "" {
@@ -172,7 +175,13 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	indexes, err := a.client.GetIndexes(&meilisearch.IndexesQuery{})
+	relevantIndexLimit := defaultRelevantIndexSearchLimit
+	if a.keep == 0 {
+		relevantIndexLimit = a.keep + 1 // during index rotation and cleanup
+	}
+	indexes, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
+		Limit: relevantIndexLimit,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -502,7 +511,7 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 		deleted++
 		a.log.Debugw("deleted index", "uid", index.UID, "created", index.CreatedAt, "info", deleteInfo)
 	}
-	a.log.Debugw("done deleting indexes", "deleted", deleted)
+	a.log.Infof("cleanup finished", "deletes", deleted, "keep", a.keep, "errs", len(errs))
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
