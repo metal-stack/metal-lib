@@ -28,10 +28,7 @@ type meiliAuditing struct {
 	index     *meilisearch.Index
 }
 
-const (
-	meiliIndexNameTimeSuffixSchema        = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
-	defaultRelevantIndexSearchLimit int64 = 30
-)
+const meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
 
 func New(c Config) (Auditing, error) {
 	if c.Component == "" {
@@ -175,13 +172,7 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	relevantIndexLimit := defaultRelevantIndexSearchLimit
-	if a.keep == 0 {
-		relevantIndexLimit = a.keep + 1 // during index rotation and cleanup
-	}
-	indexes, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
-		Limit: relevantIndexLimit,
-	})
+	indexes, err := a.getAllIndexes()
 	if err != nil {
 		return nil, err
 	}
@@ -466,18 +457,8 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 	if a.keep == 0 {
 		return nil
 	}
-	// First get one index to get total amount of indexes
-	indexListResponse, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
-		Limit: 1,
-	})
-	if err != nil {
-		a.log.Errorw("unable to list indexes", "err", err)
-		return err
-	}
-	// Now get all indexes
-	indexListResponse, err = a.client.GetIndexes(&meilisearch.IndexesQuery{
-		Limit: indexListResponse.Total,
-	})
+
+	indexListResponse, err := a.getAllIndexes()
 	if err != nil {
 		a.log.Errorw("unable to list indexes", "err", err)
 		return err
@@ -516,6 +497,23 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (a *meiliAuditing) getAllIndexes() (*meilisearch.IndexesResults, error) {
+	// First get one index to get total amount of indexes
+	indexListResponse, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
+		Limit: a.keep + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if indexListResponse.Total <= indexListResponse.Limit {
+		return indexListResponse, nil
+	}
+	// Now get all indexes
+	return a.client.GetIndexes(&meilisearch.IndexesQuery{
+		Limit: indexListResponse.Total,
+	})
 }
 
 func indexName(prefix string, i Interval) string {
