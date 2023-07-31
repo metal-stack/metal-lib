@@ -172,7 +172,7 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	indexes, err := a.client.GetIndexes(&meilisearch.IndexesQuery{})
+	indexes, err := a.getAllIndexes()
 	if err != nil {
 		return nil, err
 	}
@@ -457,18 +457,8 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 	if a.keep == 0 {
 		return nil
 	}
-	// First get one index to get total amount of indexes
-	indexListResponse, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
-		Limit: 1,
-	})
-	if err != nil {
-		a.log.Errorw("unable to list indexes", "err", err)
-		return err
-	}
-	// Now get all indexes
-	indexListResponse, err = a.client.GetIndexes(&meilisearch.IndexesQuery{
-		Limit: indexListResponse.Total,
-	})
+
+	indexListResponse, err := a.getAllIndexes()
 	if err != nil {
 		a.log.Errorw("unable to list indexes", "err", err)
 		return err
@@ -502,11 +492,28 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 		deleted++
 		a.log.Debugw("deleted index", "uid", index.UID, "created", index.CreatedAt, "info", deleteInfo)
 	}
-	a.log.Debugw("done deleting indexes", "deleted", deleted)
+	a.log.Infow("cleanup finished", "deletes", deleted, "keep", a.keep, "errs", len(errs))
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (a *meiliAuditing) getAllIndexes() (*meilisearch.IndexesResults, error) {
+	// First get one index to get total amount of indexes
+	indexListResponse, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
+		Limit: a.keep + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if indexListResponse.Total <= indexListResponse.Limit {
+		return indexListResponse, nil
+	}
+	// Now get all indexes
+	return a.client.GetIndexes(&meilisearch.IndexesQuery{
+		Limit: indexListResponse.Total,
+	})
 }
 
 func indexName(prefix string, i Interval) string {
