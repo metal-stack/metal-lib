@@ -500,17 +500,18 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 }
 
 func (a *meiliAuditing) getAllIndexes() (*meilisearch.IndexesResults, error) {
-	// First get one index to get total amount of indexes
+	// First get the expected amount of indexes
 	indexListResponse, err := a.client.GetIndexes(&meilisearch.IndexesQuery{
 		Limit: a.keep + 1,
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	// If there are non cleaned indexes, get those, too
 	if indexListResponse.Total <= indexListResponse.Limit {
 		return indexListResponse, nil
 	}
-	// Now get all indexes
 	return a.client.GetIndexes(&meilisearch.IndexesQuery{
 		Limit: indexListResponse.Total,
 	})
