@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/netip"
 	"os"
@@ -15,6 +16,16 @@ import (
 	"tailscale.com/tsnet"
 )
 
+type ConnectOpt any
+
+type connectOptOutputWriter struct {
+	out io.Writer
+}
+
+func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
+	return connectOptOutputWriter{out: out}
+}
+
 type vpn struct {
 	net.Conn
 	server   *tsnet.Server
@@ -24,7 +35,19 @@ type vpn struct {
 
 // Connect to the given target host with tailscale, controllerURL specifies the URL where the coordination server lives
 // authKey is the key to authenticate to the vpn.
-func Connect(ctx context.Context, target, controllerURL, authkey string) (*vpn, error) {
+func Connect(ctx context.Context, target, controllerURL, authkey string, opts ...ConnectOpt) (*vpn, error) {
+	var out io.Writer
+	out = os.Stdout
+
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case connectOptOutputWriter:
+			out = o.out
+		default:
+			return nil, fmt.Errorf("unknown connect opt: %T", opt)
+		}
+	}
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -56,7 +79,7 @@ func Connect(ctx context.Context, target, controllerURL, authkey string) (*vpn, 
 	var firewallVPNIP netip.Addr
 	err = retry.Do(
 		func() error {
-			fmt.Printf(".")
+			fmt.Fprintf(out, ".")
 			status, err := lc.Status(ctx)
 			if err != nil {
 				return err
@@ -65,7 +88,7 @@ func Connect(ctx context.Context, target, controllerURL, authkey string) (*vpn, 
 				for _, peer := range status.Peer {
 					if strings.HasPrefix(peer.HostName, target) {
 						firewallVPNIP = peer.TailscaleIPs[0]
-						fmt.Printf(" connected to %s (ip %s) took: %s\n", target, firewallVPNIP, time.Since(start))
+						fmt.Fprintf(out, " connected to %s (ip %s) took: %s\n", target, firewallVPNIP, time.Since(start))
 						return nil
 					}
 				}
