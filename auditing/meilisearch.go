@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 type meiliAuditing struct {

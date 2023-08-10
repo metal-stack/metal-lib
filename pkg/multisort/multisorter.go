@@ -2,9 +2,8 @@ package multisort
 
 import (
 	"fmt"
+	"slices"
 	"sort"
-
-	"golang.org/x/exp/slices"
 )
 
 // Sorter can sort by multiple criteria.
