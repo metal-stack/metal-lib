@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 )
 
 type meiliAuditing struct {
@@ -467,8 +467,15 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 	a.log.Debugw("indexes listed", "count", indexListResponse.Total, "keep", a.keep)
 
 	// Sort the indexes descending by creation date
-	slices.SortStableFunc(indexListResponse.Results, func(a, b meilisearch.Index) bool {
-		return a.CreatedAt.After(b.CreatedAt)
+	slices.SortStableFunc(indexListResponse.Results, func(a, b meilisearch.Index) int {
+		switch {
+		case a.CreatedAt.After(b.CreatedAt):
+			return -1
+		case a.CreatedAt.Before(b.CreatedAt):
+			return 1
+		default:
+			return 0
+		}
 	})
 
 	deleted := 0
