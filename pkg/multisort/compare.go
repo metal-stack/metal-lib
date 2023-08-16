@@ -20,7 +20,6 @@ const (
 )
 
 // Compare compares values according to multisort criteria.
-// TODO: can be replaced by cmp.Compare
 func Compare[O cmp.Ordered](a O, b O, descending bool) CompareResult {
 	if descending {
 		if b < a {
