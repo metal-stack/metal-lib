@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -18,7 +19,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -54,7 +54,7 @@ type Config struct {
 	// Message shown on the success page after login flow
 	SuccessMessage string
 
-	Log *zap.Logger
+	Log *slog.Logger
 
 	// Console if you want the library to write messages, may be nil
 	Console io.Writer
@@ -249,7 +249,7 @@ func oidcFlow(appModel *app) error {
 
 	callbackPath := "/callback"
 
-	appModel.config.Log.Debug("Listening", zap.String("hostname", "localhost"), zap.String("addr", listenAddr))
+	appModel.config.Log.Debug("Listening", slog.String("hostname", "localhost"), slog.String("addr", listenAddr))
 
 	srv := &http.Server{
 		ReadHeaderTimeout: 1 * time.Minute,
@@ -267,14 +267,14 @@ func oidcFlow(appModel *app) error {
 	go func() {
 		err := openBrowser(appModel.Listen)
 		if err != nil {
-			appModel.config.Log.Error("openBrowser", zap.Error(err))
+			appModel.config.Log.Error("openBrowser", "error", err)
 		}
 	}()
 	go func() {
 		appModel.waitShutdown()
 		err = srv.Shutdown(context.Background())
 		if err != nil {
-			appModel.config.Log.Error("Shutdown", zap.Error(err))
+			appModel.config.Log.Error("Shutdown", "error", err)
 		}
 	}()
 
@@ -316,7 +316,7 @@ func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
 
 type debugTransport struct {
 	roundTripper http.RoundTripper
-	log          *zap.Logger
+	log          *slog.Logger
 }
 
 func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -324,7 +324,7 @@ func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	d.log.Debug("sending request", zap.ByteString("request", reqDump))
+	d.log.Debug("sending request", slog.Any("request", reqDump))
 
 	resp, err := d.roundTripper.RoundTrip(req)
 	if err != nil {
@@ -336,7 +336,7 @@ func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		_ = resp.Body.Close()
 		return nil, err
 	}
-	d.log.Debug("received response", zap.ByteString("response", respDump))
+	d.log.Debug("received response", slog.Any("response", respDump))
 	return resp, nil
 }
 
@@ -469,14 +469,14 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 		})
 
 		if err != nil {
-			a.config.Log.Error("error handling token", zap.Error(err))
+			a.config.Log.Error("error handling token", "error", err)
 		}
 	}
 
 	renderToken(w, rawIDToken, token.RefreshToken, buff.Bytes(), a.config.SuccessMessage, a.config.Debug)
 
-	a.config.Log.Debug("Login Succeeded", zap.String("username", claims.Username()))
-	a.config.Log.Debug("Login-Data", zap.String("token", rawIDToken), zap.String("Refresh Token", token.RefreshToken), zap.String("Claims", string(rawClaims)))
+	a.config.Log.Debug("Login Succeeded", slog.String("username", claims.Username()))
+	a.config.Log.Debug("Login-Data", slog.String("token", rawIDToken), slog.String("Refresh Token", token.RefreshToken), slog.String("Claims", string(rawClaims)))
 
 	go func() {
 		a.completeChan <- true
