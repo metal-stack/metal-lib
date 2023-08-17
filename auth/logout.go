@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 type LogoutParams struct {
 	IssuerURL string
-	Logger    *zap.SugaredLogger
+	Logger    *slog.Logger
 }
 
 func (l *LogoutParams) Validate() error {
@@ -84,17 +83,17 @@ func Logout(params *LogoutParams) error {
 	fmt.Printf("Opening Browser for Authentication. If this does not work, please point your browser to %s\n", listenAddr)
 
 	go func() {
-		log.Debugw("opening browser", "addr", listenAddr, "end-session-url", endSessionURL.String())
+		log.Debug("opening browser", "addr", listenAddr, "end-session-url", endSessionURL.String())
 		err := openBrowser(endSessionURL.String())
 		if err != nil {
-			log.Errorw("open browser", "error", err)
+			log.Error("open browser", "error", err)
 		}
 	}()
 	go func() {
 		<-completeChan
 		err = server.Shutdown(context.Background())
 		if err != nil {
-			log.Errorw("shutdown", "error", err)
+			log.Error("shutdown", "error", err)
 		}
 	}()
 
@@ -107,7 +106,7 @@ func Logout(params *LogoutParams) error {
 }
 
 type logoutHandler struct {
-	log          *zap.SugaredLogger
+	log          *slog.Logger
 	completeChan chan bool
 }
 
