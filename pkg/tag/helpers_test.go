@@ -147,7 +147,7 @@ func TestTagMap_Get(t *testing.T) {
 				fmt.Sprintf("%s=%s", ClusterName, "test cluster"),
 			},
 			key:       ClusterID,
-			wantValue: fmt.Sprintf("%s=%s", ClusterID, "test"),
+			wantValue: "cluster.metal-stack.io/id=test",
 		},
 		{
 			name: "not contained",
