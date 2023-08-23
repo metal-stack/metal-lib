@@ -177,4 +177,24 @@ func TestAuditing_Meilisearch(t *testing.T) {
 	require.Equal(t, "global", reqEntry.Tenant)
 	require.Equal(t, auditing.EntryDetail("POST"), reqEntry.Detail)
 	require.Equal(t, "/meilisearch", reqEntry.Path)
+
+	t.Run("body queries", func(t *testing.T) {
+		entries, err = a.Search(auditing.EntryFilter{
+			Body: "not contained in any body",
+		})
+		require.NoError(t, err)
+		require.Len(t, entries, 0)
+
+		entries, err = a.Search(auditing.EntryFilter{
+			Body: "you shall not pass",
+		})
+		require.NoError(t, err)
+		require.Len(t, entries, 1)
+
+		entries, err = a.Search(auditing.EntryFilter{
+			Body: "pass",
+		})
+		require.NoError(t, err)
+		require.Len(t, entries, 2)
+	})
 }

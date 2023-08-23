@@ -159,10 +159,11 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	}
 
 	reqProto := meilisearch.SearchRequest{
-		Filter: predicates,
-		Query:  filter.Body,
-		Sort:   []string{"timestamp-unix:desc", "sort-weight:desc"},
-		Limit:  filter.Limit,
+		Filter:           predicates,
+		Query:            filter.Body,
+		Sort:             []string{"timestamp-unix:desc", "sort-weight:desc"},
+		Limit:            filter.Limit,
+		MatchingStrategy: "all",
 	}
 	req := &meilisearch.MultiSearchRequest{
 		Queries: []meilisearch.SearchRequest{},
