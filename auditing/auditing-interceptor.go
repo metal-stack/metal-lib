@@ -17,6 +17,9 @@ import (
 )
 
 const (
+	// Include explicitly includes the request to the auditing backend even if the request method would prevent the request to be audited (only applies for the http filter)
+	Include string = "include-to-auditing"
+	// Exclude explicitly excludes the request to the auditing backend even if the request method would audit the request (only applies for the http filter)
 	Exclude string = "exclude-from-auditing"
 )
 
@@ -297,8 +300,13 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
 			break
 		default:
-			chain.ProcessFilter(request, response)
-			return
+			included, ok := request.SelectedRoute().Metadata()[Include].(bool)
+			if ok && included {
+				break
+			} else {
+				chain.ProcessFilter(request, response)
+				return
+			}
 		}
 
 		excluded, ok := request.SelectedRoute().Metadata()[Exclude].(bool)
