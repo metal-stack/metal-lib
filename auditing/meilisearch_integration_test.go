@@ -1,29 +1,30 @@
 //go:build integration
 // +build integration
 
-package auditing_test
+package auditing
 
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
+	"time"
 
-	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap/zaptest"
 )
 
-type ConnectionDetails struct {
-	Port     string
-	Host     string
-	DB       string
-	User     string
+type connectionDetails struct {
+	Endpoint string
 	Password string
 }
 
-func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *ConnectionDetails, err error) {
+func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *connectionDetails, err error) {
 	meilisearchMasterKey := "meili"
 
 	ctx := context.Background()
@@ -60,9 +61,8 @@ func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *Conn
 		return meiliContainer, nil, err
 	}
 
-	conn := &ConnectionDetails{
-		Host:     host,
-		Port:     port.Port(),
+	conn := &connectionDetails{
+		Endpoint: "http://" + host + ":" + port.Port(),
 		Password: meilisearchMasterKey,
 	}
 
@@ -77,124 +77,227 @@ func TestAuditing_Meilisearch(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	var (
-		url = "http://" + c.Host + ":" + c.Port
-	)
-
-	a, err := auditing.New(auditing.Config{
-		URL:         url,
-		APIKey:      c.Password,
-		Log:         zaptest.NewLogger(t).Sugar(),
-		IndexPrefix: fmt.Sprintf("test-%s", t.Name()),
+	now := time.Now()
+	// meilisearch does not store the nano seconds, so we neglect them for comparison:
+	timeComparer := cmp.Comparer(func(x, y time.Time) bool {
+		return x.Unix() == y.Unix()
 	})
-	require.NoError(t, err)
 
-	entries, err := a.Search(auditing.EntryFilter{})
-	require.NoError(t, err)
-	require.Len(t, entries, 0)
+	testEntries := func() []Entry {
+		return []Entry{
+			{
+				Component:    "auditing.test",
+				RequestId:    "00000000-0000-0000-0000-000000000000",
+				Type:         EntryTypeHTTP,
+				Timestamp:    now,
+				User:         "admin",
+				Tenant:       "global",
+				Detail:       "POST",
+				Phase:        EntryPhaseResponse,
+				Path:         "/v1/test/0",
+				ForwardedFor: "127.0.0.1",
+				RemoteAddr:   "10.0.0.0",
+				Body:         "This is the body of 00000000-0000-0000-0000-000000000000",
+				StatusCode:   200,
+				Error:        nil,
+			},
+			{
+				Component:    "auditing.test",
+				RequestId:    "00000000-0000-0000-0000-000000000001",
+				Type:         EntryTypeHTTP,
+				Timestamp:    now.Add(1 * time.Second),
+				User:         "admin",
+				Tenant:       "global",
+				Detail:       "POST",
+				Phase:        EntryPhaseResponse,
+				Path:         "/v1/test/1",
+				ForwardedFor: "127.0.0.1",
+				RemoteAddr:   "10.0.0.1",
+				Body:         "This is the body of 00000000-0000-0000-0000-000000000001",
+				StatusCode:   201,
+				Error:        nil,
+			},
+			{
+				Component:    "auditing.test",
+				RequestId:    "00000000-0000-0000-0000-000000000002",
+				Type:         EntryTypeHTTP,
+				Timestamp:    now.Add(2 * time.Second),
+				User:         "admin",
+				Tenant:       "global",
+				Detail:       "POST",
+				Phase:        EntryPhaseRequest,
+				Path:         "/v1/test/2",
+				ForwardedFor: "127.0.0.1",
+				RemoteAddr:   "10.0.0.2",
+				Body:         "This is the body of 00000000-0000-0000-0000-000000000002",
+				StatusCode:   0,
+				Error:        nil,
+			},
+		}
+	}
 
-	err = a.Index(auditing.Entry{
-		Body: "test",
-	})
-	require.NoError(t, err)
-	err = a.Flush()
-	require.NoError(t, err)
+	tests := []struct {
+		name string
+		t    func(t *testing.T, a Auditing)
+	}{
+		{
+			name: "no entries, no search results",
+			t: func(t *testing.T, a Auditing) {
+				entries, err := a.Search(EntryFilter{})
+				require.NoError(t, err)
+				assert.Len(t, entries, 0)
+			},
+		},
+		{
+			name: "insert one entry",
+			t: func(t *testing.T, a Auditing) {
+				err = a.Index(Entry{
+					Body: "test",
+				})
+				require.NoError(t, err)
+				err = a.Flush()
+				require.NoError(t, err)
 
-	entries, err = a.Search(auditing.EntryFilter{
-		Body: "test",
-	})
-	require.NoError(t, err)
-	require.Len(t, entries, 1)
+				entries, err := a.Search(EntryFilter{
+					Body: "test",
+				})
+				require.NoError(t, err)
+				assert.Len(t, entries, 1)
+			},
+		},
+		{
+			name: "insert a couple of entries",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err = a.Index(e)
+					require.NoError(t, err)
+				}
 
-	err = a.Index(auditing.Entry{
-		RequestId:    "<full-request-id>",
-		Type:         auditing.EntryTypeHTTP,
-		User:         "admin",
-		Tenant:       "global",
-		Detail:       "POST",
-		Phase:        auditing.EntryPhaseRequest,
-		Path:         "/meilisearch",
-		ForwardedFor: "127.0.0.1",
-		RemoteAddr:   "10.0.0.1",
-		Body:         "I want to pass",
-	})
-	require.NoError(t, err)
-	err = a.Flush()
-	require.NoError(t, err)
+				err = a.Flush()
+				require.NoError(t, err)
 
-	entries, err = a.Search(auditing.EntryFilter{
-		RequestId: "<full-request-id>",
-		Body:      "I want to pass",
-	})
-	require.NoError(t, err)
-	require.Len(t, entries, 1)
+				entries, err := a.Search(EntryFilter{})
+				require.NoError(t, err)
+				assert.Len(t, entries, len(es))
 
-	entries, err = a.Search(auditing.EntryFilter{})
-	require.NoError(t, err)
-	require.Len(t, entries, 2)
+				sort.Slice(entries, func(i, j int) bool { return entries[i].RequestId < entries[j].RequestId })
 
-	err = a.Index(auditing.Entry{
-		RequestId:    "<full-request-id>",
-		Type:         auditing.EntryTypeHTTP,
-		User:         "admin",
-		Tenant:       "global",
-		Detail:       "POST",
-		Phase:        auditing.EntryPhaseResponse,
-		Path:         "/meilisearch",
-		ForwardedFor: "127.0.0.1",
-		RemoteAddr:   "10.0.0.1",
-		StatusCode:   418,
-		Error:        fmt.Errorf("teapots cannot pass"),
-		Body:         "you shall not pass",
-	})
-	require.NoError(t, err)
-	err = a.Flush()
-	require.NoError(t, err)
+				if diff := cmp.Diff(entries, es, cmpopts.IgnoreFields(Entry{}, "Id"), timeComparer); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
 
-	entries, err = a.Search(auditing.EntryFilter{
-		RequestId: "<full-request-id>",
-	})
-	require.NoError(t, err)
-	require.Len(t, entries, 2)
+				entries, err = a.Search(EntryFilter{
+					Body: "This",
+				})
+				require.NoError(t, err)
+				assert.Len(t, entries, len(es))
+			},
+		},
+		{
+			name: "filter search on rqid",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err = a.Index(e)
+					require.NoError(t, err)
+				}
 
-	respEntry := entries[0]
-	require.Equal(t, auditing.EntryPhaseResponse, respEntry.Phase, "response entry should be first")
-	require.Equal(t, "<full-request-id>", respEntry.RequestId)
-	require.Equal(t, auditing.EntryTypeHTTP, respEntry.Type)
-	require.Equal(t, "admin", respEntry.User)
-	require.Equal(t, "global", respEntry.Tenant)
-	require.Equal(t, auditing.EntryDetail("POST"), respEntry.Detail)
-	require.Equal(t, "/meilisearch", respEntry.Path)
-	require.Equal(t, 418, respEntry.StatusCode)
-	require.Equal(t, "you shall not pass", respEntry.Body)
-	require.EqualError(t, respEntry.Error, "teapots cannot pass")
+				err = a.Flush()
+				require.NoError(t, err)
 
-	reqEntry := entries[1]
-	require.Equal(t, auditing.EntryPhaseRequest, reqEntry.Phase, "response entry should be first")
-	require.Equal(t, "<full-request-id>", reqEntry.RequestId)
-	require.Equal(t, auditing.EntryTypeHTTP, reqEntry.Type)
-	require.Equal(t, "admin", reqEntry.User)
-	require.Equal(t, "global", reqEntry.Tenant)
-	require.Equal(t, auditing.EntryDetail("POST"), reqEntry.Detail)
-	require.Equal(t, "/meilisearch", reqEntry.Path)
+				entries, err := a.Search(EntryFilter{
+					RequestId: es[0].RequestId,
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
 
-	t.Run("body queries", func(t *testing.T) {
-		entries, err = a.Search(auditing.EntryFilter{
-			Body: "not contained in any body",
+				if diff := cmp.Diff(entries[0], es[0], cmpopts.IgnoreFields(Entry{}, "Id"), timeComparer); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
+		{
+			name: "filter search on phase",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				var wantEntries []Entry
+				for _, e := range es {
+					err = a.Index(e)
+					require.NoError(t, err)
+
+					if e.Phase == EntryPhaseResponse {
+						wantEntries = append(wantEntries, e)
+					}
+				}
+
+				err = a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(EntryFilter{
+					Phase: EntryPhaseResponse,
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 2)
+
+				sort.Slice(entries, func(i, j int) bool { return entries[i].RequestId < entries[j].RequestId })
+
+				if diff := cmp.Diff(entries, wantEntries, cmpopts.IgnoreFields(Entry{}, "Id"), timeComparer); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
+		{
+			name: "filter on body",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err = a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err = a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(EntryFilter{
+					Body: es[0].Body.(string),
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], es[0], cmpopts.IgnoreFields(Entry{}, "Id"), timeComparer); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
+	}
+	for i, tt := range tests {
+		tt := tt
+
+		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
+			a, err := New(Config{
+				URL:         c.Endpoint,
+				APIKey:      c.Password,
+				Log:         zaptest.NewLogger(t).Sugar(),
+				IndexPrefix: fmt.Sprintf("test-%d", i),
+			})
+			require.NoError(t, err)
+
+			tt.t(t, a)
+
+			// cleanup
+
+			m := a.(*meiliAuditing)
+			indexes, err := m.getAllIndexes()
+			require.NoError(t, err)
+
+			for _, index := range indexes.Results {
+				_, err := m.client.DeleteIndex(index.UID)
+				require.NoError(t, err)
+			}
+
+			err = a.Flush()
+			require.NoError(t, err)
 		})
-		require.NoError(t, err)
-		require.Len(t, entries, 0)
-
-		entries, err = a.Search(auditing.EntryFilter{
-			Body: "you shall not pass",
-		})
-		require.NoError(t, err)
-		require.Len(t, entries, 1)
-
-		entries, err = a.Search(auditing.EntryFilter{
-			Body: "pass",
-		})
-		require.NoError(t, err)
-		require.Len(t, entries, 2)
-	})
+	}
 }
