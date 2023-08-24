@@ -260,7 +260,9 @@ func TestAuditing_Meilisearch(t *testing.T) {
 				require.NoError(t, err)
 
 				entries, err := a.Search(EntryFilter{
-					Body: es[0].Body.(string),
+					// we want to run a phrase search as otherwise we return the other entries as well
+					// https://www.meilisearch.com/docs/reference/api/search#phrase-search-2
+					Body: fmt.Sprintf("%q", es[0].Body.(string)),
 				})
 				require.NoError(t, err)
 				require.Len(t, entries, 1)

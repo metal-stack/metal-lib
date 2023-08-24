@@ -160,11 +160,9 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 
 	reqProto := meilisearch.SearchRequest{
 		Filter: predicates,
-		// as we usually want to have the body be contained regardless of word order, we want to run a phrase search
-		// https://www.meilisearch.com/docs/reference/api/search#phrase-search-2
-		Query: fmt.Sprintf("%q", filter.Body),
-		Sort:  []string{"timestamp-unix:desc", "sort-weight:desc"},
-		Limit: filter.Limit,
+		Query:  filter.Body,
+		Sort:   []string{"timestamp-unix:desc", "sort-weight:desc"},
+		Limit:  filter.Limit,
 	}
 	req := &meilisearch.MultiSearchRequest{
 		Queries: []meilisearch.SearchRequest{},
