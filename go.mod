@@ -3,6 +3,7 @@ module github.com/metal-stack/metal-lib
 go 1.21
 
 require (
+	connectrpc.com/connect v1.11.1
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.5.0
@@ -42,8 +43,6 @@ require (
 	tailscale.com v1.48.0
 )
 
-require github.com/dblohm7/wingoes v0.0.0-20230803162905-5c6286bb8c6e // indirect
-
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
@@ -70,12 +69,12 @@ require (
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/bmizerany/perks v0.0.0-20230307044200-03f9df79da1e // indirect
-	github.com/bufbuild/connect-go v1.9.0
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/containerd/containerd v1.7.3 // indirect
 	github.com/coreos/go-iptables v0.6.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dblohm7/wingoes v0.0.0-20230803162905-5c6286bb8c6e // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v24.0.5+incompatible // indirect
