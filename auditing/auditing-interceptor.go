@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/rest"
