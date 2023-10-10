@@ -300,6 +300,11 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
 			break
 		default:
+			if request.SelectedRoute() == nil {
+				logger.Debugw("selected route is not defined, continue request processing")
+				chain.ProcessFilter(request, response)
+				return
+			}
 			included, ok := request.SelectedRoute().Metadata()[Include].(bool)
 			if ok && included {
 				break
