@@ -309,6 +309,12 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			}
 		}
 
+		if request.SelectedRoute() == nil {
+			logger.Debugw("selected route is not defined, continue request processing")
+			chain.ProcessFilter(request, response)
+			return
+		}
+
 		excluded, ok := request.SelectedRoute().Metadata()[Exclude].(bool)
 		if ok && excluded {
 			logger.Debugw("excluded route from auditing through metadata annotation", "path", request.SelectedRoute().Path())
