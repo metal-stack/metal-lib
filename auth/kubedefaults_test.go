@@ -1,9 +1,10 @@
 package auth
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFromEnvMultiplePath(t *testing.T) {
@@ -31,5 +32,5 @@ func TestFromEnvEmpty(t *testing.T) {
 	os.Setenv(RecommendedConfigPathEnvVar, "")
 
 	s := fromEnv()
-	assert.Len(t, s, 0)
+	assert.Empty(t, s)
 }
