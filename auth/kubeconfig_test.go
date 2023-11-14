@@ -241,10 +241,8 @@ var demoToken2 = TokenInfo{
 
 func TestUpdateUserNewFile(t *testing.T) {
 
-	asserter := require.New(t)
-
 	tmpFile, err := os.CreateTemp("", "this_file_must_not_exist_*")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tmpfileName := tmpFile.Name()
 
 	// delete file, just to be sure
@@ -253,36 +251,33 @@ func TestUpdateUserNewFile(t *testing.T) {
 	// "Update" -> create new file
 	ti := demoToken
 	_, err = UpdateKubeConfig(tmpfileName, ti, ExtractEMail)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	defer os.Remove(tmpfileName)
 
 	// check it is written
-	asserter.FileExists(tmpfileName, "expected file to exist")
+	require.FileExists(t, tmpfileName, "expected file to exist")
 
 	// check contents
 	diffFiles(t, "./testdata/createdDemoConfig", tmpfileName)
 
 	authContext, err := CurrentAuthContext(tmpfileName)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	asserter.Equal(authContext.User, demoToken.TokenClaims.EMail, "User")
-	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")
-	asserter.Equal(authContext.AuthProviderName, "oidc", "AuthProvider")
-	asserter.Equal(authContext.Ctx, testCloudContextName, "Context")
-	asserter.Equal(authContext.ClientID, demoToken.ClientID, "ClientID")
-	asserter.Equal(authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")
-	asserter.Equal(authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
-	asserter.Equal(authContext.IssuerCA, demoToken.IssuerCA, "IssuerCA")
+	require.Equal(t, authContext.User, demoToken.TokenClaims.EMail, "User")
+	require.Equal(t, authContext.IDToken, demoToken.IDToken, "IDToken")
+	require.Equal(t, "oidc", authContext.AuthProviderName, "AuthProvider")
+	require.Equal(t, testCloudContextName, authContext.Ctx, "Context")
+	require.Equal(t, authContext.ClientID, demoToken.ClientID, "ClientID")
+	require.Equal(t, authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")
+	require.Equal(t, authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
+	require.Equal(t, authContext.IssuerCA, demoToken.IssuerCA, "IssuerCA")
 
 }
 
 func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
-
-	asserter := require.New(t)
-
 	tmpFile, err := os.CreateTemp("", "this_file_must_not_exist_*")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tmpfileName := tmpFile.Name()
 
 	// delete file, just to be sure
@@ -291,27 +286,27 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 	// "Update" -> create new file
 	ti := demoToken
 	_, err = UpdateKubeConfig(tmpfileName, ti, ExtractName)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	defer os.Remove(tmpfileName)
 
 	// check it is written
-	asserter.FileExists(tmpfileName, "expected file to ")
+	require.FileExists(t, tmpfileName, "expected file to ")
 
 	// check contents
 	diffFiles(t, "./testdata/createdDemoConfigName", tmpfileName)
 
 	authContext, err := CurrentAuthContext(tmpfileName)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	asserter.Equal(authContext.User, demoToken.TokenClaims.Username(), "User")
-	asserter.Equal(authContext.IDToken, demoToken.IDToken, "IDToken")
-	asserter.Equal(authContext.ClientID, demoToken.ClientID, "ClientID")
-	asserter.Equal(authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")
-	asserter.Equal(authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
-	asserter.Equal(authContext.IssuerCA, demoToken.IssuerCA, "IssuerCA")
-	asserter.Equal(authContext.AuthProviderName, "oidc", "AuthProvider")
-	asserter.Equal(authContext.Ctx, testCloudContextName, "Context")
+	require.Equal(t, authContext.User, demoToken.TokenClaims.Username(), "User")
+	require.Equal(t, authContext.IDToken, demoToken.IDToken, "IDToken")
+	require.Equal(t, authContext.ClientID, demoToken.ClientID, "ClientID")
+	require.Equal(t, authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")
+	require.Equal(t, authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
+	require.Equal(t, demoToken.IssuerCA, authContext.IssuerCA, "IssuerCA")
+	require.Equal(t, "oidc", authContext.AuthProviderName, "AuthProvider")
+	require.Equal(t, testCloudContextName, authContext.Ctx, "Context")
 }
 
 func TestLoadExistingConfigWithOIDC(t *testing.T) {
@@ -326,8 +321,8 @@ func TestLoadExistingConfigWithOIDC(t *testing.T) {
 	require.Equal(t, authContext.ClientSecret, demoToken.ClientSecret, "ClientSecret")
 	require.Equal(t, authContext.IssuerURL, demoToken.IssuerURL, "Issuer")
 	require.Equal(t, authContext.IssuerCA, demoToken.IssuerCA, "IssuerCA")
-	require.Equal(t, authContext.AuthProviderName, "oidc", "AuthProvider")
-	require.Equal(t, authContext.Ctx, testCloudContextName, "Context")
+	require.Equal(t, "oidc", authContext.AuthProviderName, "AuthProvider")
+	require.Equal(t, testCloudContextName, authContext.Ctx, "Context")
 }
 
 func TestUpdateUserExistingConfig(t *testing.T) {
@@ -420,7 +415,7 @@ func TestManipulateEncodeKubeconfig(t *testing.T) {
 
 	clusters, err := GetClusterNames(cfg)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(clusters))
+	require.Len(t, clusters, 1)
 
 	err = AddContext(cfg, "myContext", clusters[0], "username")
 	require.NoError(t, err)
@@ -469,7 +464,7 @@ func TestKubeconfigFromEnv(t *testing.T) {
 	defer os.Setenv(RecommendedConfigPathEnvVar, "")
 
 	_, filename, isDefault, err := LoadKubeConfig("")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, tmpfile.Name(), filename)
 	require.False(t, isDefault)
 }
@@ -483,7 +478,7 @@ func TestAuthContextFromEnv(t *testing.T) {
 	defer os.Setenv(RecommendedConfigPathEnvVar, "")
 
 	authCtx, err := GetAuthContext("", testCloudContextName)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, testCloudContextName, authCtx.Ctx)
 	require.Equal(t, "email@provider.de", authCtx.User)
 }
@@ -502,7 +497,7 @@ func TestKubeconfigFromEnvDoesNotExist(t *testing.T) {
 	defer os.Setenv(RecommendedConfigPathEnvVar, "")
 
 	authCtx, filename, isDefault, err := LoadKubeConfig("")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "/tmp/path/to/kubeconfig", filename)
 	require.NotNil(t, authCtx)
 	require.False(t, isDefault)
@@ -517,7 +512,7 @@ func TestAuthContextFromEnvDoesNotExist(t *testing.T) {
 	defer os.Setenv(RecommendedConfigPathEnvVar, "")
 
 	_, err := CurrentAuthContext("")
-	require.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func TestKubeconfigFromEnvMultiplePaths(t *testing.T) {

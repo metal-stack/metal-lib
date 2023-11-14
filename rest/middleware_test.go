@@ -123,7 +123,7 @@ func TestRequestLoggerFilter(t *testing.T) {
 
 			assert.NotEmpty(t, requestLog.RequestID)
 			_, err = uuid.Parse(requestLog.RequestID)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			if tt.wantBody {
 				assert.NotEmpty(t, requestLog.Body)
@@ -139,7 +139,7 @@ func TestRequestLoggerFilter(t *testing.T) {
 
 			assert.NotEmpty(t, closingLog.RequestID)
 			_, err = uuid.Parse(closingLog.RequestID)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			d, err := time.ParseDuration(closingLog.Duration)
 			require.NoError(t, err)
