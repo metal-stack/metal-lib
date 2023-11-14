@@ -70,7 +70,11 @@ func New(c Config) (Auditing, error) {
 }
 
 func (a *meiliAuditing) Flush() error {
-	taskResult, err := a.client.GetTasks(&meilisearch.TasksQuery{Statuses: []string{"enqueued", "processing"}, Limit: 100})
+	taskStatuses := []meilisearch.TaskStatus{
+		meilisearch.TaskStatusEnqueued,
+		meilisearch.TaskStatusProcessing,
+	}
+	taskResult, err := a.client.GetTasks(&meilisearch.TasksQuery{Statuses: taskStatuses, Limit: 100})
 	if err != nil {
 		return err
 	}
