@@ -1,6 +1,7 @@
 package auditing
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -28,7 +29,11 @@ type meiliAuditing struct {
 	index     *meilisearch.Index
 }
 
-const meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
+const (
+	meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
+	meiliIndexCreationWaitTimeout  = 15 * time.Second
+	meiliIndexCreationWaitInterval = 50 * time.Millisecond
+)
 
 func New(c Config) (Auditing, error) {
 	if c.Component == "" {
@@ -351,7 +356,13 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to request create index (%s): %w", indexUid, err)
 	}
-	_, err = a.client.WaitForTask(creationTask.TaskUID)
+
+	waitCtx, cancelFunc := context.WithTimeout(context.Background(), meiliIndexCreationWaitTimeout)
+	defer cancelFunc()
+	_, err = a.client.WaitForTask(creationTask.TaskUID, meilisearch.WaitParams{
+		Context:  waitCtx,
+		Interval: meiliIndexCreationWaitInterval,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute create index (%s): %w", indexUid, err)
 	}
