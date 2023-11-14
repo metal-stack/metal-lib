@@ -35,7 +35,7 @@ var (
 
 const (
 	meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
-	meiliIndexCreationWaitTimeout  = 15 * time.Second
+	meiliIndexCreationWaitTimeout  = 30 * time.Second
 	meiliIndexCreationWaitInterval = 50 * time.Millisecond
 )
 
