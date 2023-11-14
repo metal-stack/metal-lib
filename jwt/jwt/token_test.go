@@ -16,7 +16,7 @@ func TestGenerateSimpleToken(t *testing.T) {
 	alg := jose.RS256
 
 	publicKey, privateKey, err := security.CreateWebkeyPair(alg, "sig", 0)
-	assert.NoError(t, err, "error creating keypair")
+	require.NoError(t, err, "error creating keypair")
 
 	cl := jwt.Claims{
 		Subject:   "subject",
@@ -29,14 +29,14 @@ func TestGenerateSimpleToken(t *testing.T) {
 	signer := security.MustMakeSigner(alg, privateKey)
 
 	token, err := CreateToken(signer, cl)
-	assert.NoError(t, err, "error creating token")
+	require.NoError(t, err, "error creating token")
 	assert.NotEmpty(t, token)
 
 	parsedClaims := &jwt.Claims{}
 	webToken, err := jwt.ParseSigned(token)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = webToken.Claims(publicKey, parsedClaims)
-	assert.NoError(t, err, "error parsing claims")
+	require.NoError(t, err, "error parsing claims")
 	require.Equal(t, "subject", parsedClaims.Subject)
 	require.Equal(t, "issuer", parsedClaims.Issuer)
 }
@@ -46,7 +46,7 @@ func TestGenerateFullToken(t *testing.T) {
 	alg := jose.RS256
 
 	publicKey, privateKey, err := security.CreateWebkeyPair(alg, "sig", 0)
-	assert.NoError(t, err, "error creating keypair")
+	require.NoError(t, err, "error creating keypair")
 
 	cl := jwt.Claims{
 		Issuer:   "https://dex.test.metal-stack.io/dex",
@@ -78,24 +78,24 @@ func TestGenerateFullToken(t *testing.T) {
 	signer := security.MustMakeSigner(alg, privateKey)
 
 	token, err := CreateToken(signer, cl, privateClaims)
-	assert.NoError(t, err, "error creating token")
+	require.NoError(t, err, "error creating token")
 	assert.NotEmpty(t, token)
 
 	fmt.Println(token)
 	bytes, err := publicKey.MarshalJSON()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(string(bytes))
 
 	webToken, err := jwt.ParseSigned(token)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	parsedClaims := &jwt.Claims{}
 	extendedClaims := &ExtendedClaims{}
 	err = webToken.Claims(publicKey, parsedClaims, extendedClaims)
-	assert.NoError(t, err, "error parsing claims")
+	require.NoError(t, err, "error parsing claims")
 	assert.Equal(t, "achim", parsedClaims.Subject)
 	assert.Equal(t, "achim.admin@tenant.de", extendedClaims.EMail)
 	assert.Equal(t, "tenant_ldap_openldap", extendedClaims.FederatedClaims["connector_id"])
 	assert.Equal(t, "cn=achim.admin,ou=People,dc=tenant,dc=de", extendedClaims.FederatedClaims["user_id"])
-	assert.Equal(t, 6, len(extendedClaims.Groups))
+	assert.Len(t, extendedClaims.Groups, 6)
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testCloudContextName123 = "ctx123"
@@ -65,13 +66,13 @@ func Test_NewUpdateKubeConfigHandler(t *testing.T) {
 	var b bytes.Buffer
 	thf := NewUpdateKubeConfigHandler(file.Name(), &b)
 	err = thf(tokenInfo)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = GetAuthContext(file.Name(), "xyz")
-	assert.EqualError(t, err, "no contexts, name=xyz found")
+	require.EqualError(t, err, "no contexts, name=xyz found")
 
 	authCtx, err := GetAuthContext(file.Name(), cloudContext)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "123", authCtx.IDToken)
 }
 
@@ -92,12 +93,12 @@ func Test_NewUpdateKubeConfigHandlerWithContext(t *testing.T) {
 	var b bytes.Buffer
 	thf := NewUpdateKubeConfigHandler(file.Name(), &b, WithContextName("ctx123"))
 	err = thf(tokenInfo)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = GetAuthContext(file.Name(), "cloudctl-xyz")
-	assert.EqualError(t, err, "no contexts, name=cloudctl-xyz found")
+	require.EqualError(t, err, "no contexts, name=cloudctl-xyz found")
 
 	authCtx, err := GetAuthContext(file.Name(), testCloudContextName123)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "123", authCtx.IDToken)
 }

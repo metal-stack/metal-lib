@@ -35,7 +35,7 @@ func (e *failingCheck) Check(ctx context.Context) (HealthStatus, error) {
 
 func TestNewHealth(t *testing.T) {
 	logger, err := zap.NewDevelopment()
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	type args struct {
 		log      *zap.Logger
