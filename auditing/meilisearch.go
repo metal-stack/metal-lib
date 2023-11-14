@@ -29,6 +29,10 @@ type meiliAuditing struct {
 	index     *meilisearch.Index
 }
 
+var (
+	errAuditingIndexCreationDeadlineUnsufficient = errors.New("auditing index creation timed out, because meilisearch took too long. Consider increasing the timeout to prevent failing requests")
+)
+
 const (
 	meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
 	meiliIndexCreationWaitTimeout  = 15 * time.Second
@@ -357,7 +361,7 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 		return nil, fmt.Errorf("failed to request create index (%s): %w", indexUid, err)
 	}
 
-	waitCtx, cancelFunc := context.WithTimeout(context.Background(), meiliIndexCreationWaitTimeout)
+	waitCtx, cancelFunc := context.WithTimeoutCause(context.Background(), meiliIndexCreationWaitTimeout, errAuditingIndexCreationDeadlineUnsufficient)
 	defer cancelFunc()
 	_, err = a.client.WaitForTask(creationTask.TaskUID, meilisearch.WaitParams{
 		Context:  waitCtx,
