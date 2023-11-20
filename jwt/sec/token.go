@@ -2,10 +2,11 @@ package sec
 
 import (
 	"fmt"
+
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/metal-stack/metal-lib/auth"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 // ParseTokenUnvalidated extracts information from the given jwt token without validating it

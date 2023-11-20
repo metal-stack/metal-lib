@@ -3,13 +3,14 @@ package sec
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/square/go-jose.v2/jwt"
-	"reflect"
-	"testing"
 )
 
 // setup for most of the tests in this package
