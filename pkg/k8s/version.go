@@ -13,6 +13,11 @@ var (
 	KubernetesV126 = semver.MustParse("1.26")
 	KubernetesV127 = semver.MustParse("1.27")
 	KubernetesV128 = semver.MustParse("1.28")
+	KubernetesV129 = semver.MustParse("1.29")
+	KubernetesV130 = semver.MustParse("1.30")
+	KubernetesV131 = semver.MustParse("1.31")
+	KubernetesV132 = semver.MustParse("1.32")
+	KubernetesV133 = semver.MustParse("1.33")
 )
 
 func LessThan(actual string, target *semver.Version) (bool, error) {
