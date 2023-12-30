@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
+	"github.com/go-task/slim-sprig/v3"
 )
 
 // TemplatePrinter prints data with a given template

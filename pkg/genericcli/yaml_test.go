@@ -280,7 +280,7 @@ func Test_YamlIsEqual(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "yaml is equal indepedent of trailing spaces",
+			name: "yaml is equal independent of trailing spaces",
 			x:    []byte(`a: b`),
 			y:    []byte(`  a: b   `),
 			want: true,
