@@ -63,7 +63,7 @@ func PromptCustom(c *PromptConfig) error {
 		fmt.Fprintf(c.Out, "%s ", c.Message)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(c.In)
 	scanner.Scan()
 	if err := scanner.Err(); err != nil {
 		return err
