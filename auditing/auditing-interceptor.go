@@ -14,6 +14,8 @@ import (
 	"github.com/metal-stack/security"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -62,8 +64,11 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 
 		auditReqContext.prepareForNextPhase()
 		resp, err = handler(childCtx, req)
+
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
@@ -120,6 +125,8 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 
 		auditReqContext.prepareForNextPhase()
 		err = handler(srv, childSS)
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
@@ -131,6 +138,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 
 		auditReqContext.Phase = EntryPhaseClosed
 		err = a.Index(auditReqContext)
+
 		return err
 	}
 }
@@ -177,7 +185,9 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 
 		auditReqContext.prepareForNextPhase()
 		scc := next(childCtx, s)
+
 		auditReqContext.Phase = EntryPhaseClosed
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
@@ -230,6 +240,8 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 
 		auditReqContext.prepareForNextPhase()
 		err = next(childCtx, shc)
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.auditing.Index(auditReqContext)
@@ -290,9 +302,13 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		}
 
 		auditReqContext.prepareForNextPhase()
+
 		resp, err := next(childCtx, ar)
+
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := i.auditing.Index(auditReqContext)
@@ -301,6 +317,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			}
 			return nil, err
 		}
+
 		err = i.auditing.Index(auditReqContext)
 		return resp, err
 	}
@@ -459,4 +476,51 @@ type grpcServerStreamWithContext struct {
 // Context implements grpc.ServerStream
 func (s grpcServerStreamWithContext) Context() context.Context {
 	return s.ctx
+}
+
+// statusCodeFromGrpc attempts to map some grpc status errors to its http equivalents
+func statusCodeFromGrpc(err error) int {
+	s, ok := status.FromError(err)
+	if !ok {
+		return http.StatusInternalServerError
+	}
+
+	switch s.Code() {
+	case codes.OK:
+		return http.StatusOK
+	case codes.Canceled:
+		return 499 // client connection closed
+	case codes.Unknown:
+		return http.StatusInternalServerError
+	case codes.InvalidArgument:
+		return http.StatusBadRequest
+	case codes.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.AlreadyExists:
+		return http.StatusConflict
+	case codes.PermissionDenied:
+		return http.StatusForbidden
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized
+	case codes.ResourceExhausted:
+		return http.StatusTooManyRequests
+	case codes.FailedPrecondition:
+		return http.StatusBadRequest
+	case codes.Aborted:
+		return http.StatusConflict
+	case codes.OutOfRange:
+		return http.StatusBadRequest
+	case codes.Unimplemented:
+		return http.StatusNotImplemented
+	case codes.Internal:
+		return http.StatusInternalServerError
+	case codes.Unavailable:
+		return http.StatusServiceUnavailable
+	case codes.DataLoss:
+		return http.StatusInternalServerError
+	default:
+		return http.StatusInternalServerError
+	}
 }
