@@ -281,7 +281,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
-			auditReqContext.User = user.EMail
+			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
 		err := i.auditing.Index(auditReqContext)
