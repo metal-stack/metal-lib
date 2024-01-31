@@ -14,6 +14,8 @@ import (
 	"github.com/metal-stack/security"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -48,11 +50,13 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 			Path:      info.FullMethod,
 			Phase:     EntryPhaseRequest,
 		}
+
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
-			auditReqContext.User = user.EMail
+			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
+
 		err = a.Index(auditReqContext)
 		if err != nil {
 			return nil, err
@@ -60,8 +64,11 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 
 		auditReqContext.prepareForNextPhase()
 		resp, err = handler(childCtx, req)
+
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
@@ -70,6 +77,7 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 			}
 			return nil, err
 		}
+
 		err = a.Index(auditReqContext)
 		return resp, err
 	}
@@ -106,15 +114,19 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 
 		user := security.GetUserFromContext(ss.Context())
 		if user != nil {
-			auditReqContext.User = user.EMail
+			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
+
 		err := a.Index(auditReqContext)
 		if err != nil {
 			return err
 		}
+
 		auditReqContext.prepareForNextPhase()
 		err = handler(srv, childSS)
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
@@ -123,8 +135,10 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 			}
 			return err
 		}
+
 		auditReqContext.Phase = EntryPhaseClosed
 		err = a.Index(auditReqContext)
+
 		return err
 	}
 }
@@ -157,22 +171,29 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			Phase:     EntryPhaseOpened,
 			Type:      EntryTypeGRPC,
 		}
+
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
-			auditReqContext.User = user.EMail
+			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
+
 		err := a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Errorf("unable to index error: %v", err)
 		}
+
 		auditReqContext.prepareForNextPhase()
 		scc := next(childCtx, s)
+
 		auditReqContext.Phase = EntryPhaseClosed
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Errorf("unable to index error: %v", err)
 		}
+
 		return scc
 	}
 }
@@ -193,23 +214,34 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
-			RequestId: requestID,
-			Detail:    EntryDetailGRPCStream,
-			Path:      shc.Spec().Procedure,
-			Phase:     EntryPhaseOpened,
-			Type:      EntryTypeGRPC,
+			RequestId:    requestID,
+			Detail:       EntryDetailGRPCStream,
+			Path:         shc.Spec().Procedure,
+			Phase:        EntryPhaseOpened,
+			Type:         EntryTypeGRPC,
+			RemoteAddr:   shc.RequestHeader().Get("X-Real-Ip"),
+			ForwardedFor: shc.RequestHeader().Get("X-Forwarded-For"),
 		}
+
+		if auditReqContext.RemoteAddr == "" {
+			auditReqContext.RemoteAddr = shc.Peer().Addr
+		}
+
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
-			auditReqContext.User = user.EMail
+			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
+
 		err := a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Errorf("unable to index error: %v", err)
 		}
+
 		auditReqContext.prepareForNextPhase()
 		err = next(childCtx, shc)
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := a.auditing.Index(auditReqContext)
@@ -218,11 +250,13 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			}
 			return err
 		}
+
 		auditReqContext.Phase = EntryPhaseClosed
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Errorf("unable to index error: %v", err)
 		}
+
 		return err
 	}
 }
@@ -243,17 +277,23 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
-			RequestId:  requestID,
-			Detail:     EntryDetailGRPCUnary,
-			Path:       ar.Spec().Procedure,
-			Phase:      EntryPhaseRequest,
-			Type:       EntryTypeGRPC,
-			Body:       ar.Any(),
-			RemoteAddr: ar.Peer().Addr,
+			RequestId:    requestID,
+			Detail:       EntryDetailGRPCUnary,
+			Path:         ar.Spec().Procedure,
+			Phase:        EntryPhaseRequest,
+			Type:         EntryTypeGRPC,
+			Body:         ar.Any(),
+			RemoteAddr:   ar.Header().Get("X-Real-Ip"),
+			ForwardedFor: ar.Header().Get("X-Forwarded-For"),
 		}
+
+		if auditReqContext.RemoteAddr == "" {
+			auditReqContext.RemoteAddr = ar.Peer().Addr
+		}
+
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
-			auditReqContext.User = user.EMail
+			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
 		err := i.auditing.Index(auditReqContext)
@@ -262,9 +302,13 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		}
 
 		auditReqContext.prepareForNextPhase()
+
 		resp, err := next(childCtx, ar)
+
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
+		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+
 		if err != nil {
 			auditReqContext.Error = err
 			err2 := i.auditing.Index(auditReqContext)
@@ -273,6 +317,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			}
 			return nil, err
 		}
+
 		err = i.auditing.Index(auditReqContext)
 		return resp, err
 	}
@@ -431,4 +476,13 @@ type grpcServerStreamWithContext struct {
 // Context implements grpc.ServerStream
 func (s grpcServerStreamWithContext) Context() context.Context {
 	return s.ctx
+}
+
+func statusCodeFromGrpc(err error) int {
+	s, ok := status.FromError(err)
+	if !ok {
+		return int(codes.Unknown)
+	}
+
+	return int(s.Code())
 }
