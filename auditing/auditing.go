@@ -74,7 +74,7 @@ type Entry struct {
 	RemoteAddr   string
 
 	Body       any // JSON, string or numbers
-	StatusCode int // only for `EntryDetailHTTP`
+	StatusCode int // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
 
 	// Internal errors
 	Error error
