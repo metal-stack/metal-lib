@@ -30,6 +30,7 @@ func New[K any, O any](expiration time.Duration, fetch FetchFunc[K, O]) *Cache[K
 	}
 }
 
+// Get returns the entry for the given key using the provided fetch function if the entry is missing.
 func (c *Cache[K, O]) Get(ctx context.Context, key K) (O, error) {
 	v, ok := c.entries.Load(key)
 	if !ok {
@@ -81,6 +82,18 @@ func (c *Cache[K, O]) Refresh(ctx context.Context, key K) (O, error) {
 	c.entries.Store(key, entry)
 
 	return entry.value, nil
+}
+
+// Set sets an entry explicitly without using the fetch functions
+func (c *Cache[K, O]) Set(key K, o O) {
+	entry := newEntry(o, c.expiration)
+
+	c.entries.Store(key, entry)
+}
+
+// Delete deletes an entry explicitly without waiting for expiration
+func (c *Cache[K, O]) Delete(key K) {
+	c.entries.Delete(key)
 }
 
 func newEntry[O any](o O, expiration time.Duration) *entry[O] {
