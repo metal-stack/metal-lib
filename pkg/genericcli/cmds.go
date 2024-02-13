@@ -173,6 +173,14 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
+					if viper.GetString("dry-run") == "client" {
+						fmt.Println("Create request as client:", rq)
+						return nil
+					} else if viper.GetString("dry-run") == "server" {
+						fmt.Println("Create request as server:", rq)
+						return nil
+					}
+
 					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter())
 				}
 
@@ -181,6 +189,9 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
+
+		//Adding dry-run flas to the command
+		cmd.Flags().String("dry-run", "", "Ser dry-run mode. Values: client, server")
 
 		c.addFileFlags(cmd)
 
