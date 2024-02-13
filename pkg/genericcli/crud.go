@@ -102,6 +102,11 @@ func (a *GenericCLI[C, U, R]) CreateAndPrint(rq C, p printers.Printer) error {
 	return p.Print(resp)
 }
 
+func (a *GenericCLI[C, U, R]) SimplePrint(rq C, p printers.Printer) error {
+
+	return p.Print(rq)
+}
+
 func (a *GenericCLI[C, U, R]) Update(rq U) (R, error) {
 	var zero R
 
