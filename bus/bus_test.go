@@ -1,11 +1,11 @@
 package bus
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 
 	"github.com/nsqio/nsq/nsqd"
-	"go.uber.org/zap/zaptest"
 )
 
 var (
@@ -34,7 +34,7 @@ func startupNSQD() {
 		}()
 	}
 	var err error
-	consumer, err = NewConsumer(zaptest.NewLogger(&testing.T{}), nil)
+	consumer, err = NewConsumer(slog.Default(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +45,7 @@ func startupNSQD() {
 		HTTPEndpoint: httpAddress,
 	}
 
-	publisher, err = NewPublisher(zaptest.NewLogger(&testing.T{}), cfg)
+	publisher, err = NewPublisher(slog.Default(), cfg)
 	if err != nil {
 		panic(err)
 	}

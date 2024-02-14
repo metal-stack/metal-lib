@@ -1,9 +1,8 @@
 package auditing
 
 import (
+	"log/slog"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -13,7 +12,7 @@ type Config struct {
 	IndexPrefix      string
 	RotationInterval Interval
 	Keep             int64
-	Log              *zap.SugaredLogger
+	Log              *slog.Logger
 }
 
 type Interval string

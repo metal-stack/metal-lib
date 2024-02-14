@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"connectrpc.com/connect"
@@ -12,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/rest"
 	"github.com/metal-stack/security"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,9 +25,10 @@ const (
 	Exclude string = "exclude-from-auditing"
 )
 
-func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit func(fullMethod string) bool) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) grpc.UnaryServerInterceptor {
 	if a == nil {
-		logger.Fatal("cannot use nil auditing to create unary server interceptor")
+		logger.Error("cannot use nil auditing to create unary server interceptor")
+		// FIXME return something useful
 	}
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		if !shouldAudit(info.FullMethod) {
@@ -73,7 +74,7 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
-				logger.Errorf("unable to index error: %v", err2)
+				logger.Error("unable to index", "error", err2)
 			}
 			return nil, err
 		}
@@ -83,9 +84,10 @@ func UnaryServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit f
 	}
 }
 
-func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit func(fullMethod string) bool) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) grpc.StreamServerInterceptor {
 	if a == nil {
-		logger.Fatal("cannot use nil auditing to create stream server interceptor")
+		logger.Error("cannot use nil auditing to create stream server interceptor")
+		// FIXME return something useful
 	}
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if !shouldAudit(info.FullMethod) {
@@ -131,7 +133,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 			auditReqContext.Error = err
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
-				logger.Errorf("unable to index error: %v", err2)
+				logger.Error("unable to index", "error", err2)
 			}
 			return err
 		}
@@ -145,7 +147,7 @@ func StreamServerInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit 
 
 type auditingConnectInterceptor struct {
 	auditing    Auditing
-	logger      *zap.SugaredLogger
+	logger      *slog.Logger
 	shouldAudit func(fullMethod string) bool
 }
 
@@ -180,7 +182,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 
 		err := a.auditing.Index(auditReqContext)
 		if err != nil {
-			a.logger.Errorf("unable to index error: %v", err)
+			a.logger.Error("unable to index", "error", err)
 		}
 
 		auditReqContext.prepareForNextPhase()
@@ -191,7 +193,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
-			a.logger.Errorf("unable to index error: %v", err)
+			a.logger.Error("unable to index", "error", err)
 		}
 
 		return scc
@@ -235,7 +237,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 
 		err := a.auditing.Index(auditReqContext)
 		if err != nil {
-			a.logger.Errorf("unable to index error: %v", err)
+			a.logger.Error("unable to index", "error", err)
 		}
 
 		auditReqContext.prepareForNextPhase()
@@ -246,7 +248,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			auditReqContext.Error = err
 			err2 := a.auditing.Index(auditReqContext)
 			if err2 != nil {
-				a.logger.Errorf("unable to index error: %v", err2)
+				a.logger.Error("unable to index", "error", err2)
 			}
 			return err
 		}
@@ -254,7 +256,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		auditReqContext.Phase = EntryPhaseClosed
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
-			a.logger.Errorf("unable to index error: %v", err)
+			a.logger.Error("unable to index", "error", err)
 		}
 
 		return err
@@ -313,7 +315,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			auditReqContext.Error = err
 			err2 := i.auditing.Index(auditReqContext)
 			if err2 != nil {
-				i.logger.Errorf("unable to index error: %v", err2)
+				i.logger.Error("unable to index", "error", err2)
 			}
 			return nil, err
 		}
@@ -323,9 +325,10 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 	}
 }
 
-func NewConnectInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit func(fullMethod string) bool) connect.Interceptor {
+func NewConnectInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) connect.Interceptor {
 	if a == nil {
-		logger.Fatal("cannot use nil auditing to create connect interceptor")
+		logger.Error("cannot use nil auditing to create connect interceptor")
+		// FIXME return something useful
 	}
 	return auditingConnectInterceptor{
 		auditing:    a,
@@ -334,9 +337,10 @@ func NewConnectInterceptor(a Auditing, logger *zap.SugaredLogger, shouldAudit fu
 	}
 }
 
-func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
+func HttpFilter(a Auditing, logger *slog.Logger) restful.FilterFunction {
 	if a == nil {
-		logger.Fatal("cannot use nil auditing to create http middleware")
+		logger.Error("cannot use nil auditing to create http middleware")
+		// FIXME return something useful
 	}
 	return func(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
 		r := request.Request
@@ -346,7 +350,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			break
 		default:
 			if request.SelectedRoute() == nil {
-				logger.Debugw("selected route is not defined, continue request processing")
+				logger.Debug("selected route is not defined, continue request processing")
 				chain.ProcessFilter(request, response)
 				return
 			}
@@ -360,14 +364,14 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 		}
 
 		if request.SelectedRoute() == nil {
-			logger.Debugw("selected route is not defined, continue request processing")
+			logger.Debug("selected route is not defined, continue request processing")
 			chain.ProcessFilter(request, response)
 			return
 		}
 
 		excluded, ok := request.SelectedRoute().Metadata()[Exclude].(bool)
 		if ok && excluded {
-			logger.Debugw("excluded route from auditing through metadata annotation", "path", request.SelectedRoute().Path())
+			logger.Debug("excluded route from auditing through metadata annotation", "path", request.SelectedRoute().Path())
 			chain.ProcessFilter(request, response)
 			return
 		}
@@ -399,7 +403,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 			body, err := io.ReadAll(bodyReader)
 			r.Body = io.NopCloser(bytes.NewReader(body))
 			if err != nil {
-				logger.Errorf("unable to read request body: %v", err)
+				logger.Error("unable to read request body", "error", err)
 				response.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -411,7 +415,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 
 		err := a.Index(auditReqContext)
 		if err != nil {
-			logger.Errorf("unable to index error: %v", err)
+			logger.Error("unable to index", "error", err)
 			response.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -436,7 +440,7 @@ func HttpFilter(a Auditing, logger *zap.SugaredLogger) restful.FilterFunction {
 
 		err = a.Index(auditReqContext)
 		if err != nil {
-			logger.Errorf("unable to index error: %v", err)
+			logger.Error("unable to index", "error", err)
 			response.WriteHeader(http.StatusInternalServerError)
 			return
 		}

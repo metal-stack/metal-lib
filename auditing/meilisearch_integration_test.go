@@ -6,6 +6,7 @@ package auditing
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"testing"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"go.uber.org/zap/zaptest"
 )
 
 type connectionDetails struct {
@@ -280,7 +280,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 			a, err := New(Config{
 				URL:         c.Endpoint,
 				APIKey:      c.Password,
-				Log:         zaptest.NewLogger(t).Sugar(),
+				Log:         slog.Default(),
 				IndexPrefix: fmt.Sprintf("test-%d", i),
 			})
 			require.NoError(t, err)
