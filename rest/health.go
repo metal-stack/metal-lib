@@ -32,7 +32,7 @@ type HealthCheck interface {
 	// ServiceName returns the name of the service that is health checked.
 	ServiceName() string
 	// Check is a function returning a service status and an error.
-	Check(ctx context.Context) (HealthStatus, map[string]HealthStatus, error)
+	Check(ctx context.Context) (HealthStatus, []string, error)
 }
 
 // HealthResponse is returned by the API when executing a health check.
@@ -52,7 +52,7 @@ type HealthResult struct {
 	// Message gives additional information on the health of a service.
 	Message string `json:"message"`
 	// Services is map of partitions by name with their individual health results.
-	Partitions map[string]HealthStatus `json:"partitions"`
+	UnhealthyPartitions []string `json:"unhealthy-partitions"`
 }
 
 type healthResource struct {
@@ -141,9 +141,9 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			result := chanResult{
 				name: name,
 				HealthResult: HealthResult{
-					Status:     HealthStatusHealthy,
-					Message:    "",
-					Partitions: map[string]HealthStatus{},
+					Status:              HealthStatusHealthy,
+					Message:             "",
+					UnhealthyPartitions: []string{},
 				},
 			}
 			defer func() {
@@ -151,7 +151,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			}()
 
 			var err error
-			result.Status, result.Partitions, err = healthCheck.Check(ctx)
+			result.Status, result.UnhealthyPartitions, err = healthCheck.Check(ctx)
 			if err != nil {
 				result.Message = err.Error()
 				h.log.Errorw("unhealthy service", "name", name, "status", result.Status, "error", err)

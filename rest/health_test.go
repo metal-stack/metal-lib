@@ -19,8 +19,8 @@ func (e *succeedingCheck) ServiceName() string {
 	return "success"
 }
 
-func (e *succeedingCheck) Check(ctx context.Context) (HealthStatus, map[string]HealthStatus, error) {
-	return HealthStatusHealthy, map[string]HealthStatus{"success": HealthStatusHealthy}, nil
+func (e *succeedingCheck) Check(ctx context.Context) (HealthStatus, []string, error) {
+	return HealthStatusHealthy, []string{}, nil
 }
 
 type failingCheck struct{}
@@ -29,8 +29,8 @@ func (e *failingCheck) ServiceName() string {
 	return "fail"
 }
 
-func (e *failingCheck) Check(ctx context.Context) (HealthStatus, map[string]HealthStatus, error) {
-	return HealthStatusUnhealthy, map[string]HealthStatus{"fail": HealthStatusUnhealthy}, fmt.Errorf("facing an issue")
+func (e *failingCheck) Check(ctx context.Context) (HealthStatus, []string, error) {
+	return HealthStatusUnhealthy, []string{"fail"}, fmt.Errorf("facing an issue")
 }
 
 func TestNewHealth(t *testing.T) {
@@ -73,14 +73,14 @@ func TestNewHealth(t *testing.T) {
 				Message: "facing an issue",
 				Services: map[string]HealthResult{
 					"success": {
-						Status:     HealthStatusHealthy,
-						Message:    "",
-						Partitions: map[string]HealthStatus{"success": HealthStatusHealthy},
+						Status:              HealthStatusHealthy,
+						Message:             "",
+						UnhealthyPartitions: []string{},
 					},
 					"fail": {
-						Status:     HealthStatusUnhealthy,
-						Message:    "facing an issue",
-						Partitions: map[string]HealthStatus{"fail": HealthStatusUnhealthy},
+						Status:              HealthStatusUnhealthy,
+						Message:             "facing an issue",
+						UnhealthyPartitions: []string{"fail"},
 					},
 				},
 			},
@@ -98,9 +98,9 @@ func TestNewHealth(t *testing.T) {
 				Message: "",
 				Services: map[string]HealthResult{
 					"success": {
-						Status:     HealthStatusHealthy,
-						Message:    "",
-						Partitions: map[string]HealthStatus{"success": HealthStatusHealthy},
+						Status:              HealthStatusHealthy,
+						Message:             "",
+						UnhealthyPartitions: []string{},
 					},
 				},
 			},
