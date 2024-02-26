@@ -41,8 +41,12 @@ type HealthResponse struct {
 	Status HealthStatus `json:"status"`
 	// Message gives additional information on the overall health state.
 	Message string `json:"message"`
-	// provides further information on the result e.g. services or partitions
-	Information map[string]HealthResult `json:"information"`
+	// Services contain the individual health results of the services as evaluated by the HealthCheck interface. The overall HealthStatus is then derived automatically from the results of the health checks.
+	//
+	// Note that the individual HealthResults evaluated by the HealthCheck interface may again consist of a plurality services. While this is only optional it allows for creating nested health structures. These can be used for more sophisticated scenarios like evaluating platform health describing service availability in different locations or similar.
+	//
+	// If using nested HealthResults, the status of the parent service can be derived automatically from the status of its children by leaving the parent's health status field blank.
+	Services map[string]HealthResult `json:"services"`
 }
 
 // HealthResult holds the health state of a service.
@@ -106,9 +110,9 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	var (
 		service = request.QueryParameter("service")
 		result  = HealthResponse{
-			Status:      HealthStatusHealthy,
-			Message:     "",
-			Information: map[string]HealthResult{},
+			Status:   HealthStatusHealthy,
+			Message:  "",
+			Services: map[string]HealthResult{},
 		}
 
 		resultChan = make(chan chanResult)
@@ -134,9 +138,9 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			result := chanResult{
 				name: name,
 				HealthResult: HealthResult{
-					Status:      HealthStatusHealthy,
-					Message:     "",
-					Information: map[string]HealthResult{},
+					Status:   HealthStatusHealthy,
+					Message:  "",
+					Services: map[string]HealthResult{},
 				},
 			}
 			defer func() {
@@ -158,7 +162,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	go func() {
 		for r := range resultChan {
 			r := r
-			result.Information[r.name] = r.HealthResult
+			result.Services[r.name] = r.HealthResult
 		}
 		finished <- true
 	}()
@@ -174,7 +178,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 
 	<-finished
 
-	result.Status = DeriveOverallHealthStatus(result.Information)
+	result.Status = DeriveOverallHealthStatus(result.Services)
 
 	err := response.WriteHeaderAndEntity(rc, result)
 	if err != nil {
@@ -189,11 +193,11 @@ func DeriveOverallHealthStatus(information map[string]HealthResult) HealthStatus
 		unhealthy int
 	)
 
-	for _, i := range information {
-		if i.Status == "" {
-			i.Status = DeriveOverallHealthStatus(i.Information)
+	for _, service := range information {
+		if service.Status == "" {
+			service.Status = DeriveOverallHealthStatus(service.Services)
 		}
-		switch i.Status {
+		switch service.Status {
 		case HealthStatusHealthy:
 		case HealthStatusDegraded:
 			degraded++
