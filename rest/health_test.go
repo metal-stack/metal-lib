@@ -19,8 +19,18 @@ func (e *succeedingCheck) ServiceName() string {
 	return "success"
 }
 
-func (e *succeedingCheck) Check(ctx context.Context) (HealthStatus, []string, error) {
-	return HealthStatusHealthy, []string{}, nil
+func (e *succeedingCheck) Check(ctx context.Context) (HealthResult, error) {
+	return HealthResult{
+		Status:  HealthStatusHealthy,
+		Message: "",
+		Information: map[string]HealthResult{
+			"successPartition": {
+				Status:      HealthStatusHealthy,
+				Message:     "",
+				Information: map[string]HealthResult{},
+			},
+		},
+	}, nil
 }
 
 type failingCheck struct{}
@@ -29,8 +39,18 @@ func (e *failingCheck) ServiceName() string {
 	return "fail"
 }
 
-func (e *failingCheck) Check(ctx context.Context) (HealthStatus, []string, error) {
-	return HealthStatusUnhealthy, []string{"fail"}, fmt.Errorf("facing an issue")
+func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
+	return HealthResult{
+		Status:  HealthStatusUnhealthy,
+		Message: "",
+		Information: map[string]HealthResult{
+			"failPartition": {
+				Status:      HealthStatusUnhealthy,
+				Message:     "",
+				Information: map[string]HealthResult{},
+			},
+		},
+	}, fmt.Errorf("facing an issue")
 }
 
 func TestNewHealth(t *testing.T) {
@@ -56,9 +76,9 @@ func TestNewHealth(t *testing.T) {
 				h:        nil,
 			},
 			want: &HealthResponse{
-				Status:   HealthStatusHealthy,
-				Message:  "",
-				Services: map[string]HealthResult{},
+				Status:      HealthStatusHealthy,
+				Message:     "",
+				Information: map[string]HealthResult{},
 			},
 		},
 		{
@@ -71,16 +91,28 @@ func TestNewHealth(t *testing.T) {
 			want: &HealthResponse{
 				Status:  HealthStatusPartiallyUnhealthy,
 				Message: "facing an issue",
-				Services: map[string]HealthResult{
+				Information: map[string]HealthResult{
 					"success": {
-						Status:              HealthStatusHealthy,
-						Message:             "",
-						UnhealthyPartitions: []string{},
+						Status:  HealthStatusHealthy,
+						Message: "",
+						Information: map[string]HealthResult{
+							"successPartition": {
+								Status:      HealthStatusHealthy,
+								Message:     "",
+								Information: map[string]HealthResult{},
+							},
+						},
 					},
 					"fail": {
-						Status:              HealthStatusUnhealthy,
-						Message:             "facing an issue",
-						UnhealthyPartitions: []string{"fail"},
+						Status:  HealthStatusUnhealthy,
+						Message: "facing an issue",
+						Information: map[string]HealthResult{
+							"failPartition": {
+								Status:      HealthStatusUnhealthy,
+								Message:     "",
+								Information: map[string]HealthResult{},
+							},
+						},
 					},
 				},
 			},
@@ -96,11 +128,17 @@ func TestNewHealth(t *testing.T) {
 			want: &HealthResponse{
 				Status:  HealthStatusHealthy,
 				Message: "",
-				Services: map[string]HealthResult{
+				Information: map[string]HealthResult{
 					"success": {
-						Status:              HealthStatusHealthy,
-						Message:             "",
-						UnhealthyPartitions: []string{},
+						Status:  HealthStatusHealthy,
+						Message: "",
+						Information: map[string]HealthResult{
+							"successPartition": {
+								Status:      HealthStatusHealthy,
+								Message:     "",
+								Information: map[string]HealthResult{},
+							},
+						},
 					},
 				},
 			},

@@ -32,7 +32,7 @@ type HealthCheck interface {
 	// ServiceName returns the name of the service that is health checked.
 	ServiceName() string
 	// Check is a function returning a service status and an error.
-	Check(ctx context.Context) (HealthStatus, []string, error)
+	Check(ctx context.Context) (HealthResult, error)
 }
 
 // HealthResponse is returned by the API when executing a health check.
@@ -41,19 +41,12 @@ type HealthResponse struct {
 	Status HealthStatus `json:"status"`
 	// Message gives additional information on the overall health state.
 	Message string `json:"message"`
-	// Services is map of services by name with their individual health results.
-	Services map[string]HealthResult `json:"services"`
+	// provides further information on the result e.g. services or partitions
+	Information map[string]HealthResult `json:"information"`
 }
 
 // HealthResult holds the health state of a service.
-type HealthResult struct {
-	// Status indicates the health of the service.
-	Status HealthStatus `json:"status"`
-	// Message gives additional information on the health of a service.
-	Message string `json:"message"`
-	// Services is map of partitions by name with their individual health results.
-	UnhealthyPartitions []string `json:"unhealthy-partitions"`
-}
+type HealthResult HealthResponse
 
 type healthResource struct {
 	log          *zap.SugaredLogger
@@ -113,9 +106,9 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	var (
 		service = request.QueryParameter("service")
 		result  = HealthResponse{
-			Status:   HealthStatusHealthy,
-			Message:  "",
-			Services: map[string]HealthResult{},
+			Status:      HealthStatusHealthy,
+			Message:     "",
+			Information: map[string]HealthResult{},
 		}
 
 		resultChan = make(chan chanResult)
@@ -141,9 +134,9 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			result := chanResult{
 				name: name,
 				HealthResult: HealthResult{
-					Status:              HealthStatusHealthy,
-					Message:             "",
-					UnhealthyPartitions: []string{},
+					Status:      HealthStatusHealthy,
+					Message:     "",
+					Information: map[string]HealthResult{},
 				},
 			}
 			defer func() {
@@ -151,7 +144,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			}()
 
 			var err error
-			result.Status, result.UnhealthyPartitions, err = healthCheck.Check(ctx)
+			result.HealthResult, err = healthCheck.Check(ctx)
 			if err != nil {
 				result.Message = err.Error()
 				h.log.Errorw("unhealthy service", "name", name, "status", result.Status, "error", err)
@@ -165,8 +158,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	go func() {
 		for r := range resultChan {
 			r := r
-			result.Services[r.name] = r.HealthResult
-
+			result.Information[r.name] = r.HealthResult
 		}
 		finished <- true
 	}()
@@ -182,7 +174,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 
 	<-finished
 
-	result.Status = DeriveOverallHealthStatus(result.Services)
+	result.Status = DeriveOverallHealthStatus(result.Information)
 
 	err := response.WriteHeaderAndEntity(rc, result)
 	if err != nil {
@@ -190,15 +182,15 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	}
 }
 
-func DeriveOverallHealthStatus(services map[string]HealthResult) HealthStatus {
+func DeriveOverallHealthStatus(information map[string]HealthResult) HealthStatus {
 	var (
 		result    = HealthStatusHealthy
 		degraded  int
 		unhealthy int
 	)
 
-	for _, service := range services {
-		switch service.Status {
+	for _, i := range information {
+		switch i.Status {
 		case HealthStatusHealthy:
 		case HealthStatusDegraded:
 			degraded++
@@ -209,14 +201,14 @@ func DeriveOverallHealthStatus(services map[string]HealthResult) HealthStatus {
 		}
 	}
 
-	if len(services) > 0 {
+	if len(information) > 0 {
 		if degraded > 0 {
 			result = HealthStatusDegraded
 		}
 		if unhealthy > 0 {
 			result = HealthStatusPartiallyUnhealthy
 		}
-		if unhealthy == len(services) {
+		if unhealthy == len(information) {
 			result = HealthStatusUnhealthy
 		}
 	}
