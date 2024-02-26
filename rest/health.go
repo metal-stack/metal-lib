@@ -190,6 +190,9 @@ func DeriveOverallHealthStatus(information map[string]HealthResult) HealthStatus
 	)
 
 	for _, i := range information {
+		if i.Status == "" {
+			i.Status = DeriveOverallHealthStatus(i.Information)
+		}
 		switch i.Status {
 		case HealthStatusHealthy:
 		case HealthStatusDegraded:
