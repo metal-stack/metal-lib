@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -25,10 +26,9 @@ const (
 	Exclude string = "exclude-from-auditing"
 )
 
-func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.UnaryServerInterceptor, error) {
 	if a == nil {
-		logger.Error("cannot use nil auditing to create unary server interceptor")
-		// FIXME return something useful
+		return nil, fmt.Errorf("cannot use nil auditing to create unary server interceptor")
 	}
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		if !shouldAudit(info.FullMethod) {
@@ -81,13 +81,12 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 
 		err = a.Index(auditReqContext)
 		return resp, err
-	}
+	}, nil
 }
 
-func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.StreamServerInterceptor, error) {
 	if a == nil {
-		logger.Error("cannot use nil auditing to create stream server interceptor")
-		// FIXME return something useful
+		return nil, fmt.Errorf("cannot use nil auditing to create stream server interceptor")
 	}
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if !shouldAudit(info.FullMethod) {
@@ -142,7 +141,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		err = a.Index(auditReqContext)
 
 		return err
-	}
+	}, nil
 }
 
 type auditingConnectInterceptor struct {
@@ -325,22 +324,20 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 	}
 }
 
-func NewConnectInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) connect.Interceptor {
+func NewConnectInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (connect.Interceptor, error) {
 	if a == nil {
-		logger.Error("cannot use nil auditing to create connect interceptor")
-		// FIXME return something useful
+		return nil, fmt.Errorf("cannot use nil auditing to create connect interceptor")
 	}
 	return auditingConnectInterceptor{
 		auditing:    a,
 		logger:      logger,
 		shouldAudit: shouldAudit,
-	}
+	}, nil
 }
 
-func HttpFilter(a Auditing, logger *slog.Logger) restful.FilterFunction {
+func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error) {
 	if a == nil {
-		logger.Error("cannot use nil auditing to create http middleware")
-		// FIXME return something useful
+		return nil, fmt.Errorf("cannot use nil auditing to create http middleware")
 	}
 	return func(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
 		r := request.Request
@@ -444,7 +441,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) restful.FilterFunction {
 			response.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	}
+	}, nil
 }
 
 type bufferedHttpResponseWriter struct {
