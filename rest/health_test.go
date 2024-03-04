@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http/httptest"
 	"testing"
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 type succeedingCheck struct{}
@@ -52,11 +52,10 @@ func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
 }
 
 func TestNewHealth(t *testing.T) {
-	logger, err := zap.NewDevelopment()
-	require.NoError(t, err)
+	logger := slog.Default()
 
 	type args struct {
-		log      *zap.Logger
+		log      *slog.Logger
 		basePath string
 		service  string
 		h        []HealthCheck

@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"time"
-
-	"go.uber.org/zap"
 
 	"github.com/nsqio/go-nsq"
 )
@@ -40,13 +39,13 @@ type Consumer struct {
 	lookupds []string
 	nsqds    []string
 	config   *nsq.Config
-	log      *zap.Logger
+	log      *slog.Logger
 	logLevel nsq.LogLevel
 }
 
 type ConsumerRegistration struct {
 	consumer  *Consumer
-	log       *zap.Logger
+	log       *slog.Logger
 	c         *nsq.Consumer
 	connected bool
 
@@ -108,7 +107,7 @@ func MaxInFlight(num int) Option {
 }
 
 // NewConsumer returns a consumer and stores the addresses of the lookupd's.
-func NewConsumer(log *zap.Logger, tlsCfg *TLSConfig, lookupds ...string) (*Consumer, error) {
+func NewConsumer(log *slog.Logger, tlsCfg *TLSConfig, lookupds ...string) (*Consumer, error) {
 	cfg := CreateNSQConfig(tlsCfg)
 	cfg.LookupdPollInterval = time.Second * 5
 	cfg.HeartbeatInterval = time.Second * 5
@@ -153,6 +152,7 @@ func (c *Consumer) Register(topic, channel string) (*ConsumerRegistration, error
 	return cr, nil
 }
 
+// FIXME: wtf is this
 func (cr *ConsumerRegistration) Output(num int, msg string) error {
 	bridgeNsqLogToCoreLog(msg, cr.log)
 	return nil
@@ -180,7 +180,7 @@ type timeoutWrapper struct {
 	onTimeout OnTimeout
 	msgType   reflect.Type
 	recv      Receiver
-	log       *zap.Logger
+	log       *slog.Logger
 }
 
 func (tw *timeoutWrapper) handleWithTimeout(message *nsq.Message) error {
@@ -193,7 +193,7 @@ func (tw *timeoutWrapper) handleWithTimeout(message *nsq.Message) error {
 
 		if ageNanos > tw.ttl {
 			if tw.log != nil {
-				tw.log.Warn("Dropped message", zap.String("id", string(message.ID[:])), zap.Duration("ageNanos", ageNanos))
+				tw.log.Warn("Dropped message", "id", string(message.ID[:]), "ageNanos", ageNanos)
 			}
 
 			// drop message
@@ -315,7 +315,7 @@ type Publisher interface {
 }
 
 type nsqPublisher struct {
-	log          *zap.Logger
+	log          *slog.Logger
 	producer     *nsq.Producer
 	httpEndpoint string
 	client       *http.Client
@@ -327,7 +327,7 @@ func (p *nsqPublisher) Output(num int, msg string) error {
 }
 
 // NewPublisher creates a new publisher to produce events for topics.
-func NewPublisher(zlog *zap.Logger, publisherCfg *PublisherConfig) (Publisher, error) {
+func NewPublisher(zlog *slog.Logger, publisherCfg *PublisherConfig) (Publisher, error) {
 	publisherCfg.ConfigureNSQ()
 	p, err := nsq.NewProducer(publisherCfg.TCPAddress, publisherCfg.NSQ)
 	if err != nil {
@@ -392,7 +392,7 @@ func (p *nsqPublisher) Stop() {
 //
 // Format:
 // INF    2 [switch/fra-equ01-leaf01] querying nsqlookupd http://metal.test.metal-stack.io:4161/lookup?topic=switch      {"app": "metal-core"}
-func bridgeNsqLogToCoreLog(nsqLogMessage string, log *zap.Logger) {
+func bridgeNsqLogToCoreLog(nsqLogMessage string, log *slog.Logger) {
 	logLevel := nsqLogMessage[:3]
 	logMessage := nsqLogMessage[5:]
 

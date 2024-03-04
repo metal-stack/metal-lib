@@ -3,13 +3,13 @@ package rest
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/metal-stack/metal-lib/httperrors"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -53,15 +53,15 @@ type HealthResponse struct {
 type HealthResult HealthResponse
 
 type healthResource struct {
-	log          *zap.SugaredLogger
+	log          *slog.Logger
 	healthChecks map[string]HealthCheck
 }
 
 // NewHealth returns a webservice for healthchecks. All checks are
 // executed and returned in a service health map.
-func NewHealth(log *zap.Logger, basePath string, healthChecks ...HealthCheck) (*restful.WebService, error) {
+func NewHealth(log *slog.Logger, basePath string, healthChecks ...HealthCheck) (*restful.WebService, error) {
 	h := &healthResource{
-		log:          log.Sugar(),
+		log:          log,
 		healthChecks: map[string]HealthCheck{},
 	}
 
@@ -151,7 +151,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 			result.HealthResult, err = healthCheck.Check(ctx)
 			if err != nil {
 				result.Message = err.Error()
-				h.log.Errorw("unhealthy service", "name", name, "status", result.Status, "error", err)
+				h.log.Error("unhealthy service", "name", name, "status", result.Status, "error", err)
 			}
 
 			return err
@@ -182,7 +182,7 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 
 	err := response.WriteHeaderAndEntity(rc, result)
 	if err != nil {
-		h.log.Error("error writing response", zap.Error(err))
+		h.log.Error("error writing response", "error", err)
 	}
 }
 

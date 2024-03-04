@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,13 +15,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
-	"go.uber.org/zap"
 )
 
 type meiliAuditing struct {
 	component        string
 	client           *meilisearch.Client
-	log              *zap.SugaredLogger
+	log              *slog.Logger
 	indexPrefix      string
 	rotationInterval Interval
 	keep             int64
@@ -56,12 +56,12 @@ func New(c Config) (Auditing, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to meilisearch at:%s %w", c.URL, err)
 	}
-	c.Log.Infow("meilisearch", "connected to", v, "index rotated", c.RotationInterval, "index keep", c.Keep)
+	c.Log.Info("meilisearch", "connected to", v, "index rotated", c.RotationInterval, "index keep", c.Keep)
 
 	a := &meiliAuditing{
 		component:        c.Component,
 		client:           client,
-		log:              c.Log.Named("auditing"),
+		log:              c.Log.WithGroup("auditing"),
 		indexPrefix:      c.IndexPrefix,
 		rotationInterval: c.RotationInterval,
 		keep:             c.Keep,
@@ -78,7 +78,7 @@ func (a *meiliAuditing) Flush() error {
 	if err != nil {
 		return err
 	}
-	a.log.Debugw("flush, waiting for", "tasks", len(taskResult.Results))
+	a.log.Debug("flush, waiting for", "tasks", len(taskResult.Results))
 
 	var errs []error
 	for _, task := range taskResult.Results {
@@ -114,10 +114,10 @@ func (a *meiliAuditing) Index(entry Entry) error {
 
 	task, err := index.AddDocuments(documents, "id")
 	if err != nil {
-		a.log.Errorw("index", "error", err)
+		a.log.Error("index", "error", err)
 		return err
 	}
-	a.log.Debugw("index", "task", task.TaskUID, "index", index.UID)
+	a.log.Debug("index", "task", task.TaskUID, "index", index.UID)
 	return nil
 }
 
@@ -356,7 +356,7 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 		return a.index, nil
 	}
 
-	a.log.Debugw("auditing", "create new index", a.rotationInterval, "index", indexUid)
+	a.log.Debug("auditing", "create new index", a.rotationInterval, "index", indexUid)
 	creationTask, err := a.client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        indexUid,
 		PrimaryKey: "id",
@@ -384,7 +384,7 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 	go func() {
 		err = a.cleanUpIndexes()
 		if err != nil {
-			a.log.Errorw("auditing", "failed to clean up indexes", err)
+			a.log.Error("auditing", "failed to clean up indexes", err)
 		}
 	}()
 	return a.index, nil
@@ -479,11 +479,11 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 
 	indexListResponse, err := a.getAllIndexes()
 	if err != nil {
-		a.log.Errorw("unable to list indexes", "err", err)
+		a.log.Error("unable to list indexes", "err", err)
 		return err
 	}
 
-	a.log.Debugw("indexes listed", "count", indexListResponse.Total, "keep", a.keep)
+	a.log.Debug("indexes listed", "count", indexListResponse.Total, "keep", a.keep)
 
 	// Sort the indexes descending by creation date
 	slices.SortStableFunc(indexListResponse.Results, func(a, b meilisearch.Index) int {
@@ -501,7 +501,7 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 	seen := 0
 	var errs []error
 	for _, index := range indexListResponse.Results {
-		a.log.Debugw("inspect index for deletion", "uid", index.UID)
+		a.log.Debug("inspect index for deletion", "uid", index.UID)
 		if !strings.HasPrefix(index.UID, a.indexPrefix) {
 			continue
 		}
@@ -511,14 +511,14 @@ func (a *meiliAuditing) cleanUpIndexes() error {
 		}
 		deleteInfo, err := a.client.DeleteIndex(index.UID)
 		if err != nil {
-			a.log.Errorw("unable to delete index", "uid", index.UID, "created", index.CreatedAt)
+			a.log.Error("unable to delete index", "uid", index.UID, "created", index.CreatedAt)
 			errs = append(errs, err)
 			continue
 		}
 		deleted++
-		a.log.Debugw("deleted index", "uid", index.UID, "created", index.CreatedAt, "info", deleteInfo)
+		a.log.Debug("deleted index", "uid", index.UID, "created", index.CreatedAt, "info", deleteInfo)
 	}
-	a.log.Infow("cleanup finished", "deletes", deleted, "keep", a.keep, "errs", len(errs))
+	a.log.Info("cleanup finished", "deletes", deleted, "keep", a.keep, "errs", len(errs))
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
