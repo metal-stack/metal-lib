@@ -186,17 +186,18 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 	}
 }
 
-func DeriveOverallHealthStatus(information map[string]HealthResult) HealthStatus {
+func DeriveOverallHealthStatus(services map[string]HealthResult) HealthStatus {
 	var (
 		result    = HealthStatusHealthy
 		degraded  int
 		unhealthy int
 	)
 
-	for _, service := range information {
+	for k, service := range services {
 		if service.Status == "" {
 			service.Status = DeriveOverallHealthStatus(service.Services)
 		}
+		services[k] = service
 		switch service.Status {
 		case HealthStatusHealthy:
 		case HealthStatusDegraded:
@@ -208,14 +209,14 @@ func DeriveOverallHealthStatus(information map[string]HealthResult) HealthStatus
 		}
 	}
 
-	if len(information) > 0 {
+	if len(services) > 0 {
 		if degraded > 0 {
 			result = HealthStatusDegraded
 		}
 		if unhealthy > 0 {
 			result = HealthStatusPartiallyUnhealthy
 		}
-		if unhealthy == len(information) {
+		if unhealthy == len(services) {
 			result = HealthStatusUnhealthy
 		}
 	}

@@ -21,7 +21,6 @@ func (e *succeedingCheck) ServiceName() string {
 
 func (e *succeedingCheck) Check(ctx context.Context) (HealthResult, error) {
 	return HealthResult{
-		Status:  HealthStatusHealthy,
 		Message: "",
 		Services: map[string]HealthResult{
 			"successPartition": {
@@ -41,12 +40,11 @@ func (e *failingCheck) ServiceName() string {
 
 func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
 	return HealthResult{
-		Status:  HealthStatusUnhealthy,
 		Message: "",
 		Services: map[string]HealthResult{
 			"failPartition": {
 				Status:   HealthStatusUnhealthy,
-				Message:  "",
+				Message:  "facing an issue",
 				Services: map[string]HealthResult{},
 			},
 		},
@@ -109,7 +107,7 @@ func TestNewHealth(t *testing.T) {
 						Services: map[string]HealthResult{
 							"failPartition": {
 								Status:   HealthStatusUnhealthy,
-								Message:  "",
+								Message:  "facing an issue",
 								Services: map[string]HealthResult{},
 							},
 						},
