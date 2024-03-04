@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/metal-stack/security"
-	"go.uber.org/zap"
 )
 
 type Key int
@@ -46,7 +46,7 @@ func (w *loggingResponseWriter) Content() string {
 	return w.buf.String()
 }
 
-func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
+func RequestLoggerFilter(logger *slog.Logger) restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		rq := req.Request
 
@@ -99,14 +99,14 @@ func RequestLoggerFilter(logger *zap.SugaredLogger) restful.FilterFunction {
 		}
 
 		if resp.StatusCode() < 400 {
-			requestLogger.Infow("finished handling rest call", afterChainFields...)
+			requestLogger.Info("finished handling rest call", afterChainFields...)
 		} else {
-			requestLogger.Errorw("finished handling rest call", afterChainFields...)
+			requestLogger.Error("finished handling rest call", afterChainFields...)
 		}
 	}
 }
 
-func UserAuth(ug security.UserGetter, fallbackLogger *zap.SugaredLogger) restful.FilterFunction {
+func UserAuth(ug security.UserGetter, fallbackLogger *slog.Logger) restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		log := GetLoggerFromContext(req.Request, fallbackLogger)
 
@@ -114,14 +114,14 @@ func UserAuth(ug security.UserGetter, fallbackLogger *zap.SugaredLogger) restful
 		if err != nil {
 			var hmerr *security.WrongHMAC
 			if errors.As(err, &hmerr) {
-				log.Errorw("cannot get user from request", "error", err, "got", hmerr.Got, "want", hmerr.Want)
+				log.Error("cannot get user from request", "error", err, "got", hmerr.Got, "want", hmerr.Want)
 			} else {
-				log.Errorw("cannot get user from request", "error", err)
+				log.Error("cannot get user from request", "error", err)
 			}
 
 			err = resp.WriteHeaderAndEntity(http.StatusForbidden, httperrors.NewHTTPError(http.StatusForbidden, err))
 			if err != nil {
-				log.Errorw("error sending response", "error", err)
+				log.Error("error sending response", "error", err)
 			}
 			return
 		}
@@ -138,12 +138,12 @@ func UserAuth(ug security.UserGetter, fallbackLogger *zap.SugaredLogger) restful
 	}
 }
 
-func isDebug(log *zap.SugaredLogger) bool {
-	return log.Desugar().Core().Enabled(zap.DebugLevel)
+func isDebug(log *slog.Logger) bool {
+	return log.Enabled(context.Background(), slog.LevelDebug)
 }
 
-func GetLoggerFromContext(rq *http.Request, fallback *zap.SugaredLogger) *zap.SugaredLogger {
-	l, ok := rq.Context().Value(RequestLoggerKey).(*zap.SugaredLogger)
+func GetLoggerFromContext(rq *http.Request, fallback *slog.Logger) *slog.Logger {
+	l, ok := rq.Context().Value(RequestLoggerKey).(*slog.Logger)
 	if ok {
 		return l
 	}
