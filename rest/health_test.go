@@ -19,8 +19,17 @@ func (e *succeedingCheck) ServiceName() string {
 	return "success"
 }
 
-func (e *succeedingCheck) Check(ctx context.Context) (HealthStatus, error) {
-	return HealthStatusHealthy, nil
+func (e *succeedingCheck) Check(ctx context.Context) (HealthResult, error) {
+	return HealthResult{
+		Message: "",
+		Services: map[string]HealthResult{
+			"successPartition": {
+				Status:   HealthStatusHealthy,
+				Message:  "",
+				Services: map[string]HealthResult{},
+			},
+		},
+	}, nil
 }
 
 type failingCheck struct{}
@@ -29,8 +38,17 @@ func (e *failingCheck) ServiceName() string {
 	return "fail"
 }
 
-func (e *failingCheck) Check(ctx context.Context) (HealthStatus, error) {
-	return HealthStatusUnhealthy, fmt.Errorf("facing an issue")
+func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
+	return HealthResult{
+		Message: "",
+		Services: map[string]HealthResult{
+			"failPartition": {
+				Status:   HealthStatusUnhealthy,
+				Message:  "facing an issue",
+				Services: map[string]HealthResult{},
+			},
+		},
+	}, fmt.Errorf("facing an issue")
 }
 
 func TestNewHealth(t *testing.T) {
@@ -74,10 +92,24 @@ func TestNewHealth(t *testing.T) {
 					"success": {
 						Status:  HealthStatusHealthy,
 						Message: "",
+						Services: map[string]HealthResult{
+							"successPartition": {
+								Status:   HealthStatusHealthy,
+								Message:  "",
+								Services: map[string]HealthResult{},
+							},
+						},
 					},
 					"fail": {
 						Status:  HealthStatusUnhealthy,
 						Message: "facing an issue",
+						Services: map[string]HealthResult{
+							"failPartition": {
+								Status:   HealthStatusUnhealthy,
+								Message:  "facing an issue",
+								Services: map[string]HealthResult{},
+							},
+						},
 					},
 				},
 			},
@@ -97,6 +129,13 @@ func TestNewHealth(t *testing.T) {
 					"success": {
 						Status:  HealthStatusHealthy,
 						Message: "",
+						Services: map[string]HealthResult{
+							"successPartition": {
+								Status:   HealthStatusHealthy,
+								Message:  "",
+								Services: map[string]HealthResult{},
+							},
+						},
 					},
 				},
 			},
