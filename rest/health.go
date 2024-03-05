@@ -194,7 +194,7 @@ func DeriveOverallHealthStatus(services map[string]HealthResult) HealthStatus {
 	)
 
 	for k, service := range services {
-		if service.Status == "" {
+		if len(service.Services) > 0 && service.Status == "" {
 			service.Status = DeriveOverallHealthStatus(service.Services)
 		}
 		services[k] = service
