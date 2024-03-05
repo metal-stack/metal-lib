@@ -2,135 +2,96 @@ package printers_test
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 )
 
-type CSVReport struct {
-	FirstName string `json:"first_name,omitempty"`
-	LastName  string `json:"last_name,omitempty"`
-	Username  string `json:"username,omitempty"`
-}
-
-var (
-	content = []CSVReport{
-		{
-			FirstName: "John",
-			LastName:  "Deere",
-			Username:  "jd",
+func TestBasicCSVPrinter(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	printer := printers.NewCSVPrinter(&printers.CSVPrinterConfig{
+		Out: buffer,
+		ToHeaderAndRows: func(data any) ([]string, [][]string, error) {
+			if data != "test" {
+				t.Errorf("want data test, got %s", data)
+			}
+			return []string{"a", "b"}, [][]string{
+				{"1", "2"},
+				{"3", "4"},
+			}, nil
 		},
-		{
-			FirstName: "New",
-			LastName:  "Holland",
-			Username:  "nh",
+	})
+
+	err := printer.Print("test")
+	if err != nil {
+		t.Error(err)
+	}
+	got := buffer.String()
+	want := `a;b
+1;2
+3;4
+`
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+}
+
+func TestBasicCSVPrinterWithoutHeader(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	printer := printers.NewCSVPrinter(&printers.CSVPrinterConfig{
+		Out: buffer,
+		ToHeaderAndRows: func(data any) ([]string, [][]string, error) {
+			if data != "test" {
+				t.Errorf("want data test, got %s", data)
+			}
+			return []string{"a", "b"}, [][]string{
+				{"1", "2"},
+				{"3", "4"},
+			}, nil
 		},
+		NoHeaders: true,
+	})
+
+	err := printer.Print("test")
+	if err != nil {
+		t.Error(err)
 	}
-	expectationWithHeader = `first_name;last_name;username
-John;Deere;jd
-New;Holland;nh
+	got := buffer.String()
+	want := `1;2
+3;4
 `
-	expectationWithOutHeader = `John;Deere;jd
-New;Holland;nh
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+}
+
+func TestBasicCSVPrinterWithCustomDelimiter(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	printer := printers.NewCSVPrinter(&printers.CSVPrinterConfig{
+		Out: buffer,
+		ToHeaderAndRows: func(data any) ([]string, [][]string, error) {
+			if data != "test" {
+				t.Errorf("want data test, got %s", data)
+			}
+			return []string{"a", "b"}, [][]string{
+				{"1", "2"},
+				{"3", "4"},
+			}, nil
+		},
+		Delimiter: ',',
+	})
+
+	err := printer.Print("test")
+	if err != nil {
+		t.Error(err)
+	}
+	got := buffer.String()
+	want := `a,b
+1,2
+3,4
 `
-	delimiter = ';' // rune(59) ≙ ';'
-
-)
-
-func TestCSVWithHeader(t *testing.T) {
-	t.Parallel()
-
-	out := new(bytes.Buffer)
-	config := &printers.CSVPrinterConfig{
-		Delimiter:  delimiter,
-		AutoHeader: true,
-	}
-	printer := printers.NewCSVPrinter(config).WithOut(out)
-
-	err := printer.Print(content)
-	if err != nil {
-		t.Error(err)
-	}
-
-	got := out.String()
-	want := expectationWithHeader
-
-	if !reflect.DeepEqual(got, want) {
-		diff := cmp.Diff(want, got)
-		t.Errorf("got %v, want %v, diff %s", got, want, diff)
-	}
-}
-
-func TestCSVWithHeaderNoDelimiter(t *testing.T) {
-	t.Parallel()
-
-	out := new(bytes.Buffer)
-	config := &printers.CSVPrinterConfig{
-		AutoHeader: true,
-	}
-	printer := printers.NewCSVPrinter(config).WithOut(out)
-
-	err := printer.Print(content)
-	if err != nil {
-		t.Error(err)
-	}
-
-	got := out.String()
-	want := expectationWithHeader
-
-	if !reflect.DeepEqual(got, want) {
-		diff := cmp.Diff(want, got)
-		t.Errorf("got %v, want %v, diff %s", got, want, diff)
-	}
-}
-
-func TestCSVNoHeader(t *testing.T) {
-	t.Parallel()
-
-	out := new(bytes.Buffer)
-
-	config := &printers.CSVPrinterConfig{
-		AutoHeader: false,
-		Delimiter:  delimiter,
-	}
-	printer := printers.NewCSVPrinter(config).WithOut(out)
-
-	err := printer.Print(content)
-	if err != nil {
-		t.Error(err)
-	}
-
-	got := out.String()
-	want := expectationWithOutHeader
-
-	if !reflect.DeepEqual(got, want) {
-		diff := cmp.Diff(want, got)
-		t.Errorf("got %v, want %v, diff %s", got, want, diff)
-	}
-}
-
-func TestCSVEmptyArgHeader(t *testing.T) {
-	t.Parallel()
-
-	out := new(bytes.Buffer)
-
-	config := &printers.CSVPrinterConfig{
-		Delimiter: delimiter,
-	}
-	printer := printers.NewCSVPrinter(config).WithOut(out)
-
-	err := printer.Print(content)
-	if err != nil {
-		t.Error(err)
-	}
-
-	got := out.String()
-	want := expectationWithOutHeader
-
-	if !reflect.DeepEqual(got, want) {
-		diff := cmp.Diff(want, got)
-		t.Errorf("got %v, want %v, diff %s", got, want, diff)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
 	}
 }

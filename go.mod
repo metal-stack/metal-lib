@@ -18,7 +18,6 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/icza/dyno v0.0.0-20230330125955-09f820a8d9c0
-	github.com/jszwec/csvutil v1.10.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/meilisearch/meilisearch-go v0.26.1
 	github.com/metal-stack/security v0.7.2
