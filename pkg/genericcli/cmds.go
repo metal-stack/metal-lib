@@ -1,6 +1,7 @@
 package genericcli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -173,7 +174,20 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
+					if viper.GetBool("dry-run") {
+
+						// If dry-run flas is set, print and return
+
+						return c.GenericCLI.SimplePrint(rq, c.DescribePrinter())
+					}
+
 					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter())
+				}
+
+				// In case -f is set and dry-run is true
+				if viper.GetBool("dry-run") && viper.IsSet("file") {
+					// Errror out
+					return errors.New("cannot use dry-run in combination with -f")
 				}
 
 				p := c.evalBulkFlags()
@@ -181,6 +195,9 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
+
+		//Adding dry-run flas to the command
+		cmd.Flags().Bool("dry-run", false, "Ser dry-run mode. When set only prints the output")
 
 		c.addFileFlags(cmd)
 
