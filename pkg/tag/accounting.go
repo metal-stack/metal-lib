@@ -13,6 +13,10 @@ const (
 	AccountingNetworkTrafficInternal = "accounting.metal-stack.io/network-traffic-internal"
 	// AccountingVolumeReplicas tag to store accounting volume replicas
 	AccountingVolumeReplicas = "accounting.metal-stack.io/volume-replicas"
+	// AccountingVolumeQoSPolicyID tag to store accounting volume qos policy ID
+	AccountingVolumeQoSPolicyID = "accounting.metal-stack.io/volume-qos-policy-id"
+	// AccountingVolumeQoSPolicyName tag to store accounting volume qos policy name
+	AccountingVolumeQoSPolicyName = "accounting.metal-stack.io/volume-qos-policy-name"
 	// AccountingVolumeEncryption tag to store accounting volume encryption information
 	AccountingVolumeEncryption = "accounting.metal-stack.io/volume-encryption"
 	// AccountingVolumeSnapshotSource tag to store accounting volume snapshot source uuid
@@ -28,6 +32,8 @@ func AccountingTags() map[string]bool {
 		AccountingNetworkTrafficExternal: true,
 		AccountingNetworkTrafficInternal: true,
 		AccountingVolumeReplicas:         true,
+		AccountingVolumeQoSPolicyID:      true,
+		AccountingVolumeQoSPolicyName:    true,
 		AccountingVolumeEncryption:       true,
 		AccountingVolumeSnapshotSource:   true,
 	}
