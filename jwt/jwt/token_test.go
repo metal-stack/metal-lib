@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/metal-stack/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +34,7 @@ func TestGenerateSimpleToken(t *testing.T) {
 	assert.NotEmpty(t, token)
 
 	parsedClaims := &jwt.Claims{}
-	webToken, err := jwt.ParseSigned(token)
+	webToken, err := jwt.ParseSigned(token, []jose.SignatureAlgorithm{alg})
 	require.NoError(t, err)
 	err = webToken.Claims(publicKey, parsedClaims)
 	require.NoError(t, err, "error parsing claims")
@@ -87,7 +87,7 @@ func TestGenerateFullToken(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println(string(bytes))
 
-	webToken, err := jwt.ParseSigned(token)
+	webToken, err := jwt.ParseSigned(token, []jose.SignatureAlgorithm{alg})
 	require.NoError(t, err)
 
 	parsedClaims := &jwt.Claims{}

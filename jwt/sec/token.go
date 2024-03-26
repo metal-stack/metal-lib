@@ -3,17 +3,31 @@ package sec
 import (
 	"fmt"
 
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/metal-stack/metal-lib/auth"
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
 )
 
+var signatureAlgorithms = []jose.SignatureAlgorithm{
+	jose.RS256,
+	jose.RS384,
+	jose.RS512,
+	jose.ES256,
+	jose.ES384,
+	jose.ES512,
+	jose.PS256,
+	jose.PS384,
+	jose.PS512,
+	jose.EdDSA,
+}
+
 // ParseTokenUnvalidated extracts information from the given jwt token without validating it
 func (p *Plugin) ParseTokenUnvalidated(token string) (*security.User, *security.Claims, error) {
 
 	parsedClaims := &security.Claims{}
-	webToken, err := jwt.ParseSigned(token)
+	webToken, err := jwt.ParseSigned(token, signatureAlgorithms)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing token: %w", err)
 	}
@@ -37,7 +51,7 @@ func (p *Plugin) ParseTokenUnvalidated(token string) (*security.User, *security.
 func ParseTokenUnvalidatedUnfiltered(token string) (*security.User, *auth.Claims, error) {
 
 	parsedClaims := &auth.Claims{}
-	webToken, err := jwt.ParseSigned(token)
+	webToken, err := jwt.ParseSigned(token, signatureAlgorithms)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing token: %w", err)
 	}

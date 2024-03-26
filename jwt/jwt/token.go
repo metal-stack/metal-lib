@@ -3,9 +3,9 @@ package jwt
 import (
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/metal-stack/security"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
 )
 
 type ExtendedClaims struct {
@@ -21,7 +21,7 @@ func CreateToken(signer jose.Signer, cl interface{}, privateClaims ...interface{
 	for i := range privateClaims {
 		builder = builder.Claims(privateClaims[i])
 	}
-	raw, err := builder.CompactSerialize()
+	raw, err := builder.Serialize()
 	if err != nil {
 		return "", err
 	}
