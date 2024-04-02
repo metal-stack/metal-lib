@@ -46,7 +46,7 @@ type HealthResponse struct {
 	// Note that the individual HealthResults evaluated by the HealthCheck interface may again consist of a plurality services. While this is only optional it allows for creating nested health structures. These can be used for more sophisticated scenarios like evaluating platform health describing service availability in different locations or similar.
 	//
 	// If using nested HealthResults, the status of the parent service can be derived automatically from the status of its children by leaving the parent's health status field blank.
-	Services map[string]HealthResult `json:"services"`
+	Services map[string]HealthResult `json:"services,omitempty"`
 }
 
 // HealthResult holds the health state of a service.
