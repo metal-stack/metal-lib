@@ -24,9 +24,8 @@ func (e *succeedingCheck) Check(ctx context.Context) (HealthResult, error) {
 		Message: "",
 		Services: map[string]HealthResult{
 			"successPartition": {
-				Status:   HealthStatusHealthy,
-				Message:  "",
-				Services: map[string]HealthResult{},
+				Status:  HealthStatusHealthy,
+				Message: "",
 			},
 		},
 	}, nil
@@ -43,9 +42,8 @@ func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
 		Message: "",
 		Services: map[string]HealthResult{
 			"failPartition": {
-				Status:   HealthStatusUnhealthy,
-				Message:  "facing an issue",
-				Services: map[string]HealthResult{},
+				Status:  HealthStatusUnhealthy,
+				Message: "facing an issue",
 			},
 		},
 	}, fmt.Errorf("facing an issue")
@@ -73,9 +71,8 @@ func TestNewHealth(t *testing.T) {
 				h:        nil,
 			},
 			want: &HealthResponse{
-				Status:   HealthStatusHealthy,
-				Message:  "",
-				Services: map[string]HealthResult{},
+				Status:  HealthStatusHealthy,
+				Message: "",
 			},
 		},
 		{
@@ -94,9 +91,8 @@ func TestNewHealth(t *testing.T) {
 						Message: "",
 						Services: map[string]HealthResult{
 							"successPartition": {
-								Status:   HealthStatusHealthy,
-								Message:  "",
-								Services: map[string]HealthResult{},
+								Status:  HealthStatusHealthy,
+								Message: "",
 							},
 						},
 					},
@@ -105,9 +101,8 @@ func TestNewHealth(t *testing.T) {
 						Message: "facing an issue",
 						Services: map[string]HealthResult{
 							"failPartition": {
-								Status:   HealthStatusUnhealthy,
-								Message:  "facing an issue",
-								Services: map[string]HealthResult{},
+								Status:  HealthStatusUnhealthy,
+								Message: "facing an issue",
 							},
 						},
 					},
@@ -131,9 +126,8 @@ func TestNewHealth(t *testing.T) {
 						Message: "",
 						Services: map[string]HealthResult{
 							"successPartition": {
-								Status:   HealthStatusHealthy,
-								Message:  "",
-								Services: map[string]HealthResult{},
+								Status:  HealthStatusHealthy,
+								Message: "",
 							},
 						},
 					},
