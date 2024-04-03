@@ -35,7 +35,7 @@ func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *conn
 
 	meiliContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "getmeili/meilisearch:v1.2.0",
+			Image:        "getmeili/meilisearch:v1.7.1",
 			ExposedPorts: []string{"7700/tcp"},
 			Env: map[string]string{
 				"MEILI_MASTER_KEY":   meilisearchMasterKey,
@@ -145,7 +145,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 			t: func(t *testing.T, a Auditing) {
 				entries, err := a.Search(EntryFilter{})
 				require.NoError(t, err)
-				assert.Len(t, entries, 0)
+				assert.Empty(t, entries)
 			},
 		},
 		{
