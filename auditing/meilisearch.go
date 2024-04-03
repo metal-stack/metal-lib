@@ -30,13 +30,13 @@ type meiliAuditing struct {
 }
 
 var (
-	errAuditingIndexCreationDeadlineUnsufficient = errors.New("auditing index creation timed out, because meilisearch took too long. Consider increasing the timeout to prevent failing requests")
+	errAuditingIndexCreationDeadlineInsufficient = errors.New("auditing index creation timed out, because meilisearch took too long. Consider increasing the timeout to prevent failing requests")
 )
 
 const (
 	meiliIndexNameTimeSuffixSchema = "\\d\\d\\d\\d-\\d\\d(-\\d\\d(_\\d\\d)?)?"
 	meiliIndexCreationWaitTimeout  = 30 * time.Second
-	meiliIndexCreationWaitInterval = 50 * time.Millisecond
+	meiliIndexCreationWaitInterval = 100 * time.Millisecond
 )
 
 func New(c Config) (Auditing, error) {
@@ -351,9 +351,23 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 	a.indexLock.Lock()
 	defer a.indexLock.Unlock()
+
 	indexUid := indexName(a.indexPrefix, a.rotationInterval)
 	if a.index != nil && a.index.UID == indexUid {
 		return a.index, nil
+	}
+
+	var meiliError *meilisearch.Error
+	index, err := a.client.GetIndex(indexUid)
+
+	switch {
+	case err == nil:
+		a.index = index
+		return a.index, nil
+	case errors.As(err, &meiliError) && meiliError.ErrCode == meilisearch.MeilisearchApiError && meiliError.MeilisearchApiError.Code == "index_not_found":
+		// fallthrough
+	default:
+		return nil, err
 	}
 
 	a.log.Debug("auditing", "create new index", a.rotationInterval, "index", indexUid)
@@ -365,7 +379,7 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 		return nil, fmt.Errorf("failed to request create index (%s): %w", indexUid, err)
 	}
 
-	waitCtx, cancelFunc := context.WithTimeoutCause(context.Background(), meiliIndexCreationWaitTimeout, errAuditingIndexCreationDeadlineUnsufficient)
+	waitCtx, cancelFunc := context.WithTimeoutCause(context.Background(), meiliIndexCreationWaitTimeout, errAuditingIndexCreationDeadlineInsufficient)
 	defer cancelFunc()
 	_, err = a.client.WaitForTask(creationTask.TaskUID, meilisearch.WaitParams{
 		Context:  waitCtx,
@@ -387,6 +401,7 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 			a.log.Error("auditing", "failed to clean up indexes", err)
 		}
 	}()
+
 	return a.index, nil
 }
 
