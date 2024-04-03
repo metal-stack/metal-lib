@@ -351,19 +351,20 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 	a.indexLock.Lock()
 	defer a.indexLock.Unlock()
+
 	indexUid := indexName(a.indexPrefix, a.rotationInterval)
 	if a.index != nil && a.index.UID == indexUid {
 		return a.index, nil
 	}
 
-	var apiError *meilisearch.Error
+	var meiliError *meilisearch.Error
 	index, err := a.client.GetIndex(indexUid)
 
 	switch {
 	case err == nil:
 		a.index = index
 		return a.index, nil
-	case errors.As(err, &apiError) && apiError.ErrCode == meilisearch.MeilisearchApiError && apiError.MeilisearchApiError.Code == "index_not_found":
+	case errors.As(err, &meiliError) && meiliError.ErrCode == meilisearch.MeilisearchApiError && meiliError.MeilisearchApiError.Code == "index_not_found":
 		// fallthrough
 	default:
 		return nil, err
@@ -400,6 +401,7 @@ func (a *meiliAuditing) getLatestIndex() (*meilisearch.Index, error) {
 			a.log.Error("auditing", "failed to clean up indexes", err)
 		}
 	}()
+
 	return a.index, nil
 }
 
