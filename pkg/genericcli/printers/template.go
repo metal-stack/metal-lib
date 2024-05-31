@@ -9,20 +9,22 @@ import (
 	"reflect"
 	"text/template"
 
-	"github.com/go-task/slim-sprig/v3"
+	sprig "github.com/go-task/slim-sprig/v3"
 )
 
 // TemplatePrinter prints data with a given template
 type TemplatePrinter struct {
-	out  io.Writer
-	text string
-	t    *template.Template
+	out       io.Writer
+	text      string
+	t         *template.Template
+	omitEmpty bool
 }
 
 func NewTemplatePrinter(template string) *TemplatePrinter {
 	return &TemplatePrinter{
-		out:  os.Stdout,
-		text: template,
+		out:       os.Stdout,
+		text:      template,
+		omitEmpty: true,
 	}
 }
 
@@ -33,6 +35,11 @@ func (p *TemplatePrinter) WithOut(out io.Writer) *TemplatePrinter {
 
 func (p *TemplatePrinter) WithTemplate(t *template.Template) *TemplatePrinter {
 	p.t = t
+	return p
+}
+
+func (p *TemplatePrinter) WithoutOmitEmptyLines() *TemplatePrinter {
+	p.omitEmpty = false
 	return p
 }
 
@@ -91,7 +98,9 @@ func (p *TemplatePrinter) print(data any) error {
 		return fmt.Errorf("unable to render template: %w", err)
 	}
 
-	fmt.Fprintf(p.out, "%s\n", buf.String())
+	if !p.omitEmpty || buf.Len() > 0 {
+		fmt.Fprintf(p.out, "%s\n", buf.String())
+	}
 
 	return nil
 }
