@@ -91,5 +91,41 @@ func TestTemplatePrinter_WithTemplate(t *testing.T) {
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
 	}
+}
 
+func TestTemplatePrinter_OmitEmptyRowsInSliceResponses(t *testing.T) {
+	type obj struct {
+		Name string `json:"name"`
+	}
+
+	var (
+		out      bytes.Buffer
+		out2     bytes.Buffer
+		tpl      = `{{ if eq .name "test" }}{{ .name }}{{ end }}`
+		testObjs = []obj{{Name: "a"}, {Name: "test"}}
+	)
+
+	p := NewTemplatePrinter(tpl).WithOut(&out)
+	err := p.Print(testObjs)
+	if err != nil {
+		t.Error(err)
+	}
+
+	want := "test\n"
+	got := out.String()
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+
+	p = NewTemplatePrinter(tpl).WithOut(&out2).WithoutOmitEmptyLines()
+	err = p.Print(testObjs)
+	if err != nil {
+		t.Error(err)
+	}
+
+	want = "\ntest\n"
+	got = out2.String()
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
 }
