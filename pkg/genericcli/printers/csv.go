@@ -16,7 +16,7 @@ type CSVPrinter struct {
 type CSVPrinterConfig struct {
 	// ToHeaderAndRows is called during print to obtain the headers and rows for the given data.
 	ToHeaderAndRows func(data any) ([]string, [][]string, error)
-	// NoHeaders will omit headers during pring when set to true
+	// NoHeaders will omit headers during print when set to true
 	NoHeaders bool
 	// Out defines the output writer for the printer, will default to os.stdout
 	Out io.Writer

@@ -12,7 +12,7 @@ import (
 )
 
 //
-// kubeconfig provides methods to read and write kuberentes kubectl-config-files.
+// kubeconfig provides methods to read and write kubernetes kubectl-config-files.
 // It must not depend on the k8s.io-client due to the dependency-hell surrounding it.
 // So we tried to be generic and structure agnostic, so that we can read a config,
 // modify just the parts we need and write it back and do not loose anything,

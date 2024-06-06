@@ -23,7 +23,7 @@ type TablePrinterConfig struct {
 	Wide bool
 	// Markdown will print the table in Markdown format
 	Markdown bool
-	// NoHeaders will omit headers during pring when set to true
+	// NoHeaders will omit headers during print when set to true
 	NoHeaders bool
 	// Out defines the output writer for the printer, will default to os.stdout
 	Out io.Writer

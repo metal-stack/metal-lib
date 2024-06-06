@@ -2,9 +2,10 @@ package sec
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/metal-stack/metal-lib/jwt/grp"
 	"github.com/metal-stack/security"
-	"strings"
 )
 
 const OidcDirectory = "oidc.metal-stack.io/directory"
@@ -160,7 +161,7 @@ func (p *Plugin) HasGroupExpression(user *security.User, resourceTenant string, 
 			continue
 		}
 
-		// check if group maches for any of the tenants
+		// check if group matches for any of the tenants
 		if resourceTenant == grp.Any {
 			if groupExpression.Matches(*grpCtx) {
 				return true

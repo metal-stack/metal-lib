@@ -6,53 +6,53 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestTruncateMiddleElipsis(t *testing.T) {
+func TestTruncateMiddleEllipsis(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
-		elipsis   string
+		ellipsis  string
 		maxlength int
 		want      string
 	}{
 		{
 			name:      "no trunc on short enough input",
 			input:     "0123456789",
-			elipsis:   TruncateElipsis,
+			ellipsis:  TruncateEllipsis,
 			maxlength: 10,
 			want:      "0123456789",
 		},
 		{
-			name:      "even elipsis is in the middle on even length",
+			name:      "even ellipsis is in the middle on even length",
 			input:     "0123456789",
-			elipsis:   "..",
+			ellipsis:  "..",
 			maxlength: 6,
 			want:      "01..89",
 		},
 		{
-			name:      "even elipsis is slightly to the right on odd length",
+			name:      "even ellipsis is slightly to the right on odd length",
 			input:     "0123456789",
-			elipsis:   "..",
+			ellipsis:  "..",
 			maxlength: 7,
 			want:      "012..89",
 		},
 		{
-			name:      "odd elipsis is in the middle on odd length",
+			name:      "odd ellipsis is in the middle on odd length",
 			input:     "0123456789",
-			elipsis:   TruncateElipsis,
+			ellipsis:  TruncateEllipsis,
 			maxlength: 7,
 			want:      "01...89",
 		},
 		{
-			name:      "odd elipsis is slightly on the right on even length",
+			name:      "odd ellipsis is slightly on the right on even length",
 			input:     "0123456789",
-			elipsis:   TruncateElipsis,
+			ellipsis:  TruncateEllipsis,
 			maxlength: 6,
 			want:      "01...9",
 		},
 		{
-			name:      "too long elipsis does not increase final length",
+			name:      "too long ellipsis does not increase final length",
 			input:     "0123456789",
-			elipsis:   "..........",
+			ellipsis:  "..........",
 			maxlength: 6,
 			want:      "012345",
 		},
@@ -60,7 +60,7 @@ func TestTruncateMiddleElipsis(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := TruncateMiddleElipsis(tt.input, tt.elipsis, tt.maxlength)
+			got := TruncateMiddleEllipsis(tt.input, tt.ellipsis, tt.maxlength)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
 			}
@@ -68,39 +68,39 @@ func TestTruncateMiddleElipsis(t *testing.T) {
 	}
 }
 
-func TestTruncateEndElipsis(t *testing.T) {
+func TestTruncateEndellipsis(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
-		elipsis   string
+		ellipsis  string
 		maxlength int
 		want      string
 	}{
 		{
 			name:      "no trunc on short enough input",
 			input:     "0123456789",
-			elipsis:   TruncateElipsis,
+			ellipsis:  TruncateEllipsis,
 			maxlength: 10,
 			want:      "0123456789",
 		},
 		{
-			name:      "even elipsis",
+			name:      "even ellipsis",
 			input:     "0123456789",
-			elipsis:   "..",
+			ellipsis:  "..",
 			maxlength: 6,
 			want:      "0123..",
 		},
 		{
-			name:      "odd elipsis",
+			name:      "odd ellipsis",
 			input:     "0123456789",
-			elipsis:   "...",
+			ellipsis:  "...",
 			maxlength: 7,
 			want:      "0123...",
 		},
 		{
-			name:      "too long elipsis does not increase final length",
+			name:      "too long ellipsis does not increase final length",
 			input:     "0123456789",
-			elipsis:   "..........",
+			ellipsis:  "..........",
 			maxlength: 6,
 			want:      "012345",
 		},
@@ -108,7 +108,7 @@ func TestTruncateEndElipsis(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := TruncateEndElipsis(tt.input, tt.elipsis, tt.maxlength)
+			got := TruncateEndEllipsis(tt.input, tt.ellipsis, tt.maxlength)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
 			}
@@ -116,39 +116,39 @@ func TestTruncateEndElipsis(t *testing.T) {
 	}
 }
 
-func TestTruncateStartElipsis(t *testing.T) {
+func TestTruncateStartellipsis(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
-		elipsis   string
+		ellipsis  string
 		maxlength int
 		want      string
 	}{
 		{
 			name:      "no trunc on short enough input",
 			input:     "0123456789",
-			elipsis:   TruncateElipsis,
+			ellipsis:  TruncateEllipsis,
 			maxlength: 10,
 			want:      "0123456789",
 		},
 		{
-			name:      "even elipsis",
+			name:      "even ellipsis",
 			input:     "0123456789",
-			elipsis:   "..",
+			ellipsis:  "..",
 			maxlength: 6,
 			want:      "..6789",
 		},
 		{
-			name:      "odd elipsis",
+			name:      "odd ellipsis",
 			input:     "0123456789",
-			elipsis:   "...",
+			ellipsis:  "...",
 			maxlength: 7,
 			want:      "...6789",
 		},
 		{
-			name:      "too long elipsis does not increase final length",
+			name:      "too long ellipsis does not increase final length",
 			input:     "0123456789",
-			elipsis:   "..........",
+			ellipsis:  "..........",
 			maxlength: 6,
 			want:      "456789",
 		},
@@ -156,7 +156,7 @@ func TestTruncateStartElipsis(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := TruncateStartElipsis(tt.input, tt.elipsis, tt.maxlength)
+			got := TruncateStartEllipsis(tt.input, tt.ellipsis, tt.maxlength)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("diff (+got -want):\n %s", diff)
 			}

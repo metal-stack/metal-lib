@@ -135,7 +135,7 @@ func TestTwoProcessesFunctionHelloWorld(t *testing.T) {
 		cmd.Env = append([]string{"PUBLISH=1", "NO_NSQD_START=1"}, os.Environ()...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Fatalf("error occured: %s", string(out))
+			log.Fatalf("error occurred: %s", string(out))
 		}
 	}()
 	var wg sync.WaitGroup
@@ -191,7 +191,7 @@ func TestUniqueTargetFunctionWithResponse(t *testing.T) {
 		cmd.Env = append([]string{"PRODUCER=1", "NO_NSQD_START=1"}, os.Environ()...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Fatalf("error occured: %s", string(out))
+			log.Fatalf("error occurred: %s", string(out))
 		}
 	}()
 	var wg sync.WaitGroup
