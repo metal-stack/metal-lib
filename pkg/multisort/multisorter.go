@@ -12,7 +12,7 @@ type Sorter[E any] struct {
 	fields          FieldMap[E]
 }
 
-// FieldMap defines the fields that the sorter is capable to sort and provides the corresponsing compare funcs.
+// FieldMap defines the fields that the sorter is capable to sort and provides the corresponding compare funcs.
 type FieldMap[E any] map[string]CompareFn[E]
 
 // Key is the key that will be sorted by.

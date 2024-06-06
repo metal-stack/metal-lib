@@ -31,7 +31,7 @@ We can now connect to NSQD and create a test topic:
 curl -v -X POST --key client_key.pem --cert client_cert.pem --cacert server_cert.pem --resolve metal-control-plane-nsqd:4152:127.0.0.1 https://metal-control-plane-nsqd:4152/topic/create?topic=test
 ```
 
-Verifiy with
+Verify with
 
 ```
 curl -v --key client_key.pem --cert client_cert.pem --cacert server_cert.pem --resolve metal-control-plane-nsqd:4152:127.0.0.1 https://metal-control-plane-nsqd:4152/stats?format=json&topic=test

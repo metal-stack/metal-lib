@@ -6,23 +6,23 @@ type Truncatable interface {
 	~string
 }
 
-const TruncateElipsis = "..."
+const TruncateEllipsis = "..."
 
 // TruncateMiddle will trim a string in the middle.
 func TruncateMiddle[T Truncatable](input T, maxlength int) T {
-	return TruncateMiddleElipsis(input, TruncateElipsis, maxlength)
+	return TruncateMiddleEllipsis(input, TruncateEllipsis, maxlength)
 }
 
-// TruncateMiddleElipsis will trim a string in the middle and replace it with elipsis.
-func TruncateMiddleElipsis[T Truncatable](input T, elipsis T, maxlength int) T {
-	if elipsis == "" {
-		elipsis = TruncateElipsis
+// TruncateMiddleEllipsis will trim a string in the middle and replace it with ellipsis.
+func TruncateMiddleEllipsis[T Truncatable](input T, ellipsis T, maxlength int) T {
+	if ellipsis == "" {
+		ellipsis = TruncateEllipsis
 	}
 	if maxlength < 0 || len(input) <= maxlength {
 		return input
 	}
 
-	finalLength := float64(maxlength - len(elipsis))
+	finalLength := float64(maxlength - len(ellipsis))
 	if finalLength <= 0 {
 		return input[:maxlength]
 	}
@@ -31,49 +31,49 @@ func TruncateMiddleElipsis[T Truncatable](input T, elipsis T, maxlength int) T {
 		start = int(math.Ceil(finalLength / 2))
 		end   = int(math.Floor(finalLength / 2))
 	)
-	return input[:start] + elipsis + input[len(input)-end:]
+	return input[:start] + ellipsis + input[len(input)-end:]
 }
 
 // TruncateEnd will trim a string at the end.
 func TruncateEnd[T Truncatable](input T, maxlength int) T {
-	return TruncateEndElipsis(input, TruncateElipsis, maxlength)
+	return TruncateEndEllipsis(input, TruncateEllipsis, maxlength)
 }
 
-// TruncateEndElipsis will trim a string at the end and replace it with elipsis.
-func TruncateEndElipsis[T Truncatable](input T, elipsis T, maxlength int) T {
-	if elipsis == "" {
-		elipsis = TruncateElipsis
+// TruncateEndEllipsis will trim a string at the end and replace it with ellipsis.
+func TruncateEndEllipsis[T Truncatable](input T, ellipsis T, maxlength int) T {
+	if ellipsis == "" {
+		ellipsis = TruncateEllipsis
 	}
 	if maxlength < 0 || len(input) <= maxlength {
 		return input
 	}
 
-	finalLength := maxlength - len(elipsis)
+	finalLength := maxlength - len(ellipsis)
 	if finalLength <= 0 {
 		return input[:maxlength]
 	}
 
-	return input[:finalLength] + elipsis
+	return input[:finalLength] + ellipsis
 }
 
 // TruncateStart will trim a string at the start.
 func TruncateStart[T Truncatable](input T, maxlength int) T {
-	return TruncateStartElipsis(input, TruncateElipsis, maxlength)
+	return TruncateStartEllipsis(input, TruncateEllipsis, maxlength)
 }
 
-// TruncateStartElipsis will trim a string at the start and replace it with elipsis.
-func TruncateStartElipsis[T Truncatable](input T, elipsis T, maxlength int) T {
-	if elipsis == "" {
-		elipsis = TruncateElipsis
+// TruncateStartEllipsis will trim a string at the start and replace it with ellipsis.
+func TruncateStartEllipsis[T Truncatable](input T, ellipsis T, maxlength int) T {
+	if ellipsis == "" {
+		ellipsis = TruncateEllipsis
 	}
 	if maxlength < 0 || len(input) <= maxlength {
 		return input
 	}
 
-	finalLength := maxlength - len(elipsis)
+	finalLength := maxlength - len(ellipsis)
 	if finalLength <= 0 {
 		return input[len(input)-maxlength:]
 	}
 
-	return elipsis + input[len(input)-finalLength:]
+	return ellipsis + input[len(input)-finalLength:]
 }

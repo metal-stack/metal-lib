@@ -61,9 +61,9 @@ type CmdsConfig[C any, U any, R any] struct {
 	// Aliases provides additional aliases for the root cmd.
 	Aliases []string
 
-	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get intialized later in the game.
+	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get initialized later in the game.
 	DescribePrinter func() printers.Printer
-	// ListPrinter is the printer that is used for listing multiple entities. It's a function because printers potentially get intialized later in the game.
+	// ListPrinter is the printer that is used for listing multiple entities. It's a function because printers potentially get initialized later in the game.
 	ListPrinter func() printers.Printer
 
 	// CreateRequestFromCLI if not nil, this function uses the returned create request to create the entity.

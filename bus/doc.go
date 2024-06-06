@@ -13,7 +13,7 @@
   parameters as JSON and invoke the corresponding function with nsq. You can start many services
   which implement the same function (identified by its name), so you will have something like a
   balancing. Note: As the functions are asynchronuous, you cannot return a result. Only errors
-  are used to signal if the function was successfull.
+  are used to signal if the function was successful.
 
   When you create a function with `Unique` the consumer will be connected to a unique, ephemeral
   topic and channel. Create unique functions if you want your services to respond with values. You

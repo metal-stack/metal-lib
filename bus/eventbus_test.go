@@ -65,7 +65,7 @@ func TestTimeoutWrapper_FailTimeoutWithTimeoutFunc(t *testing.T) {
 
 	err := twTimeout.handleWithTimeout(messageFromQueue)
 	if err != nil {
-		t.Errorf("no error expected because the onTimeout retuns nil")
+		t.Errorf("no error expected because the onTimeout returns nil")
 	}
 	if !handlerCalled {
 		t.Errorf("timeoutfunction expected ")

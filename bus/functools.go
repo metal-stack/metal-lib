@@ -75,7 +75,7 @@ func (e *Endpoints) Client(name string) (*Function, Func, error) {
 	return e.function(name, "function", nil)
 }
 
-// Unique uses an unique, ephemeral topic so the topic will be deregisted when there is no
+// Unique uses an unique, ephemeral topic so the topic will be deregistered when there is no
 // consumer any more for this function. Use this function to create a unique receiver, so function
 // invocations will not be distributed and the topic only exists as long as the registration
 // process is active. The computed unique name of this function is returned so it can be used with the
@@ -164,20 +164,20 @@ func (f *Function) receive(par interface{}) error {
 		pkind = f.fn.Type().In(0).Kind()
 	}
 
-	parms := []reflect.Value{v}
+	params := []reflect.Value{v}
 	if vkind != pkind {
 		if pkind == reflect.Ptr {
 			// function wants a ptr but we got a value
 			// --> copy value and pass pointer to this copy
 			nv := reflect.New(reflect.TypeOf(par))
 			nv.Elem().Set(v)
-			parms = []reflect.Value{nv}
+			params = []reflect.Value{nv}
 		} else if vkind == reflect.Ptr {
 			// function wants value
-			parms = []reflect.Value{v.Elem()}
+			params = []reflect.Value{v.Elem()}
 		}
 	}
-	res := f.fn.Call(parms)
+	res := f.fn.Call(params)
 	if res[0].IsNil() {
 		return nil
 	}
