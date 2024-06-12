@@ -19,7 +19,15 @@ type connectOptOutputWriter struct {
 }
 
 func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
-	return connectOptOutputWriter{out: out}
+	return &connectOptOutputWriter{out: out}
+}
+
+type connectOptPassword struct {
+	password string
+}
+
+func ConnectOptOutputPassword(password string) ConnectOpt {
+	return &connectOptPassword{password: password}
 }
 
 type Client struct {
@@ -71,21 +79,43 @@ func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn
 //
 // Call client.Connect() to actually get the ssh session
 func NewClient(user, host string, privateKey []byte, port int, opts ...ConnectOpt) (*Client, error) {
-	var out io.Writer
+	var (
+		out       io.Writer
+		sshConfig *ssh.ClientConfig
+		password  string
+	)
+
 	out = os.Stdout
 
 	for _, opt := range opts {
 		switch o := opt.(type) {
 		case *connectOptOutputWriter:
 			out = o.out
+		case *connectOptPassword:
+			password = o.password
+		default:
+			return nil, fmt.Errorf("unknown connect opt: %T", o)
 		}
 	}
 
 	fmt.Fprintf(out, "ssh to %s@%s:%d\n", user, host, port)
 
-	sshConfig, err := getSSHConfig(user, privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create SSH config: %w", err)
+	if password != "" {
+		sshConfig = &ssh.ClientConfig{
+			User: user,
+			Auth: []ssh.AuthMethod{
+				ssh.Password(password),
+			},
+			//nolint:gosec
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         10 * time.Second,
+		}
+	} else {
+		var err error
+		sshConfig, err = getSSHConfig(user, privateKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create SSH config: %w", err)
+		}
 	}
 
 	sshServerAddress := fmt.Sprintf("%s:%d", host, port)
