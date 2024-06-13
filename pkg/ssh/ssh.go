@@ -12,43 +12,47 @@ import (
 	"golang.org/x/term"
 )
 
-type ConnectOpt any
+type (
+	Client struct {
+		*ssh.Client
+		out io.Writer
+	}
+	Env map[string]string
 
-type connectOptOutputWriter struct {
-	out io.Writer
-}
+	ConnectOpt any
+
+	connectOptOutputWriter struct {
+		out io.Writer
+	}
+	connectOptPassword struct {
+		password string
+	}
+	connectOptPrivateKey struct {
+		privateKey []byte
+	}
+)
 
 func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
-	return connectOptOutputWriter{out: out}
+	return &connectOptOutputWriter{out: out}
 }
 
-type Client struct {
-	*ssh.Client
-	out io.Writer
+func ConnectOptOutputPassword(password string) ConnectOpt {
+	return &connectOptPassword{password: password}
 }
-type Env map[string]string
 
-// NewClientWithConnection connects via ssh to host with the given user and authenticates with the privateKey.
+func ConnectOptOutputPrivateKey(privateKey []byte) ConnectOpt {
+	return &connectOptPrivateKey{privateKey: privateKey}
+}
+
+// NewClientWithConnection connects via ssh to host with the given user and authenticates with the given connect options.
 // a already created net.Conn must be provided.
 // see vpn.Connect howto create such a connection via tailscale VPN
 //
 // Call client.Connect() to actually get the ssh session
-func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn, opts ...ConnectOpt) (*Client, error) {
-	sshConfig, err := getSSHConfig(user, privateKey)
+func NewClientWithConnection(user, host string, conn net.Conn, opts ...ConnectOpt) (*Client, error) {
+	out, sshConfig, err := readFromConnectOpts(user, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create SSH config: %w", err)
-	}
-
-	var out io.Writer
-	out = os.Stdout
-
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case connectOptOutputWriter:
-			out = o.out
-		default:
-			return nil, fmt.Errorf("unknown connect opt: %T", opt)
-		}
+		return nil, err
 	}
 
 	sshConn, sshChan, req, err := ssh.NewClientConn(conn, host, sshConfig)
@@ -56,37 +60,22 @@ func NewClientWithConnection(user, host string, privateKey []byte, conn net.Conn
 		return nil, err
 	}
 
-	client := ssh.NewClient(sshConn, sshChan, req)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Client{
-		Client: client,
+		Client: ssh.NewClient(sshConn, sshChan, req),
 		out:    out,
 	}, nil
 }
 
-// NewClient connects via ssh to host with the given user and authenticates with the privateKey.
+// NewClient connects via ssh to host with the given user and authenticates with the given connect options.
 //
 // Call client.Connect() to actually get the ssh session
-func NewClient(user, host string, privateKey []byte, port int, opts ...ConnectOpt) (*Client, error) {
-	var out io.Writer
-	out = os.Stdout
-
-	for _, opt := range opts {
-		switch o := opt.(type) {
-		case *connectOptOutputWriter:
-			out = o.out
-		}
+func NewClient(user, host string, port int, opts ...ConnectOpt) (*Client, error) {
+	out, sshConfig, err := readFromConnectOpts(user, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	fmt.Fprintf(out, "ssh to %s@%s:%d\n", user, host, port)
-
-	sshConfig, err := getSSHConfig(user, privateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create SSH config: %w", err)
-	}
 
 	sshServerAddress := fmt.Sprintf("%s:%d", host, port)
 	client, err := ssh.Dial("tcp", sshServerAddress, sshConfig)
@@ -171,19 +160,35 @@ func (c *Client) Connect(env *Env) error {
 	return session.Wait()
 }
 
-func getSSHConfig(user string, privateKey []byte) (*ssh.ClientConfig, error) {
-	signer, err := ssh.ParsePrivateKey(privateKey)
-	if err != nil {
-		return nil, err
+func readFromConnectOpts(user string, opts []ConnectOpt) (out io.Writer, sshConfig *ssh.ClientConfig, err error) {
+	sshConfig = getDefaultSSHConfig(user)
+	out = os.Stdout
+
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case *connectOptOutputWriter:
+			out = o.out
+		case *connectOptPassword:
+			sshConfig.Auth = append(sshConfig.Auth, ssh.Password(o.password))
+		case *connectOptPrivateKey:
+			signer, err := ssh.ParsePrivateKey(o.privateKey)
+			if err != nil {
+				return nil, nil, err
+			}
+			sshConfig.Auth = append(sshConfig.Auth, ssh.PublicKeys(signer))
+		default:
+			return nil, nil, fmt.Errorf("unknown connect opt: %T", o)
+		}
 	}
 
+	return out, sshConfig, nil
+}
+
+func getDefaultSSHConfig(user string) *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
 		//nolint:gosec
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
-	}, nil
+	}
 }
