@@ -10,6 +10,7 @@ import (
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/healthstatus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,12 +20,12 @@ func (e *succeedingCheck) ServiceName() string {
 	return "success"
 }
 
-func (e *succeedingCheck) Check(ctx context.Context) (HealthResult, error) {
-	return HealthResult{
+func (e *succeedingCheck) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return healthstatus.HealthResult{
 		Message: "",
-		Services: map[string]HealthResult{
+		Services: map[string]healthstatus.HealthResult{
 			"successPartition": {
-				Status:  HealthStatusHealthy,
+				Status:  healthstatus.HealthStatusHealthy,
 				Message: "",
 			},
 		},
@@ -37,12 +38,12 @@ func (e *failingCheck) ServiceName() string {
 	return "fail"
 }
 
-func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
-	return HealthResult{
+func (e *failingCheck) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return healthstatus.HealthResult{
 		Message: "",
-		Services: map[string]HealthResult{
+		Services: map[string]healthstatus.HealthResult{
 			"failPartition": {
-				Status:  HealthStatusUnhealthy,
+				Status:  healthstatus.HealthStatusUnhealthy,
 				Message: "facing an issue",
 			},
 		},
@@ -56,7 +57,7 @@ func TestNewHealth(t *testing.T) {
 		log      *slog.Logger
 		basePath string
 		service  string
-		h        []HealthCheck
+		h        []healthstatus.HealthCheck
 	}
 	tests := []struct {
 		name string
@@ -71,7 +72,7 @@ func TestNewHealth(t *testing.T) {
 				h:        nil,
 			},
 			want: &HealthResponse{
-				Status:  HealthStatusHealthy,
+				Status:  healthstatus.HealthStatusHealthy,
 				Message: "",
 			},
 		},
@@ -80,28 +81,28 @@ func TestNewHealth(t *testing.T) {
 			args: args{
 				log:      logger,
 				basePath: "/",
-				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
+				h:        []healthstatus.HealthCheck{&succeedingCheck{}, &failingCheck{}},
 			},
 			want: &HealthResponse{
-				Status:  HealthStatusPartiallyUnhealthy,
+				Status:  healthstatus.HealthStatusPartiallyUnhealthy,
 				Message: "facing an issue",
-				Services: map[string]HealthResult{
+				Services: map[string]HealthResponse{
 					"success": {
-						Status:  HealthStatusHealthy,
+						Status:  healthstatus.HealthStatusHealthy,
 						Message: "",
-						Services: map[string]HealthResult{
+						Services: map[string]HealthResponse{
 							"successPartition": {
-								Status:  HealthStatusHealthy,
+								Status:  healthstatus.HealthStatusHealthy,
 								Message: "",
 							},
 						},
 					},
 					"fail": {
-						Status:  HealthStatusUnhealthy,
+						Status:  healthstatus.HealthStatusUnhealthy,
 						Message: "facing an issue",
-						Services: map[string]HealthResult{
+						Services: map[string]HealthResponse{
 							"failPartition": {
-								Status:  HealthStatusUnhealthy,
+								Status:  healthstatus.HealthStatusUnhealthy,
 								Message: "facing an issue",
 							},
 						},
@@ -114,19 +115,19 @@ func TestNewHealth(t *testing.T) {
 			args: args{
 				log:      logger,
 				basePath: "/",
-				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
+				h:        []healthstatus.HealthCheck{&succeedingCheck{}, &failingCheck{}},
 				service:  "success",
 			},
 			want: &HealthResponse{
-				Status:  HealthStatusHealthy,
+				Status:  healthstatus.HealthStatusHealthy,
 				Message: "",
-				Services: map[string]HealthResult{
+				Services: map[string]HealthResponse{
 					"success": {
-						Status:  HealthStatusHealthy,
+						Status:  healthstatus.HealthStatusHealthy,
 						Message: "",
-						Services: map[string]HealthResult{
+						Services: map[string]HealthResponse{
 							"successPartition": {
-								Status:  HealthStatusHealthy,
+								Status:  healthstatus.HealthStatusHealthy,
 								Message: "",
 							},
 						},
@@ -138,7 +139,7 @@ func TestNewHealth(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			ws, err := NewHealth(tt.args.log, tt.args.basePath, tt.args.h...)
+			ws, err := NewHealthGroup(tt.args.log, tt.args.basePath, tt.args.h...)
 			require.NoError(t, err)
 
 			container := restful.NewContainer().Add(ws)
