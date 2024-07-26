@@ -40,7 +40,7 @@ func (c *AsyncHealthCheck) ServiceName() string {
 func (c *AsyncHealthCheck) Check(context.Context) (HealthResult, error) {
 	c.log.Debug("checked async")
 	if c.ticker == nil {
-		c.Start(context.Background())
+		c.Start(context.Background()) //nolint:contextcheck
 	}
 	return c.current.Status, c.current.Err
 }
@@ -97,10 +97,6 @@ func (r *AsyncHealthCheck) ForceUpdateStatus(ctx context.Context) error {
 
 func (r *AsyncHealthCheck) updateStatus(ctx context.Context) error {
 	r.log.Info("evaluating current service health statuses")
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, r.healthCheckInterval/2)
 	defer cancel()
 

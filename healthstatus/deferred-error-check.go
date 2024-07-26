@@ -35,7 +35,7 @@ func (c *DeferredErrorHealthCheck) Check(ctx context.Context) (HealthResult, err
 	if err == nil {
 		c.errorCountSinceSuccess = 0
 		c.lastSuccess = state
-		return status, err
+		return status, nil
 	}
 	c.errorCountSinceSuccess++
 	if c.errorCountSinceSuccess > c.maxIgnoredErrors {
