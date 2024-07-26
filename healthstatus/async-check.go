@@ -40,6 +40,8 @@ func (c *AsyncHealthCheck) ServiceName() string {
 func (c *AsyncHealthCheck) Check(context.Context) (HealthResult, error) {
 	c.log.Debug("checked async")
 	if c.ticker == nil {
+		// The context coming in is bound to a single request
+		// but the ticker should be started in background
 		c.Start(context.Background()) //nolint:contextcheck
 	}
 	return c.current.Status, c.current.Err
