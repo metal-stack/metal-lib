@@ -31,15 +31,14 @@ type healthResource struct {
 
 // NewHealth returns a webservice for healthchecks. All checks are
 // executed and returned in a service health map.
-func NewHealthGroup(log *slog.Logger, basePath string, healthChecks ...healthstatus.HealthCheck) (*restful.WebService, error) {
-	rootCheck := healthstatus.Grouped(log, "", healthChecks...)
-	return NewHealth(log, basePath, rootCheck)
-}
-
-func NewHealth(log *slog.Logger, basePath string, healthCheck healthstatus.HealthCheck) (*restful.WebService, error) {
+func NewHealth(log *slog.Logger, basePath string, healthChecks ...healthstatus.HealthCheck) (*restful.WebService, error) {
 	h := &healthResource{
-		log:         log,
-		healthCheck: healthCheck,
+		log: log,
+	}
+	if len(healthChecks) == 1 {
+		h.healthCheck = healthChecks[0]
+	} else {
+		h.healthCheck = healthstatus.Grouped(log, "", healthChecks...)
 	}
 
 	return h.webService(basePath), nil

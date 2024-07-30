@@ -139,7 +139,7 @@ func TestNewHealth(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			ws, err := NewHealthGroup(tt.args.log, tt.args.basePath, tt.args.h...)
+			ws, err := NewHealth(tt.args.log, tt.args.basePath, tt.args.h...)
 			require.NoError(t, err)
 
 			container := restful.NewContainer().Add(ws)
