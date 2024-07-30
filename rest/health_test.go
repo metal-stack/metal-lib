@@ -10,7 +10,7 @@ import (
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/google/go-cmp/cmp"
-	"github.com/metal-stack/metal-lib/healthstatus"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/require"
 )
 

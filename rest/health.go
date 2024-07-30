@@ -6,8 +6,8 @@ import (
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	restful "github.com/emicklei/go-restful/v3"
-	"github.com/metal-stack/metal-lib/healthstatus"
 	"github.com/metal-stack/metal-lib/httperrors"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
 // HealthResponse is returned by the API when executing a health check.
