@@ -77,8 +77,8 @@ func (h *healthResource) check(request *restful.Request, response *restful.Respo
 		h.log.Error("unhealthy application", "status", result.Status, "error", err)
 
 		code = http.StatusInternalServerError
-		if result.Status == healthstatus.HealthStatusHealthy {
-			result.Status = healthstatus.HealthStatusDegraded
+		if result.Status == "" {
+			result.Status = healthstatus.DeriveOverallHealthStatus(result.Services)
 		}
 		if result.Message == "" {
 			result.Message = err.Error()
