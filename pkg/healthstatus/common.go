@@ -39,6 +39,6 @@ type HealthResult struct {
 }
 
 type currentState struct {
-	Status HealthResult
-	Err    error
+	status HealthResult
+	err    error
 }

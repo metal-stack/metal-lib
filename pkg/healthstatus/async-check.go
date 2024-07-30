@@ -25,7 +25,7 @@ func Async(log *slog.Logger, interval time.Duration, hc HealthCheck) *AsyncHealt
 		log:                 log,
 		sem:                 semaphore.NewWeighted(1),
 		current: currentState{
-			Status: HealthResult{
+			status: HealthResult{
 				Status:  HealthStatusHealthy,
 				Message: "",
 			},
@@ -44,7 +44,7 @@ func (c *AsyncHealthCheck) Check(context.Context) (HealthResult, error) {
 		// but the ticker should be started in background
 		c.Start(context.Background()) //nolint:contextcheck
 	}
-	return c.current.Status, c.current.Err
+	return c.current.status, c.current.err
 }
 
 func (r *AsyncHealthCheck) Start(ctx context.Context) {

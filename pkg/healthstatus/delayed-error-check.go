@@ -4,31 +4,27 @@ import (
 	"context"
 )
 
-type DeferredErrorHealthCheck struct {
+type DelayedErrorHealthCheck struct {
 	maxIgnoredErrors       int
 	errorCountSinceSuccess int
 	lastSuccess            currentState
 	healthCheck            HealthCheck
 }
 
-func DeferErrors(maxIgnoredErrors int, hc HealthCheck) *DeferredErrorHealthCheck {
-	return &DeferredErrorHealthCheck{
+func DelayErrors(maxIgnoredErrors int, hc HealthCheck) *DelayedErrorHealthCheck {
+	return &DelayedErrorHealthCheck{
 		maxIgnoredErrors: maxIgnoredErrors,
 		healthCheck:      hc,
-		lastSuccess: currentState{
-			Status: HealthResult{
-				Status:  HealthStatusHealthy,
-				Message: "",
-			},
-		},
+		// trick the check to always start with the actual state
+		errorCountSinceSuccess: maxIgnoredErrors,
 	}
 }
 
-func (c *DeferredErrorHealthCheck) ServiceName() string {
+func (c *DelayedErrorHealthCheck) ServiceName() string {
 	return c.healthCheck.ServiceName()
 }
 
-func (c *DeferredErrorHealthCheck) Check(ctx context.Context) (HealthResult, error) {
+func (c *DelayedErrorHealthCheck) Check(ctx context.Context) (HealthResult, error) {
 	status, err := c.healthCheck.Check(ctx)
 	state := currentState{status, err}
 
@@ -41,5 +37,5 @@ func (c *DeferredErrorHealthCheck) Check(ctx context.Context) (HealthResult, err
 	if c.errorCountSinceSuccess > c.maxIgnoredErrors {
 		return status, err
 	}
-	return c.lastSuccess.Status, c.lastSuccess.Err
+	return c.lastSuccess.status, c.lastSuccess.err
 }
