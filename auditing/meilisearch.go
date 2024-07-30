@@ -445,14 +445,10 @@ func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
 	}
 	diff := &meilisearch.Settings{}
 
-	// We'd like to disable the typo tolerance completely, but that's not possible, yet.
-	// TypoTolerance.Enabled is marked as omitempty and therefore prevents overriding true with false.
-	// https://github.com/meilisearch/meilisearch-go/issues/452
-	//
-	// if current.TypoTolerance != nil && current.TypoTolerance.Enabled != desired.TypoTolerance.Enabled {
-	// 	changesRequired = true
-	// 	diff.TypoTolerance = desired.TypoTolerance
-	// }
+	if current.TypoTolerance != nil && current.TypoTolerance.Enabled != desired.TypoTolerance.Enabled {
+		changesRequired = true
+		diff.TypoTolerance = desired.TypoTolerance
+	}
 
 	slices.Sort(current.SortableAttributes)
 	slices.Sort(desired.SortableAttributes)
