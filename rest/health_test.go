@@ -11,6 +11,7 @@ import (
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
+	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,9 +61,10 @@ func TestNewHealth(t *testing.T) {
 		h        []healthstatus.HealthCheck
 	}
 	tests := []struct {
-		name string
-		args args
-		want *HealthResponse
+		name    string
+		args    args
+		want    *HealthResponse
+		wantErr error
 	}{
 		{
 			name: "check without giving health checks",
@@ -71,10 +73,7 @@ func TestNewHealth(t *testing.T) {
 				basePath: "/",
 				h:        nil,
 			},
-			want: &HealthResponse{
-				Status:  healthstatus.HealthStatusHealthy,
-				Message: "",
-			},
+			wantErr: fmt.Errorf("at least one health check needs to be given"),
 		},
 		{
 			name: "check with one service error",
@@ -140,7 +139,12 @@ func TestNewHealth(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			ws, err := NewHealth(tt.args.log, tt.args.basePath, tt.args.h...)
-			require.NoError(t, err)
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+			if tt.wantErr != nil {
+				return
+			}
 
 			container := restful.NewContainer().Add(ws)
 

@@ -38,7 +38,7 @@ func NewHealth(log *slog.Logger, basePath string, healthChecks ...healthstatus.H
 	}
 	switch len(healthChecks) {
 	case 0:
-		return nil, fmt.Errorf("health check service name should not be empty")
+		return nil, fmt.Errorf("at least one health check needs to be given")
 	case 1:
 		h.healthCheck = healthChecks[0]
 	default:
