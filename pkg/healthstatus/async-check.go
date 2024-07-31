@@ -3,9 +3,8 @@ package healthstatus
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
-
-	"golang.org/x/sync/semaphore"
 )
 
 type AsyncHealthCheck struct {
@@ -13,7 +12,7 @@ type AsyncHealthCheck struct {
 	log                 *slog.Logger
 	healthCheckInterval time.Duration
 
-	sem     *semaphore.Weighted
+	lock    sync.RWMutex
 	current currentState
 	ticker  *time.Ticker
 }
@@ -22,8 +21,7 @@ func Async(log *slog.Logger, interval time.Duration, hc HealthCheck) *AsyncHealt
 	return &AsyncHealthCheck{
 		healthCheckInterval: interval,
 		healthCheck:         hc,
-		log:                 log,
-		sem:                 semaphore.NewWeighted(1),
+		log:                 log.With("type", "async", "service", hc.ServiceName()),
 		current: currentState{
 			status: HealthResult{
 				Status:  HealthStatusHealthy,
@@ -37,13 +35,9 @@ func (c *AsyncHealthCheck) ServiceName() string {
 	return c.healthCheck.ServiceName()
 }
 
-func (c *AsyncHealthCheck) Check(context.Context) (HealthResult, error) {
-	c.log.Debug("checked async")
-	if c.ticker == nil {
-		// The context coming in is bound to a single request
-		// but the ticker should be started in background
-		c.Start(context.Background()) //nolint:contextcheck
-	}
+func (c *AsyncHealthCheck) Check(_ context.Context) (HealthResult, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	return c.current.status, c.current.err
 }
 
@@ -55,23 +49,26 @@ func (r *AsyncHealthCheck) Start(ctx context.Context) {
 		r.ticker = time.NewTicker(r.healthCheckInterval)
 	}
 	go func() {
+		r.lock.Lock()
 		err := r.updateStatus(ctx)
 		if err != nil {
-			r.log.Error("services are unhealthy", "error", err)
+			r.log.Error("async services are unhealthy", "error", err)
 		}
+		r.lock.Unlock()
 
 		for {
 			select {
 			case <-ctx.Done():
-				r.log.Info("stop health checking, context is done")
+				r.log.Info("stop async health checking, context is done")
+				r.Stop(ctx)
 				return
 			case <-r.ticker.C:
-				if r.sem.TryAcquire(1) {
+				if r.lock.TryLock() {
 					err := r.updateStatus(ctx)
 					if err != nil {
 						r.log.Error("services are unhealthy", "error", err)
 					}
-					r.sem.Release(1)
+					r.lock.Unlock()
 				} else {
 					r.log.Info("skip updating health status because update is still running")
 				}
@@ -85,15 +82,12 @@ func (r *AsyncHealthCheck) Stop(ctx context.Context) {
 }
 
 func (r *AsyncHealthCheck) ForceUpdateStatus(ctx context.Context) error {
-	err := r.sem.Acquire(ctx, 1)
-	if err != nil {
-		return err
-	}
-	err = r.updateStatus(ctx)
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	err := r.updateStatus(ctx)
 	if err != nil {
 		r.log.Error("services are unhealthy", "error", err)
 	}
-	r.sem.Release(1)
 	return err
 }
 

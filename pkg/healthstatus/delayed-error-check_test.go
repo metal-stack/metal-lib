@@ -3,6 +3,7 @@ package healthstatus
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,6 +26,9 @@ func (c *recordedCheck) Check(context.Context) (HealthResult, error) {
 }
 
 func TestDelayErrors(t *testing.T) {
+	log := slog.Default()
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+
 	tests := []struct {
 		name string
 		hc   *DelayedErrorHealthCheck
@@ -32,7 +36,7 @@ func TestDelayErrors(t *testing.T) {
 	}{
 		{
 			name: "check always returns first result even on error",
-			hc: DelayErrors(1, &recordedCheck{
+			hc: DelayErrors(log, 1, &recordedCheck{
 				name: "record",
 				states: []currentState{
 					{
@@ -73,8 +77,8 @@ func TestDelayErrors(t *testing.T) {
 			},
 		},
 		{
-			name: "ignores first error after inital success",
-			hc: DelayErrors(1, &recordedCheck{
+			name: "ignores first error after intial success",
+			hc: DelayErrors(log, 1, &recordedCheck{
 				name: "record",
 				states: []currentState{
 					{

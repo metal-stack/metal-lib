@@ -2,6 +2,7 @@ package healthstatus
 
 import (
 	"context"
+	"log/slog"
 )
 
 type DelayedErrorHealthCheck struct {
@@ -9,10 +10,12 @@ type DelayedErrorHealthCheck struct {
 	errorCountSinceSuccess int
 	lastSuccess            currentState
 	healthCheck            HealthCheck
+	log                    *slog.Logger
 }
 
-func DelayErrors(maxIgnoredErrors int, hc HealthCheck) *DelayedErrorHealthCheck {
+func DelayErrors(log *slog.Logger, maxIgnoredErrors int, hc HealthCheck) *DelayedErrorHealthCheck {
 	return &DelayedErrorHealthCheck{
+		log:              log.With("type", "delay"),
 		maxIgnoredErrors: maxIgnoredErrors,
 		healthCheck:      hc,
 		// trick the check to always start with the actual state
@@ -37,5 +40,6 @@ func (c *DelayedErrorHealthCheck) Check(ctx context.Context) (HealthResult, erro
 	if c.errorCountSinceSuccess > c.maxIgnoredErrors {
 		return status, err
 	}
+	c.log.Warn("delaying health check error propagation", "counter", c.errorCountSinceSuccess, "max", c.maxIgnoredErrors, "err", err, "status", status.Status)
 	return c.lastSuccess.status, c.lastSuccess.err
 }

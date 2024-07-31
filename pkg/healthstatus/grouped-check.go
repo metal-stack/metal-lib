@@ -18,7 +18,7 @@ func Grouped(log *slog.Logger, serviceName string, checks ...HealthCheck) *group
 	return &groupedHealthCheck{
 		serviceName: serviceName,
 		hcs:         checks,
-		log:         log,
+		log:         log.With("group", serviceName, "type", "group"),
 	}
 }
 
@@ -29,12 +29,12 @@ func (c *groupedHealthCheck) Add(hc HealthCheck) {
 func (c *groupedHealthCheck) ServiceName() string {
 	return c.serviceName
 }
-func (h *groupedHealthCheck) Check(ctx context.Context) (HealthResult, error) {
+func (c *groupedHealthCheck) Check(ctx context.Context) (HealthResult, error) {
 	type chanResult struct {
 		name string
 		HealthResult
 	}
-	if len(h.hcs) == 0 {
+	if len(c.hcs) == 0 {
 		return HealthResult{
 			Status:   HealthStatusHealthy,
 			Message:  "",
@@ -55,7 +55,7 @@ func (h *groupedHealthCheck) Check(ctx context.Context) (HealthResult, error) {
 
 	g, _ := errgroup.WithContext(ctx)
 
-	for _, healthCheck := range h.hcs {
+	for _, healthCheck := range c.hcs {
 		name := healthCheck.ServiceName()
 		healthCheck := healthCheck
 
@@ -75,7 +75,7 @@ func (h *groupedHealthCheck) Check(ctx context.Context) (HealthResult, error) {
 			result.HealthResult, err = healthCheck.Check(ctx)
 			if err != nil {
 				result.Message = err.Error()
-				h.log.Error("unhealthy service", "name", name, "status", result.Status, "error", err)
+				c.log.Error("unhealthy service", "name", name, "status", result.Status, "error", err)
 			}
 
 			return err
