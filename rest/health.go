@@ -1,44 +1,20 @@
 package rest
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"sync"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/metal-stack/metal-lib/httperrors"
-	"golang.org/x/sync/errgroup"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
-
-// HealthStatus indicates the health of a service.
-type HealthStatus string
-
-const (
-	// HealthStatusHealthy is returned when the service is healthy.
-	HealthStatusHealthy HealthStatus = "healthy"
-	// HealthStatusUnhealthy is returned when the service is not healthy.
-	HealthStatusUnhealthy HealthStatus = "unhealthy"
-	// HealthStatusDegraded is returned when the service is degraded.
-	HealthStatusDegraded HealthStatus = "degraded"
-	// HealthStatusPartiallyUnhealthy is returned when the service is partially not healthy.
-	HealthStatusPartiallyUnhealthy HealthStatus = "partial-outage"
-)
-
-// HealthCheck defines an interface for health checks.
-type HealthCheck interface {
-	// ServiceName returns the name of the service that is health checked.
-	ServiceName() string
-	// Check is a function returning a service status and an error.
-	Check(ctx context.Context) (HealthResult, error)
-}
 
 // HealthResponse is returned by the API when executing a health check.
 type HealthResponse struct {
 	// Status indicates the overall health state.
-	Status HealthStatus `json:"status"`
+	Status healthstatus.HealthStatus `json:"status"`
 	// Message gives additional information on the overall health state.
 	Message string `json:"message"`
 	// Services contain the individual health results of the services as evaluated by the HealthCheck interface. The overall HealthStatus is then derived automatically from the results of the health checks.
@@ -46,35 +22,27 @@ type HealthResponse struct {
 	// Note that the individual HealthResults evaluated by the HealthCheck interface may again consist of a plurality services. While this is only optional it allows for creating nested health structures. These can be used for more sophisticated scenarios like evaluating platform health describing service availability in different locations or similar.
 	//
 	// If using nested HealthResults, the status of the parent service can be derived automatically from the status of its children by leaving the parent's health status field blank.
-	Services map[string]HealthResult `json:"services,omitempty"`
+	Services map[string]HealthResponse `json:"services,omitempty"`
 }
 
-// HealthResult holds the health state of a service.
-type HealthResult HealthResponse
-
 type healthResource struct {
-	log          *slog.Logger
-	healthChecks map[string]HealthCheck
+	log         *slog.Logger
+	healthCheck healthstatus.HealthCheck
 }
 
 // NewHealth returns a webservice for healthchecks. All checks are
 // executed and returned in a service health map.
-func NewHealth(log *slog.Logger, basePath string, healthChecks ...HealthCheck) (*restful.WebService, error) {
+func NewHealth(log *slog.Logger, basePath string, healthChecks ...healthstatus.HealthCheck) (*restful.WebService, error) {
 	h := &healthResource{
-		log:          log,
-		healthChecks: map[string]HealthCheck{},
+		log: log,
 	}
-
-	for _, healthCheck := range healthChecks {
-		name := healthCheck.ServiceName()
-		if name == "" {
-			return nil, fmt.Errorf("health check service name should not be empty")
-		}
-		_, ok := h.healthChecks[name]
-		if ok {
-			return nil, fmt.Errorf("health checks must register with unique names")
-		}
-		h.healthChecks[name] = healthCheck
+	switch len(healthChecks) {
+	case 0:
+		return nil, fmt.Errorf("at least one health check needs to be given")
+	case 1:
+		h.healthCheck = healthChecks[0]
+	default:
+		h.healthCheck = healthstatus.Grouped(log, "", healthChecks...)
 	}
 
 	return h.webService(basePath), nil
@@ -102,124 +70,49 @@ func (h *healthResource) webService(basePath string) *restful.WebService {
 }
 
 func (h *healthResource) check(request *restful.Request, response *restful.Response) {
-	type chanResult struct {
-		name string
-		HealthResult
-	}
-
 	var (
 		service = request.QueryParameter("service")
-		result  = HealthResponse{
-			Status:   HealthStatusHealthy,
-			Message:  "",
-			Services: map[string]HealthResult{},
-		}
-
-		resultChan = make(chan chanResult)
-		once       sync.Once
+		ctx     = request.Request.Context()
+		code    = http.StatusOK
 	)
-	defer once.Do(func() { close(resultChan) })
 
-	ctx := request.Request.Context()
-	g, _ := errgroup.WithContext(ctx)
+	result, err := h.healthCheck.Check(ctx)
+	if err != nil {
+		h.log.Error("unhealthy application", "status", result.Status, "error", err)
 
-	for name, healthCheck := range h.healthChecks {
-		name := name
-		healthCheck := healthCheck
-
-		g.Go(func() error {
-			if h == nil {
-				return nil
-			}
-			if service != "" && name != service {
-				return nil
-			}
-
-			result := chanResult{
-				name: name,
-				HealthResult: HealthResult{
-					Status:   HealthStatusHealthy,
-					Message:  "",
-					Services: map[string]HealthResult{},
-				},
-			}
-			defer func() {
-				resultChan <- result
-			}()
-
-			var err error
-			result.HealthResult, err = healthCheck.Check(ctx)
-			if err != nil {
-				result.Message = err.Error()
-				h.log.Error("unhealthy service", "name", name, "status", result.Status, "error", err)
-			}
-
-			return err
-		})
-	}
-
-	finished := make(chan bool)
-	go func() {
-		for r := range resultChan {
-			r := r
-			result.Services[r.name] = r.HealthResult
+		code = http.StatusInternalServerError
+		if result.Status == "" {
+			result.Status = healthstatus.DeriveOverallHealthStatus(result.Services)
 		}
-		finished <- true
-	}()
-
-	rc := http.StatusOK
-
-	if err := g.Wait(); err != nil {
-		rc = http.StatusInternalServerError
-		result.Message = err.Error()
+		if result.Message == "" {
+			result.Message = err.Error()
+		}
 	}
 
-	once.Do(func() { close(resultChan) })
+	hr := resultToResponse(result)
+	if service != "" && hr.Services != nil {
+		srv := hr.Services[service]
+		hr.Status = srv.Status
+		hr.Message = srv.Message
+		hr.Services = map[string]HealthResponse{service: srv}
+	}
 
-	<-finished
-
-	result.Status = DeriveOverallHealthStatus(result.Services)
-
-	err := response.WriteHeaderAndEntity(rc, result)
+	err = response.WriteHeaderAndEntity(code, hr)
 	if err != nil {
 		h.log.Error("error writing response", "error", err)
 	}
 }
 
-func DeriveOverallHealthStatus(services map[string]HealthResult) HealthStatus {
-	var (
-		result    = HealthStatusHealthy
-		degraded  int
-		unhealthy int
-	)
-
-	for k, service := range services {
-		if len(service.Services) > 0 && service.Status == "" {
-			service.Status = DeriveOverallHealthStatus(service.Services)
-		}
-		services[k] = service
-		switch service.Status {
-		case HealthStatusHealthy:
-		case HealthStatusDegraded:
-			degraded++
-		case HealthStatusUnhealthy, HealthStatusPartiallyUnhealthy:
-			unhealthy++
-		default:
-			unhealthy++
-		}
+func resultToResponse(result healthstatus.HealthResult) HealthResponse {
+	hr := HealthResponse{
+		Status:  result.Status,
+		Message: result.Message,
 	}
-
-	if len(services) > 0 {
-		if degraded > 0 {
-			result = HealthStatusDegraded
-		}
-		if unhealthy > 0 {
-			result = HealthStatusPartiallyUnhealthy
-		}
-		if unhealthy == len(services) {
-			result = HealthStatusUnhealthy
-		}
+	if result.Services != nil {
+		hr.Services = make(map[string]HealthResponse)
 	}
-
-	return result
+	for name, serviceResult := range result.Services {
+		hr.Services[name] = resultToResponse(serviceResult)
+	}
+	return hr
 }

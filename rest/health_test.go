@@ -10,6 +10,8 @@ import (
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
+	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,12 +21,12 @@ func (e *succeedingCheck) ServiceName() string {
 	return "success"
 }
 
-func (e *succeedingCheck) Check(ctx context.Context) (HealthResult, error) {
-	return HealthResult{
+func (e *succeedingCheck) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return healthstatus.HealthResult{
 		Message: "",
-		Services: map[string]HealthResult{
+		Services: map[string]healthstatus.HealthResult{
 			"successPartition": {
-				Status:  HealthStatusHealthy,
+				Status:  healthstatus.HealthStatusHealthy,
 				Message: "",
 			},
 		},
@@ -37,12 +39,12 @@ func (e *failingCheck) ServiceName() string {
 	return "fail"
 }
 
-func (e *failingCheck) Check(ctx context.Context) (HealthResult, error) {
-	return HealthResult{
+func (e *failingCheck) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return healthstatus.HealthResult{
 		Message: "",
-		Services: map[string]HealthResult{
+		Services: map[string]healthstatus.HealthResult{
 			"failPartition": {
-				Status:  HealthStatusUnhealthy,
+				Status:  healthstatus.HealthStatusUnhealthy,
 				Message: "facing an issue",
 			},
 		},
@@ -56,12 +58,13 @@ func TestNewHealth(t *testing.T) {
 		log      *slog.Logger
 		basePath string
 		service  string
-		h        []HealthCheck
+		h        []healthstatus.HealthCheck
 	}
 	tests := []struct {
-		name string
-		args args
-		want *HealthResponse
+		name    string
+		args    args
+		want    *HealthResponse
+		wantErr error
 	}{
 		{
 			name: "check without giving health checks",
@@ -70,38 +73,35 @@ func TestNewHealth(t *testing.T) {
 				basePath: "/",
 				h:        nil,
 			},
-			want: &HealthResponse{
-				Status:  HealthStatusHealthy,
-				Message: "",
-			},
+			wantErr: fmt.Errorf("at least one health check needs to be given"),
 		},
 		{
 			name: "check with one service error",
 			args: args{
 				log:      logger,
 				basePath: "/",
-				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
+				h:        []healthstatus.HealthCheck{&succeedingCheck{}, &failingCheck{}},
 			},
 			want: &HealthResponse{
-				Status:  HealthStatusPartiallyUnhealthy,
+				Status:  healthstatus.HealthStatusPartiallyUnhealthy,
 				Message: "facing an issue",
-				Services: map[string]HealthResult{
+				Services: map[string]HealthResponse{
 					"success": {
-						Status:  HealthStatusHealthy,
+						Status:  healthstatus.HealthStatusHealthy,
 						Message: "",
-						Services: map[string]HealthResult{
+						Services: map[string]HealthResponse{
 							"successPartition": {
-								Status:  HealthStatusHealthy,
+								Status:  healthstatus.HealthStatusHealthy,
 								Message: "",
 							},
 						},
 					},
 					"fail": {
-						Status:  HealthStatusUnhealthy,
+						Status:  healthstatus.HealthStatusUnhealthy,
 						Message: "facing an issue",
-						Services: map[string]HealthResult{
+						Services: map[string]HealthResponse{
 							"failPartition": {
-								Status:  HealthStatusUnhealthy,
+								Status:  healthstatus.HealthStatusUnhealthy,
 								Message: "facing an issue",
 							},
 						},
@@ -114,19 +114,19 @@ func TestNewHealth(t *testing.T) {
 			args: args{
 				log:      logger,
 				basePath: "/",
-				h:        []HealthCheck{&succeedingCheck{}, &failingCheck{}},
+				h:        []healthstatus.HealthCheck{&succeedingCheck{}, &failingCheck{}},
 				service:  "success",
 			},
 			want: &HealthResponse{
-				Status:  HealthStatusHealthy,
+				Status:  healthstatus.HealthStatusHealthy,
 				Message: "",
-				Services: map[string]HealthResult{
+				Services: map[string]HealthResponse{
 					"success": {
-						Status:  HealthStatusHealthy,
+						Status:  healthstatus.HealthStatusHealthy,
 						Message: "",
-						Services: map[string]HealthResult{
+						Services: map[string]HealthResponse{
 							"successPartition": {
-								Status:  HealthStatusHealthy,
+								Status:  healthstatus.HealthStatusHealthy,
 								Message: "",
 							},
 						},
@@ -139,7 +139,12 @@ func TestNewHealth(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			ws, err := NewHealth(tt.args.log, tt.args.basePath, tt.args.h...)
-			require.NoError(t, err)
+			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+			}
+			if tt.wantErr != nil {
+				return
+			}
 
 			container := restful.NewContainer().Add(ws)
 
