@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -35,9 +36,12 @@ func NewHealth(log *slog.Logger, basePath string, healthChecks ...healthstatus.H
 	h := &healthResource{
 		log: log,
 	}
-	if len(healthChecks) == 1 {
+	switch len(healthChecks) {
+	case 0:
+		return nil, fmt.Errorf("health check service name should not be empty")
+	case 1:
 		h.healthCheck = healthChecks[0]
-	} else {
+	default:
 		h.healthCheck = healthstatus.Grouped(log, "", healthChecks...)
 	}
 
