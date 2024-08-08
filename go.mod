@@ -19,7 +19,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/icza/dyno v0.0.0-20230330125955-09f820a8d9c0
 	github.com/mattn/go-isatty v0.0.20
-	github.com/meilisearch/meilisearch-go v0.27.1
+	github.com/meilisearch/meilisearch-go v0.27.2
 	github.com/metal-stack/security v0.8.0
 	github.com/metal-stack/v v1.0.3
 	github.com/nsqio/go-nsq v1.1.0

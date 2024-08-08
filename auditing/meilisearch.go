@@ -171,14 +171,14 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		filter.Limit = EntryFilterDefaultLimit
 	}
 
-	reqProto := meilisearch.SearchRequest{
+	reqProto := &meilisearch.SearchRequest{
 		Filter: predicates,
 		Query:  filter.Body,
 		Sort:   []string{"timestamp-unix:desc", "sort-weight:desc"},
 		Limit:  filter.Limit,
 	}
 	req := &meilisearch.MultiSearchRequest{
-		Queries: []meilisearch.SearchRequest{},
+		Queries: []*meilisearch.SearchRequest{},
 	}
 
 	_, err := a.getLatestIndex()
