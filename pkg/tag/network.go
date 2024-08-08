@@ -8,4 +8,6 @@ const (
 	NetworkDefaultExternal = "network.metal-stack.io/default-external"
 	// NetworkPartitionStorage indicates a network that can serve as a storage network in a partition
 	NetworkPartitionStorage = "network.metal-stack.io/partition-storage"
+	// NetworkPodCidrs are the pod CIDRs specified in this network, multiple cidrs must be comma separated
+	NetworkPodCidrs = "network.metal-stack.io/pod-cidrs"
 )
