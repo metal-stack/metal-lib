@@ -30,13 +30,20 @@ type (
 		// Retention defines when audit traces will be thrown away, only settable on initial database usage
 		// If this needs to be changed over time, you need to do this manually. Defaults to '14 days'.
 		Retention string
+		// CompressionInterval defines after which period audit traces will be compressed, only settable on initial database usage.
+		// If this needs to be changed over time, you need to do this manually. Defaults to '7 days'.
+		CompressionInterval string
+		// ChunkInterval defines after which period audit traces will be stored in a new chunk table, only settable on initial database usage.
+		// If this needs to be changed over time, you need to do this manually. Defaults to '1 days'.
+		ChunkInterval string
 	}
 
 	timescaleAuditing struct {
 		component string
 		db        *sqlx.DB
 		log       *slog.Logger
-		retention string
+
+		config *TimescaleDbConfig
 
 		cols []string
 		vals []any
@@ -91,6 +98,12 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 	if tc.Retention == "" {
 		tc.Retention = "14 days"
 	}
+	if tc.ChunkInterval == "" {
+		tc.ChunkInterval = "1 days"
+	}
+	if tc.CompressionInterval == "" {
+		tc.CompressionInterval = "7 days"
+	}
 
 	source := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", tc.Host, tc.Port, tc.User, tc.DB, tc.Password)
 
@@ -103,7 +116,7 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 		component: c.Component,
 		log:       c.Log.WithGroup("auditing"),
 		db:        db,
-		retention: tc.Retention,
+		config:    &tc,
 	}
 
 	err = a.initialize()
@@ -117,51 +130,66 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 }
 
 func (a *timescaleAuditing) initialize() error {
+	type txStatement struct {
+		query string
+		args  []any
+	}
+
 	initialSchema := &migrator.Migration{
 		Name: "Initial database schema",
 		Func: func(tx *sql.Tx) error {
-			schema := `
-			CREATE EXTENSION IF NOT EXISTS timescaledb;
-			CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-
-			CREATE TABLE IF NOT EXISTS traces (
-				timestamp timestamp NOT NULL,
-				rqid text NOT NULL,
-				component text NOT NULL,
-				type text NOT NULL,
-				body text NOT NULL,
-				error text NOT NULL,
-				statuscode int NOT NULL,
-				remoteaddr text NOT NULL,
-				forwardedfor text NOT NULL,
-				path text NOT NULL,
-				phase text NOT NULL,
-				detail text NOT NULL,
-				tenant text NOT NULL,
-				userid text NOT NULL
-			);
-
-			SELECT create_hypertable('traces', 'timestamp', chunk_time_interval => INTERVAL '1 days', if_not_exists => TRUE);
-
-			ALTER TABLE traces SET (
-				timescaledb.compress,
-				timescaledb.compress_segmentby = 'rqid',
-				timescaledb.compress_orderby = 'timestamp',
-				timescaledb.compress_chunk_time_interval = '7 days'
-			);
-			`
-
-			// TODO: evaluate what is needed
-			// CREATE INDEX IF NOT EXISTS traces_idx ON traces();
-
-			if _, err := tx.Exec(schema); err != nil {
-				return err
-			}
-
-			retention := `SELECT add_retention_policy('traces', $1::interval);`
-
-			if _, err := tx.Exec(retention, a.retention); err != nil {
-				return err
+			for _, stmt := range []txStatement{
+				{
+					query: `CREATE EXTENSION IF NOT EXISTS timescaledb`,
+				},
+				{
+					query: `CREATE EXTENSION IF NOT EXISTS pg_stat_statements`,
+				},
+				{
+					query: `CREATE TABLE IF NOT EXISTS traces (
+						timestamp timestamp NOT NULL,
+						rqid text NOT NULL,
+						component text NOT NULL,
+						type text NOT NULL,
+						body text NOT NULL,
+						error text NOT NULL,
+						statuscode int NOT NULL,
+						remoteaddr text NOT NULL,
+						forwardedfor text NOT NULL,
+						path text NOT NULL,
+						phase text NOT NULL,
+						detail text NOT NULL,
+						tenant text NOT NULL,
+						userid text NOT NULL
+					)`,
+				},
+				{
+					query: `SELECT create_hypertable('traces', 'timestamp', chunk_time_interval => $1::interval, if_not_exists => TRUE)`,
+					args:  []any{a.config.ChunkInterval},
+				},
+				{
+					query: `ALTER TABLE traces SET (
+						timescaledb.compress,
+						timescaledb.compress_segmentby = 'tenant',
+						timescaledb.compress_orderby = 'timestamp'
+					)`,
+				},
+				{
+					query: `SELECT add_compression_policy('traces', $1::interval)`,
+					args:  []any{a.config.CompressionInterval},
+				},
+				// TODO: evaluate what is needed
+				// {
+				// 	query: `CREATE INDEX IF NOT EXISTS traces_idx ON traces()`,
+				// },
+				{
+					query: `SELECT add_retention_policy('traces', $1::interval)`,
+					args:  []any{a.config.Retention},
+				},
+			} {
+				if _, err := tx.Exec(stmt.query, stmt.args...); err != nil {
+					return err
+				}
 			}
 
 			return nil
