@@ -71,7 +71,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = err.Error()
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Error("unable to index", "error", err2)
@@ -129,7 +129,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = err.Error()
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Error("unable to index", "error", err2)
@@ -244,7 +244,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = err.Error()
 			err2 := a.auditing.Index(auditReqContext)
 			if err2 != nil {
 				a.logger.Error("unable to index", "error", err2)
@@ -311,7 +311,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = err.Error()
 			err2 := i.auditing.Index(auditReqContext)
 			if err2 != nil {
 				i.logger.Error("unable to index", "error", err2)
@@ -432,7 +432,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 		err = json.Unmarshal(body, &auditReqContext.Body)
 		if err != nil {
 			auditReqContext.Body = strBody
-			auditReqContext.Error = err
+			auditReqContext.Error = err.Error()
 		}
 
 		err = a.Index(auditReqContext)
