@@ -1,6 +1,7 @@
 package auditing
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -49,39 +50,38 @@ const (
 const EntryFilterDefaultLimit int64 = 100
 
 type Entry struct {
-	Id string `db:"-"` // filled by the auditing driver
+	Id        string // filled by the auditing driver
+	Component string
+	RequestId string `json:"rqid"`
+	Type      EntryType
+	Timestamp time.Time
 
-	Component string    `db:"component"`
-	RequestId string    `db:"rqid" json:"rqid"`
-	Type      EntryType `db:"type"`
-	Timestamp time.Time `db:"timestamp"`
-
-	User   string `db:"userid"`
-	Tenant string `db:"tenant"`
+	User   string
+	Tenant string
 
 	// For `EntryDetailHTTP` the HTTP method get, post, put, delete, ...
 	// For `EntryDetailGRPC` unary, stream
-	Detail EntryDetail `db:"detail"`
+	Detail EntryDetail
 	// e.g. Request, Response, Error, Opened, Close
-	Phase EntryPhase `db:"phase"`
+	Phase EntryPhase
 	// For `EntryDetailHTTP` /api/v1/...
 	// For `EntryDetailGRPC` /api.v1/... (the method name)
-	Path         string `db:"path"`
-	ForwardedFor string `db:"forwardedfor"`
-	RemoteAddr   string `db:"remoteaddr"`
+	Path         string
+	ForwardedFor string
+	RemoteAddr   string
 
-	Body       any `db:"body"`       // JSON, string or numbers
-	StatusCode int `db:"statuscode"` // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
+	Body       any // JSON, string or numbers
+	StatusCode int // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
 
 	// Internal errors
-	Error string `db:"error"`
+	Error error
 }
 
 func (e *Entry) prepareForNextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()
 	e.Body = nil
-	e.Error = ""
+	e.Error = nil
 
 	switch e.Phase {
 	case EntryPhaseRequest:
@@ -133,7 +133,7 @@ type Auditing interface {
 	// Searches for entries matching the given filter.
 	// By default only recent entries will be returned.
 	// The returned entries will be sorted by timestamp in descending order.
-	Search(EntryFilter) ([]Entry, error)
+	Search(context.Context, EntryFilter) ([]Entry, error)
 }
 
 func defaultComponent() (string, error) {

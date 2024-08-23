@@ -3,6 +3,8 @@ package auditing
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -17,22 +19,50 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type TimescaleDbConfig struct {
-	Host     string
-	Port     string
-	DB       string
-	User     string
-	Password string
-}
+type (
+	TimescaleDbConfig struct {
+		Host     string
+		Port     string
+		DB       string
+		User     string
+		Password string
+	}
 
-type timescaleAuditing struct {
-	component string
-	db        *sqlx.DB
-	log       *slog.Logger
+	timescaleAuditing struct {
+		component string
+		db        *sqlx.DB
+		log       *slog.Logger
 
-	cols []string
-	vals []any
-}
+		cols []string
+		vals []any
+	}
+
+	// to keep the public interface free from field tags like "db" and "json" (as these might differ for different dbs)
+	// we introduce an internal type. unfortunately, this requires a conversion, which takes effort to maintain
+	timescaleEntry struct {
+		Component    string      `db:"component"`
+		RequestId    string      `db:"rqid" json:"rqid"`
+		Type         EntryType   `db:"type"`
+		Timestamp    time.Time   `db:"timestamp"`
+		User         string      `db:"userid"`
+		Tenant       string      `db:"tenant"`
+		Detail       EntryDetail `db:"detail"`
+		Phase        EntryPhase  `db:"phase"`
+		Path         string      `db:"path"`
+		ForwardedFor string      `db:"forwardedfor"`
+		RemoteAddr   string      `db:"remoteaddr"`
+		Body         any         `db:"body"`
+		StatusCode   int         `db:"statuscode"`
+		Error        string      `db:"error" json:"-"`
+	}
+
+	sqlCompOp string
+)
+
+const (
+	equals sqlCompOp = "equals"
+	like   sqlCompOp = "like"
+)
 
 func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 	if c.Component == "" {
@@ -187,12 +217,15 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 		return err
 	}
 
+	internalEntry, err := a.toInternal(entry)
+	if err != nil {
+		return fmt.Errorf("unable to convert audit trace to database entry: %w", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	entry.Id = entry.RequestId
-
-	_, err = a.db.NamedExecContext(ctx, q, entry)
+	_, err = a.db.NamedExecContext(ctx, q, internalEntry)
 	if err != nil {
 		return fmt.Errorf("unable to index audit trace: %w", err)
 	}
@@ -200,18 +233,11 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 	return nil
 }
 
-type compOp string
-
-const (
-	equals compOp = "equals"
-	like   compOp = "like"
-)
-
-func (a *timescaleAuditing) Search(filter EntryFilter) ([]Entry, error) {
+func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	var (
 		where     []string
 		values    = map[string]interface{}{}
-		addFilter = func(field string, value any, op compOp) error {
+		addFilter = func(field string, value any, op sqlCompOp) error {
 			if reflect.ValueOf(value).IsZero() {
 				return nil
 			}
@@ -303,7 +329,7 @@ func (a *timescaleAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		return nil, err
 	}
 
-	rows, err := a.db.NamedQueryContext(context.TODO(), q, values) // TODO: search needs a ctx!
+	rows, err := a.db.NamedQueryContext(ctx, q, values)
 	if err != nil {
 		return nil, err
 	}
@@ -312,17 +338,58 @@ func (a *timescaleAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	var entries []Entry
 
 	for rows.Next() {
-		var e Entry
+		var e timescaleEntry
 
 		err = rows.StructScan(&e)
 		if err != nil {
 			return nil, err
 		}
 
-		e.Id = e.RequestId
+		entry, err := a.toExternal(e)
+		if err != nil {
+			return nil, fmt.Errorf("unable to convert entry: %w", err)
+		}
 
-		entries = append(entries, e)
+		entries = append(entries, entry)
 	}
 
 	return entries, nil
+}
+
+func (_ *timescaleAuditing) toInternal(e Entry) (*timescaleEntry, error) {
+	intermediate, err := json.Marshal(e) // nolint
+	if err != nil {
+		return nil, err
+	}
+	var internalEntry timescaleEntry
+	err = json.Unmarshal(intermediate, &internalEntry) // nolint
+	if err != nil {
+		return nil, err
+	}
+
+	internalEntry.RequestId = e.RequestId
+	if e.Error != nil {
+		internalEntry.Error = e.Error.Error()
+	}
+
+	return &internalEntry, nil
+}
+
+func (_ *timescaleAuditing) toExternal(e timescaleEntry) (Entry, error) {
+	intermediate, err := json.Marshal(e) // nolint
+	if err != nil {
+		return Entry{}, err
+	}
+	var externalEntry Entry
+	err = json.Unmarshal(intermediate, &externalEntry) // nolint
+	if err != nil {
+		return Entry{}, err
+	}
+
+	externalEntry.Id = e.RequestId
+	if e.Error != "" {
+		externalEntry.Error = errors.New(e.Error)
+	}
+
+	return externalEntry, nil
 }

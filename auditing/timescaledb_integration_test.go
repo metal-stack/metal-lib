@@ -20,6 +20,7 @@ import (
 )
 
 func TestAuditing_TimescaleDB(t *testing.T) {
+	ctx := context.Background()
 	container, auditing := StartTimescaleDB(t, Config{
 		Log: slog.Default(),
 	})
@@ -50,7 +51,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				RemoteAddr:   "10.0.0.0",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000000",
 				StatusCode:   200,
-				Error:        "",
+				Error:        nil,
 			},
 			{
 				Component:    "auditing.test",
@@ -66,7 +67,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				RemoteAddr:   "10.0.0.1",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000001",
 				StatusCode:   201,
-				Error:        "",
+				Error:        nil,
 			},
 			{
 				Component:    "auditing.test",
@@ -82,7 +83,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				RemoteAddr:   "10.0.0.2",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000002",
 				StatusCode:   0,
-				Error:        "",
+				Error:        nil,
 			},
 		}
 	}
@@ -94,7 +95,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 		{
 			name: "no entries, no search results",
 			t: func(t *testing.T, a Auditing) {
-				entries, err := a.Search(EntryFilter{})
+				entries, err := a.Search(ctx, EntryFilter{})
 				require.NoError(t, err)
 				assert.Empty(t, entries)
 			},
@@ -109,7 +110,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				err = a.Flush()
 				require.NoError(t, err)
 
-				entries, err := a.Search(EntryFilter{
+				entries, err := a.Search(ctx, EntryFilter{
 					Body: "test",
 				})
 				require.NoError(t, err)
@@ -128,7 +129,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				err := a.Flush()
 				require.NoError(t, err)
 
-				entries, err := a.Search(EntryFilter{})
+				entries, err := a.Search(ctx, EntryFilter{})
 				require.NoError(t, err)
 				assert.Len(t, entries, len(es))
 
@@ -138,7 +139,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 					t.Errorf("diff (+got -want):\n %s", diff)
 				}
 
-				entries, err = a.Search(EntryFilter{
+				entries, err = a.Search(ctx, EntryFilter{
 					Body: "This",
 				})
 				require.NoError(t, err)
@@ -157,7 +158,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				err := a.Flush()
 				require.NoError(t, err)
 
-				entries, err := a.Search(EntryFilter{
+				entries, err := a.Search(ctx, EntryFilter{
 					RequestId: es[0].RequestId,
 				})
 				require.NoError(t, err)
@@ -185,7 +186,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				err := a.Flush()
 				require.NoError(t, err)
 
-				entries, err := a.Search(EntryFilter{
+				entries, err := a.Search(ctx, EntryFilter{
 					Phase: EntryPhaseResponse,
 				})
 				require.NoError(t, err)
@@ -210,7 +211,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 		// 		err := a.Flush()
 		// 		require.NoError(t, err)
 
-		// 		entries, err := a.Search(EntryFilter{
+		// 		entries, err := a.Search(ctx, EntryFilter{
 		// 			Body: fmt.Sprintf("%q", es[0].Body.(string)),
 		// 		})
 		// 		require.NoError(t, err)
