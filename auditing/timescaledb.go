@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -191,6 +192,10 @@ func (a *timescaleAuditing) Flush() error {
 }
 
 func (a *timescaleAuditing) Index(entry Entry) error {
+	if entry.Timestamp.IsZero() {
+		return errors.New("timestamp is not set")
+	}
+
 	q, _, err := sq.
 		Insert("traces").
 		Columns("timestamp", "entry").

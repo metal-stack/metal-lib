@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/emicklei/go-restful/v3"
@@ -45,6 +46,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp: time.Now(),
 			RequestId: requestID,
 			Type:      EntryTypeGRPC,
 			Detail:    EntryDetailGRPCUnary,
@@ -106,6 +108,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		}
 
 		auditReqContext := Entry{
+			Timestamp: time.Now(),
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
 			Path:      info.FullMethod,
@@ -166,6 +169,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp: time.Now(),
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
 			Path:      s.Procedure,
@@ -215,6 +219,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp:    time.Now(),
 			RequestId:    requestID,
 			Detail:       EntryDetailGRPCStream,
 			Path:         shc.Spec().Procedure,
@@ -278,6 +283,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp:    time.Now(),
 			RequestId:    requestID,
 			Detail:       EntryDetailGRPCUnary,
 			Path:         ar.Spec().Procedure,
@@ -381,6 +387,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 			requestID = uuid.NewString()
 		}
 		auditReqContext := Entry{
+			Timestamp:    time.Now(),
 			RequestId:    requestID,
 			Type:         EntryTypeHTTP,
 			Detail:       EntryDetail(r.Method),
