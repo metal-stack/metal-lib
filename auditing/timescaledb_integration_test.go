@@ -262,6 +262,23 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "filter on nothing",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{})
+				require.NoError(t, err)
+				require.Len(t, entries, len(testEntries()))
+			},
+		},
 	}
 	for i, tt := range tests {
 		tt := tt
