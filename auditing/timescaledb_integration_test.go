@@ -201,29 +201,29 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				}
 			},
 		},
-		// {
-		// 	name: "filter on body",
-		// 	t: func(t *testing.T, a Auditing) {
-		// 		es := testEntries()
-		// 		for _, e := range es {
-		// 			err := a.Index(e)
-		// 			require.NoError(t, err)
-		// 		}
+		{
+			name: "filter on body",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
 
-		// 		err := a.Flush()
-		// 		require.NoError(t, err)
+				err := a.Flush()
+				require.NoError(t, err)
 
-		// 		entries, err := a.Search(ctx, EntryFilter{
-		// 			Body: fmt.Sprintf("%q", es[0].Body.(string)),
-		// 		})
-		// 		require.NoError(t, err)
-		// 		require.Len(t, entries, 1)
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: fmt.Sprintf("%s", es[0].Body.(string)),
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
 
-		// 		if diff := cmp.Diff(entries[0], es[0]); diff != "" {
-		// 			t.Errorf("diff (+got -want):\n %s", diff)
-		// 		}
-		// 	},
-		// },
+				if diff := cmp.Diff(entries[0], es[0]); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
 	}
 	for i, tt := range tests {
 		tt := tt
