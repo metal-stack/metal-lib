@@ -40,7 +40,11 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return nil, err
+			}
+			requestID = uuid.String()
 		}
 
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
@@ -99,7 +103,11 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return err
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ss.Context(), rest.RequestIDKey, requestID)
 		childSS := grpcServerStreamWithContext{
@@ -164,7 +172,11 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				a.logger.Error("unable to generate uuid", "error", err)
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
@@ -214,7 +226,11 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return err
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
@@ -278,7 +294,11 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return nil, err
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
@@ -384,7 +404,14 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				logger.Error("unable to generate uuid", "error", err)
+				_, _ = response.Write([]byte("unable to generate request uuid " + err.Error()))
+				response.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			requestID = uuid.String()
 		}
 		auditReqContext := Entry{
 			Timestamp:    time.Now(),
