@@ -203,7 +203,7 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 	}
 
 	row := timescaledbRow{
-		Timestamp: entry.Timestamp,
+		Timestamp: entry.Timestamp.UTC(),
 		Entry:     e,
 	}
 
@@ -284,14 +284,14 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 
 	// to make queries more efficient for timescaledb, we always provide from
 	if filter.From.IsZero() {
-		filter.From = time.Now().Add(-24 * time.Hour)
+		filter.From = time.Now().Add(-24 * time.Hour).UTC()
 	}
 
-	values["from"] = filter.From
+	values["from"] = filter.From.UTC()
 	where = append(where, "timestamp >= :from")
 
 	if !filter.To.IsZero() {
-		values["to"] = filter.To
+		values["to"] = filter.To.UTC()
 		where = append(where, "timestamp <= :to")
 	}
 
