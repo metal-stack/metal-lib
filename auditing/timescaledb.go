@@ -278,7 +278,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	if err := addFilter("type", filter.Type, equals); err != nil {
 		return nil, err
 	}
-	if err := addFilter("userid", filter.User, equals); err != nil {
+	if err := addFilter("user", filter.User, equals); err != nil {
 		return nil, err
 	}
 

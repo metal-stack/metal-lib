@@ -224,6 +224,44 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "filter on everything",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Limit:        1,
+					From:         now.Add(-1 * time.Minute),
+					To:           now.Add(1 * time.Minute),
+					Component:    "auditing.test",
+					RequestId:    "00000000-0000-0000-0000-000000000000",
+					Type:         "http",
+					User:         "admin",
+					Tenant:       "global",
+					Detail:       "POST",
+					Phase:        "response",
+					Path:         "/v1/test/0",
+					ForwardedFor: "127.0.0.1",
+					RemoteAddr:   "10.0.0.0",
+					Body:         fmt.Sprintf("%s", es[0].Body.(string)),
+					StatusCode:   200,
+					Error:        "",
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], es[0]); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
 	}
 	for i, tt := range tests {
 		tt := tt
