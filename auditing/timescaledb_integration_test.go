@@ -104,7 +104,8 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 			name: "insert one entry",
 			t: func(t *testing.T, a Auditing) {
 				err := a.Index(Entry{
-					Body: "test",
+					Timestamp: now,
+					Body:      "test",
 				})
 				require.NoError(t, err)
 				err = a.Flush()
@@ -142,6 +143,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				entries, err = a.Search(ctx, EntryFilter{
 					Body: "This",
 				})
+
 				require.NoError(t, err)
 				assert.Len(t, entries, len(es))
 			},

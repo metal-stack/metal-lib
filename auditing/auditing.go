@@ -50,31 +50,31 @@ const (
 const EntryFilterDefaultLimit int64 = 100
 
 type Entry struct {
-	Id        string // filled by the auditing driver
-	Component string
-	RequestId string `json:"rqid"`
-	Type      EntryType
-	Timestamp time.Time
+	Id        string    `json:"-"` // filled by the auditing driver
+	Component string    `json:"component"`
+	RequestId string    `json:"rqid"`
+	Type      EntryType `json:"type"`
+	Timestamp time.Time `json:"timestamp"`
 
-	User   string
-	Tenant string
+	User   string `json:"user"`
+	Tenant string `json:"tenant"`
 
 	// For `EntryDetailHTTP` the HTTP method get, post, put, delete, ...
 	// For `EntryDetailGRPC` unary, stream
-	Detail EntryDetail
+	Detail EntryDetail `json:"detail"`
 	// e.g. Request, Response, Error, Opened, Close
-	Phase EntryPhase
+	Phase EntryPhase `json:"phase"`
 	// For `EntryDetailHTTP` /api/v1/...
 	// For `EntryDetailGRPC` /api.v1/... (the method name)
-	Path         string
-	ForwardedFor string
-	RemoteAddr   string
+	Path         string `json:"path"`
+	ForwardedFor string `json:"forwardedfor"`
+	RemoteAddr   string `json:"remoteaddr"`
 
-	Body       any // JSON, string or numbers
-	StatusCode int // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
+	Body       any `json:"body"`       // JSON, string or numbers
+	StatusCode int `json:"statuscode"` // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
 
 	// Internal errors
-	Error error
+	Error error `json:"error"`
 }
 
 func (e *Entry) prepareForNextPhase() {
