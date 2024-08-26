@@ -5,7 +5,6 @@ go 1.22
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/Masterminds/squirrel v1.5.4
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/emicklei/go-restful-openapi/v2 v2.10.2
@@ -119,8 +118,6 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/kortschak/wol v0.0.0-20200729010619-da482cc4850a // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc v1.0.5 // indirect

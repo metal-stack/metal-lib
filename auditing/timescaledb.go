@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"github.com/lopezator/migrator"
 
@@ -196,14 +195,7 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 		return errors.New("timestamp is not set")
 	}
 
-	q, _, err := sq.
-		Insert("traces").
-		Columns("timestamp", "entry").
-		Values(sq.Expr(":timestamp"), sq.Expr(":entry")).
-		ToSql()
-	if err != nil {
-		return err
-	}
+	q := "INSERT INTO traces (timestamp, entry) VALUES (:timestamp, :entry)"
 
 	e, err := json.Marshal(entry)
 	if err != nil {
@@ -303,19 +295,14 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 		where = append(where, "timestamp <= :to")
 	}
 
-	query := sq.
-		Select("timestamp", "entry").
-		From("traces").
-		Where(strings.Join(where, " AND ")).
-		OrderBy("timestamp ASC")
+	q := "SELECT timestamp,entry FROM traces"
+	if len(where) > 0 {
+		q += " WHERE " + strings.Join(where, " AND ")
+	}
+	q += " ORDER BY timestamp ASC"
 
 	if filter.Limit != 0 {
-		query.Limit(uint64(filter.Limit))
-	}
-
-	q, _, err := query.ToSql()
-	if err != nil {
-		return nil, err
+		q += fmt.Sprintf(" LIMIT %d", filter.Limit)
 	}
 
 	rows, err := a.db.NamedQueryContext(ctx, q, values)
