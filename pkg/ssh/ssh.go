@@ -125,7 +125,7 @@ func (c *Client) Connect(env *Env) error {
 		ssh.TTY_OP_OSPEED: 115200, // output speed = 14.4kbaud
 	}
 
-	fileDescriptor := int(os.Stdin.Fd())
+	fileDescriptor := int(os.Stdin.Fd()) //nolint
 
 	if term.IsTerminal(fileDescriptor) {
 		originalState, err := term.MakeRaw(fileDescriptor)

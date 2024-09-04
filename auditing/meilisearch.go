@@ -197,7 +197,13 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 			continue
 		}
 
-		indexQuery := reqProto
+		indexQuery := &meilisearch.SearchRequest{
+			Filter: reqProto.Filter,
+			Query:  reqProto.Query,
+			Sort:   reqProto.Sort,
+			Limit:  reqProto.Limit,
+		}
+
 		indexQuery.IndexUID = index.UID
 		req.Queries = append(req.Queries, indexQuery)
 
