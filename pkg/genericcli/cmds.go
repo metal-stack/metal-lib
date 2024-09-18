@@ -62,8 +62,8 @@ type CmdsConfig[C any, U any, R any] struct {
 	// Aliases provides additional aliases for the root cmd.
 	Aliases []string
 
-	// NumberOfArgs defines how many arguments are being used for the entity's id, this defaults to 1
-	NumberOfArgs int
+	// Args defines how many arguments are being used for the entity's id and how they are named, this defaults to ["id"]
+	Args []string
 
 	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get initialized later in the game.
 	DescribePrinter func() printers.Printer
@@ -102,8 +102,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	if len(c.OnlyCmds) == 0 {
 		c.OnlyCmds = allCmds()
 	}
-	if c.NumberOfArgs == 0 {
-		c.NumberOfArgs = 1
+	if len(c.Args) == 0 {
+		c.Args = []string{"id"}
 	}
 	if c.Sorter != nil {
 		c.GenericCLI = c.GenericCLI.WithSorter(c.Sorter)
@@ -148,8 +148,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 
 	if _, ok := c.OnlyCmds[DescribeCmd]; ok {
 		use := "describe"
-		for range c.NumberOfArgs {
-			use += " <id>"
+		for _, arg := range c.Args {
+			use += fmt.Sprintf(" <%s>", arg)
 		}
 
 		cmd := &cobra.Command{
@@ -157,7 +157,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"get"},
 			Short:   fmt.Sprintf("describes the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				id, err := GetExactlyNArgs(c.NumberOfArgs, args)
+				id, err := GetExactlyNArgs(len(c.Args), args)
 				if err != nil {
 					return err
 				}
@@ -235,8 +235,8 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 
 	if _, ok := c.OnlyCmds[DeleteCmd]; ok {
 		use := "delete"
-		for range c.NumberOfArgs {
-			use += " <id>"
+		for _, arg := range c.Args {
+			use += fmt.Sprintf(" <%s>", arg)
 		}
 
 		cmd := &cobra.Command{
@@ -245,7 +245,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"destroy", "rm", "remove"},
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if !viper.IsSet("file") {
-					id, err := GetExactlyNArgs(c.NumberOfArgs, args)
+					id, err := GetExactlyNArgs(len(c.Args), args)
 					if err != nil {
 						return err
 					}
@@ -296,15 +296,15 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 
 	if _, ok := c.OnlyCmds[EditCmd]; ok {
 		use := "edit"
-		for range c.NumberOfArgs {
-			use += " <id>"
+		for _, arg := range c.Args {
+			use += fmt.Sprintf(" <%s>", arg)
 		}
 
 		cmd := &cobra.Command{
 			Use:   use,
 			Short: fmt.Sprintf("edit the %s through an editor and update", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.EditAndPrint(c.NumberOfArgs, args, c.DescribePrinter())
+				return c.GenericCLI.EditAndPrint(len(c.Args), args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -391,7 +391,7 @@ func (c *CmdsConfig[C, U, R]) validate() error {
 	if c.Description == "" {
 		return fmt.Errorf("description must not be empty, command: %s", c.Singular)
 	}
-	if c.NumberOfArgs < 1 {
+	if len(c.Args) < 1 {
 		return errors.New("at least one arg for id is required")
 	}
 
