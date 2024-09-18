@@ -10,24 +10,26 @@ type mockTestClient struct {
 }
 
 // Convert provides a mock function with given fields: r
-func (_m *mockTestClient) Convert(r *testResponse) (string, *testCreate, *testUpdate, error) {
+func (_m *mockTestClient) Convert(r *testResponse) ([]string, *testCreate, *testUpdate, error) {
 	ret := _m.Called(r)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Convert")
 	}
 
-	var r0 string
+	var r0 []string
 	var r1 *testCreate
 	var r2 *testUpdate
 	var r3 error
-	if rf, ok := ret.Get(0).(func(*testResponse) (string, *testCreate, *testUpdate, error)); ok {
+	if rf, ok := ret.Get(0).(func(*testResponse) ([]string, *testCreate, *testUpdate, error)); ok {
 		return rf(r)
 	}
-	if rf, ok := ret.Get(0).(func(*testResponse) string); ok {
+	if rf, ok := ret.Get(0).(func(*testResponse) []string); ok {
 		r0 = rf(r)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(*testResponse) *testCreate); ok {

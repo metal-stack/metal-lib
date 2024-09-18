@@ -30,8 +30,8 @@ func (t testCRUD) Delete(ids ...string) (*testResponse, error) {
 	return t.client.Delete(id)
 }
 
-func (t testCRUD) Convert(r *testResponse) (string, *testCreate, *testUpdate, error) {
-	return r.ID,
+func (t testCRUD) Convert(r *testResponse) ([]string, *testCreate, *testUpdate, error) {
+	return []string{r.ID},
 		&testCreate{
 			ID:   r.ID,
 			Name: r.Name,

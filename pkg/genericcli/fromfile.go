@@ -401,7 +401,7 @@ func (m multiOperationDelete[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[
 		return BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error retrieving id from response entity: %w", err)}
 	}
 
-	result, err := crud.Delete(id)
+	result, err := crud.Delete(id...)
 	if err != nil {
 		return BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error deleting entity: %w", err)}
 	}

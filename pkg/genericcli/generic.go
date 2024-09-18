@@ -41,7 +41,7 @@ type CRUD[C any, U any, R any] interface {
 	Delete(id ...string) (R, error)
 	// Convert converts an entity's response object to best possible create and update requests and additionally returns the entities ID.
 	// This is required for capabilities like creation/update/deletion from a file of response objects.
-	Convert(r R) (string, C, U, error)
+	Convert(r R) ([]string, C, U, error)
 }
 
 // NewGenericCLI returns a new generic cli.
@@ -111,7 +111,7 @@ type (
 		Create(rq *testCreate) (*testResponse, error)
 		Update(rq *testUpdate) (*testResponse, error)
 		Delete(id ...string) (*testResponse, error)
-		Convert(r *testResponse) (string, *testCreate, *testUpdate, error)
+		Convert(r *testResponse) ([]string, *testCreate, *testUpdate, error)
 	}
 	testCRUD   struct{ client testClient }
 	testCreate struct {
