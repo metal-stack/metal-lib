@@ -10,10 +10,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
+func (a *GenericCLI[C, U, R]) Edit(n int, args []string) (R, error) {
 	var zero R
 
-	id, err := GetExactlyOneArg(args)
+	id, err := GetExactlyNArgs(n, args)
 	if err != nil {
 		return zero, err
 	}
@@ -31,7 +31,7 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 		_ = a.fs.Remove(tmpfile.Name())
 	}()
 
-	doc, err := a.crud.Get(id)
+	doc, err := a.crud.Get(id...)
 	if err != nil {
 		return zero, err
 	}
@@ -88,8 +88,8 @@ func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
 	return result, nil
 }
 
-func (a *GenericCLI[C, U, R]) EditAndPrint(args []string, p printers.Printer) error {
-	result, err := a.Edit(args)
+func (a *GenericCLI[C, U, R]) EditAndPrint(n int, args []string, p printers.Printer) error {
+	result, err := a.Edit(n, args)
 	if err != nil {
 		return err
 	}

@@ -213,9 +213,6 @@ func (a *GenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOp
 		}
 
 		colored := PrintColoredYAML(raw)
-		if err != nil {
-			return err
-		}
 
 		c.Message = fmt.Sprintf("%s %q, continue?\n\n%s\n\n", op.verb(), id, colored)
 

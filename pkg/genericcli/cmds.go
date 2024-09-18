@@ -147,8 +147,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if _, ok := c.OnlyCmds[DescribeCmd]; ok {
+		use := "describe"
+		for range c.NumberOfArgs {
+			use += " <id>"
+		}
+
 		cmd := &cobra.Command{
-			Use:     "describe <id>",
+			Use:     use,
 			Aliases: []string{"get"},
 			Short:   fmt.Sprintf("describes the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -229,8 +234,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if _, ok := c.OnlyCmds[DeleteCmd]; ok {
+		use := "delete"
+		for range c.NumberOfArgs {
+			use += " <id>"
+		}
+
 		cmd := &cobra.Command{
-			Use:     "delete <id>",
+			Use:     use,
 			Short:   fmt.Sprintf("deletes the %s", c.Singular),
 			Aliases: []string{"destroy", "rm", "remove"},
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -285,11 +295,16 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if _, ok := c.OnlyCmds[EditCmd]; ok {
+		use := "edit"
+		for range c.NumberOfArgs {
+			use += " <id>"
+		}
+
 		cmd := &cobra.Command{
-			Use:   "edit <id>",
+			Use:   use,
 			Short: fmt.Sprintf("edit the %s through an editor and update", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.EditAndPrint(args, c.DescribePrinter())
+				return c.GenericCLI.EditAndPrint(c.NumberOfArgs, args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
