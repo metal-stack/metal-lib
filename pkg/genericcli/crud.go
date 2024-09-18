@@ -20,20 +20,17 @@ func GetExactlyOneArg(args []string) (string, error) {
 }
 
 func GetExactlyNArgs(n int, args []string) ([]string, error) {
-	if n == 1 {
+	switch {
+	case n == 1:
 		arg, err := GetExactlyOneArg(args)
 		if err != nil {
 			return nil, err
 		}
-
 		return pointer.WrapInSlice(arg), nil
-	}
-
-	switch count := len(args); count {
-	case n:
+	case len(args) == n:
 		return args, nil
 	default:
-		return nil, fmt.Errorf("%d positional args are required, %d were provided", n, count)
+		return nil, fmt.Errorf("%d positional args are required, %d were provided", n, len(args))
 	}
 }
 
