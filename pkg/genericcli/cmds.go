@@ -48,7 +48,7 @@ func OnlyCmds(cmds ...DefaultCmd) map[DefaultCmd]bool {
 
 // CmdsConfig provides the configuration for the default commands.
 type CmdsConfig[C any, U any, R any] struct {
-	GenericCLI *GenericCLI[C, U, R]
+	GenericCLI *GenericCLIv2[C, U, R]
 
 	// OnlyCmds defines which default commands to include from the generic cli. if empty, all default commands will be added.
 	OnlyCmds map[DefaultCmd]bool
