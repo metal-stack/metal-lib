@@ -1,6 +1,7 @@
 package genericcli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -61,6 +62,9 @@ type CmdsConfig[C any, U any, R any] struct {
 	// Aliases provides additional aliases for the root cmd.
 	Aliases []string
 
+	// NumberOfArgs defines how many arguments are being used for the entity's id, this defaults to 1
+	NumberOfArgs int
+
 	// DescribePrinter is the printer that is used for describing the entity. It's a function because printers potentially get initialized later in the game.
 	DescribePrinter func() printers.Printer
 	// ListPrinter is the printer that is used for listing multiple entities. It's a function because printers potentially get initialized later in the game.
@@ -97,6 +101,9 @@ type CmdsConfig[C any, U any, R any] struct {
 func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cobra.Command) *cobra.Command {
 	if len(c.OnlyCmds) == 0 {
 		c.OnlyCmds = allCmds()
+	}
+	if c.NumberOfArgs == 0 {
+		c.NumberOfArgs = 1
 	}
 	if c.Sorter != nil {
 		c.GenericCLI = c.GenericCLI.WithSorter(c.Sorter)
@@ -145,12 +152,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"get"},
 			Short:   fmt.Sprintf("describes the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				id, err := GetExactlyOneArg(args)
+				id, err := GetExactlyNArgs(c.NumberOfArgs, args)
 				if err != nil {
 					return err
 				}
 
-				return c.GenericCLI.DescribeAndPrint(id, c.DescribePrinter())
+				return c.GenericCLI.DescribeAndPrint(c.DescribePrinter(), id...)
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -228,12 +235,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Aliases: []string{"destroy", "rm", "remove"},
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if !viper.IsSet("file") {
-					id, err := GetExactlyOneArg(args)
+					id, err := GetExactlyNArgs(c.NumberOfArgs, args)
 					if err != nil {
 						return err
 					}
 
-					return c.GenericCLI.DeleteAndPrint(id, c.DescribePrinter())
+					return c.GenericCLI.DeleteAndPrint(c.DescribePrinter(), id...)
 				}
 
 				p := c.evalBulkFlags()
@@ -368,6 +375,9 @@ func (c *CmdsConfig[C, U, R]) validate() error {
 	}
 	if c.Description == "" {
 		return fmt.Errorf("description must not be empty, command: %s", c.Singular)
+	}
+	if c.NumberOfArgs < 1 {
+		return errors.New("at least one arg for id is required")
 	}
 
 	return nil

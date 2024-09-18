@@ -29,16 +29,16 @@ type GenericCLI[C any, U any, R any] struct {
 // U is the update request for an entity.
 // R is the response object of an entity.
 type CRUD[C any, U any, R any] interface {
-	// Get returns the entity with the given id.
-	Get(id string) (R, error)
+	// Get returns the entity with the given id. It can be that multiple ids are passed in case the id is a compound key.
+	Get(id ...string) (R, error)
 	// List returns a slice of entities.
 	List() ([]R, error)
 	// Create tries to create the entity with the given request and returns the created entity.
 	Create(rq C) (R, error)
 	// Update tries to update the entity with the given request and returns the updated entity.
 	Update(rq U) (R, error)
-	// Delete tries to delete the entity with the given id and returns the deleted entity.
-	Delete(id string) (R, error)
+	// Delete tries to delete the entity with the given id and returns the deleted entity. It can be that multiple ids are passed in case the id is a compound key.
+	Delete(id ...string) (R, error)
 	// Convert converts an entity's response object to best possible create and update requests and additionally returns the entities ID.
 	// This is required for capabilities like creation/update/deletion from a file of response objects.
 	Convert(r R) (string, C, U, error)
@@ -106,11 +106,11 @@ func (a *GenericCLI[C, U, R]) Sorter() *multisort.Sorter[R] {
 
 type (
 	testClient interface {
-		Get(id string) (*testResponse, error)
+		Get(id ...string) (*testResponse, error)
 		List() ([]*testResponse, error)
 		Create(rq *testCreate) (*testResponse, error)
 		Update(rq *testUpdate) (*testResponse, error)
-		Delete(id string) (*testResponse, error)
+		Delete(id ...string) (*testResponse, error)
 		Convert(r *testResponse) (string, *testCreate, *testUpdate, error)
 	}
 	testCRUD   struct{ client testClient }

@@ -1,6 +1,11 @@
 package genericcli
 
-func (t testCRUD) Get(id string) (*testResponse, error) {
+func (t testCRUD) Get(ids ...string) (*testResponse, error) {
+	id, err := GetExactlyOneArg(ids)
+	if err != nil {
+		return nil, err
+	}
+
 	return t.client.Get(id)
 }
 
@@ -16,7 +21,12 @@ func (t testCRUD) Update(rq *testUpdate) (*testResponse, error) {
 	return t.client.Update(rq)
 }
 
-func (t testCRUD) Delete(id string) (*testResponse, error) {
+func (t testCRUD) Delete(ids ...string) (*testResponse, error) {
+	id, err := GetExactlyOneArg(ids)
+	if err != nil {
+		return nil, err
+	}
+
 	return t.client.Delete(id)
 }
 
