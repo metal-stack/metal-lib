@@ -109,7 +109,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		c.Args = []string{"id"}
 	}
 	if c.GenericCLI != nil {
-		c.MultiArgGenericCLI = &c.GenericCLI.multiCLI
+		c.MultiArgGenericCLI = c.GenericCLI.multiCLI
 	}
 	if c.Sorter != nil {
 		c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithSorter(c.Sorter)

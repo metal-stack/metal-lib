@@ -8,9 +8,14 @@ import (
 	"github.com/spf13/afero"
 )
 
+// GenericCLI can be used to gain generic CLI functionality.
+//
+// C is the create request for an entity.
+// U is the update request for an entity.
+// R is the response object of an entity.
 type GenericCLI[C any, U any, R any] struct {
 	// internally we map everyhing to multi arg cli to reduce code redundance
-	multiCLI MultiArgGenericCLI[C, U, R]
+	multiCLI *MultiArgGenericCLI[C, U, R]
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -19,7 +24,7 @@ type GenericCLI[C any, U any, R any] struct {
 // U is the update request for an entity.
 // R is the response object of an entity.
 type CRUD[C any, U any, R any] interface {
-	// Get returns the entity with the given id. It can be that multiple ids are passed in case the id is a compound key.
+	// Get returns the entity with the given id.
 	Get(id string) (R, error)
 	// List returns a slice of entities.
 	List() ([]R, error)
@@ -27,7 +32,7 @@ type CRUD[C any, U any, R any] interface {
 	Create(rq C) (R, error)
 	// Update tries to update the entity with the given request and returns the updated entity.
 	Update(rq U) (R, error)
-	// Delete tries to delete the entity with the given id and returns the deleted entity. It can be that multiple ids are passed in case the id is a compound key.
+	// Delete tries to delete the entity with the given id and returns the deleted entity.
 	Delete(id string) (R, error)
 	// Convert converts an entity's response object to best possible create and update requests and additionally returns the entities ID.
 	// This is required for capabilities like creation/update/deletion from a file of response objects.
@@ -40,58 +45,48 @@ type CRUD[C any, U any, R any] interface {
 // U is the update request for an entity.
 // R is the response object of an entity.
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
-	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		multiCLI: MultiArgGenericCLI[C, U, R]{
-			crud:      multiArgMapper[C, U, R]{},
-			fs:        fs,
-			parser:    MultiDocumentYAML[R]{fs: fs},
-			bulkPrint: false,
-		},
+		multiCLI: NewGenericMultiArgCLI(multiArgMapper[C, U, R]{}),
 	}
 }
 
 func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
-	a.multiCLI.fs = fs
-	a.multiCLI.parser = MultiDocumentYAML[R]{fs: fs}
+	a.multiCLI.WithFS(fs)
 	return a
 }
 
 func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCLI[C, U, R] {
-	a.multiCLI.sorter = sorter
+	a.multiCLI.WithSorter(sorter)
 	return a
 }
 
 // WithBulkPrint prints results in a bulk at the end on multi-entity operations, the results are a list.
 // default is printing results intermediately during the bulk operation, which causes single entities to be printed in sequence.
 func (a *GenericCLI[C, U, R]) WithBulkPrint() *GenericCLI[C, U, R] {
-	a.multiCLI.bulkPrint = true
+	a.multiCLI.WithBulkPrint()
 	return a
 }
 
 // WithBulkSecurityPrompt prints interactive prompts before a multi-entity operation if there is a tty.
 func (a *GenericCLI[C, U, R]) WithBulkSecurityPrompt(in io.Reader, out io.Writer) *GenericCLI[C, U, R] {
-	a.multiCLI.bulkSecurityPrompt = &PromptConfig{
-		In:  in,
-		Out: out,
-	}
+	a.multiCLI.WithBulkSecurityPrompt(in, out)
 	return a
 }
 
 // WithBulkTimestamps prints out the duration of an operation to stdout during a bulk operation.
 func (a *GenericCLI[C, U, R]) WithTimestamps() *GenericCLI[C, U, R] {
-	a.multiCLI.timestamps = true
+	a.multiCLI.WithTimestamps()
 	return a
 }
 
 // Interface returns the interface that was used to create this generic cli.
 func (a *GenericCLI[C, U, R]) Interface() MultiArgCRUD[C, U, R] {
-	return a.multiCLI.crud
+	return a.multiCLI.Interface()
 }
 
 // Sorter returns the sorter of this generic cli.
 func (a *GenericCLI[C, U, R]) Sorter() *multisort.Sorter[R] {
-	return a.multiCLI.sorter
+	return a.multiCLI.Sorter()
 }
 
 func (a *GenericCLI[C, U, R]) List(sortKeys ...multisort.Key) ([]R, error) {

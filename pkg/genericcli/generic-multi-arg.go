@@ -49,10 +49,10 @@ type MultiArgCRUD[C any, U any, R any] interface {
 // C is the create request for an entity.
 // U is the update request for an entity.
 // R is the response object of an entity.
-func NewGenericMultiArgCLI[C any, U any, R any](crud CRUD[C, U, R]) *MultiArgGenericCLI[C, U, R] {
+func NewGenericMultiArgCLI[C any, U any, R any](crud MultiArgCRUD[C, U, R]) *MultiArgGenericCLI[C, U, R] {
 	fs := afero.NewOsFs()
 	return &MultiArgGenericCLI[C, U, R]{
-		crud:      multiArgMapper[C, U, R]{},
+		crud:      crud,
 		fs:        fs,
 		parser:    MultiDocumentYAML[R]{fs: fs},
 		bulkPrint: false,
