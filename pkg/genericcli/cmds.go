@@ -210,8 +210,15 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if _, ok := c.OnlyCmds[UpdateCmd]; ok {
+		use := "update"
+		if c.UpdateRequestFromCLI != nil {
+			for _, arg := range c.Args {
+				use += fmt.Sprintf(" <%s>", arg)
+			}
+		}
+
 		cmd := &cobra.Command{
-			Use:   "update",
+			Use:   use,
 			Short: fmt.Sprintf("updates the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if c.UpdateRequestFromCLI != nil && !viper.IsSet("file") {
