@@ -46,7 +46,7 @@ type CRUD[C any, U any, R any] interface {
 // R is the response object of an entity.
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
 	return &GenericCLI[C, U, R]{
-		multiCLI: NewGenericMultiArgCLI(multiArgMapper[C, U, R]{}),
+		multiCLI: NewGenericMultiArgCLI(multiArgMapper[C, U, R]{singleArg: crud}),
 	}
 }
 
