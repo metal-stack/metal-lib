@@ -88,14 +88,8 @@ func (_m *mockTestClient) Create(rq *testCreate) (*testResponse, error) {
 }
 
 // Delete provides a mock function with given fields: id
-func (_m *mockTestClient) Delete(id ...string) (*testResponse, error) {
-	_va := make([]interface{}, len(id))
-	for _i := range id {
-		_va[_i] = id[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+func (_m *mockTestClient) Delete(id string) (*testResponse, error) {
+	ret := _m.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
@@ -103,19 +97,19 @@ func (_m *mockTestClient) Delete(id ...string) (*testResponse, error) {
 
 	var r0 *testResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(...string) (*testResponse, error)); ok {
-		return rf(id...)
+	if rf, ok := ret.Get(0).(func(string) (*testResponse, error)); ok {
+		return rf(id)
 	}
-	if rf, ok := ret.Get(0).(func(...string) *testResponse); ok {
-		r0 = rf(id...)
+	if rf, ok := ret.Get(0).(func(string) *testResponse); ok {
+		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*testResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(...string) error); ok {
-		r1 = rf(id...)
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -124,14 +118,8 @@ func (_m *mockTestClient) Delete(id ...string) (*testResponse, error) {
 }
 
 // Get provides a mock function with given fields: id
-func (_m *mockTestClient) Get(id ...string) (*testResponse, error) {
-	_va := make([]interface{}, len(id))
-	for _i := range id {
-		_va[_i] = id[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+func (_m *mockTestClient) Get(id string) (*testResponse, error) {
+	ret := _m.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -139,19 +127,19 @@ func (_m *mockTestClient) Get(id ...string) (*testResponse, error) {
 
 	var r0 *testResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(...string) (*testResponse, error)); ok {
-		return rf(id...)
+	if rf, ok := ret.Get(0).(func(string) (*testResponse, error)); ok {
+		return rf(id)
 	}
-	if rf, ok := ret.Get(0).(func(...string) *testResponse); ok {
-		r0 = rf(id...)
+	if rf, ok := ret.Get(0).(func(string) *testResponse); ok {
+		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*testResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(...string) error); ok {
-		r1 = rf(id...)
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
 	} else {
 		r1 = ret.Error(1)
 	}

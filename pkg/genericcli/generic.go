@@ -151,7 +151,7 @@ func (a *GenericCLI[C, U, R]) DeleteFromFileAndPrint(from string, p printers.Pri
 }
 
 type multiArgMapper[C any, U any, R any] struct {
-	v1 CRUD[C, U, R]
+	singleArg CRUD[C, U, R]
 }
 
 func (v multiArgMapper[C, U, R]) Get(ids ...string) (R, error) {
@@ -161,19 +161,19 @@ func (v multiArgMapper[C, U, R]) Get(ids ...string) (R, error) {
 		return zero, err
 	}
 
-	return v.v1.Get(id)
+	return v.singleArg.Get(id)
 }
 
 func (v multiArgMapper[C, U, R]) List() ([]R, error) {
-	return v.v1.List()
+	return v.singleArg.List()
 }
 
 func (v multiArgMapper[C, U, R]) Create(rq C) (R, error) {
-	return v.v1.Create(rq)
+	return v.singleArg.Create(rq)
 }
 
 func (v multiArgMapper[C, U, R]) Update(rq U) (R, error) {
-	return v.v1.Update(rq)
+	return v.singleArg.Update(rq)
 }
 
 func (v multiArgMapper[C, U, R]) Delete(ids ...string) (R, error) {
@@ -183,11 +183,11 @@ func (v multiArgMapper[C, U, R]) Delete(ids ...string) (R, error) {
 		return zero, err
 	}
 
-	return v.v1.Delete(id)
+	return v.singleArg.Delete(id)
 }
 
 func (v multiArgMapper[C, U, R]) Convert(r R) ([]string, C, U, error) {
-	id, cr, ur, err := v.v1.Convert(r)
+	id, cr, ur, err := v.singleArg.Convert(r)
 	return []string{id}, cr, ur, err
 }
 
@@ -195,11 +195,11 @@ func (v multiArgMapper[C, U, R]) Convert(r R) ([]string, C, U, error) {
 
 type (
 	testClient interface {
-		Get(id ...string) (*testResponse, error)
+		Get(id string) (*testResponse, error)
 		List() ([]*testResponse, error)
 		Create(rq *testCreate) (*testResponse, error)
 		Update(rq *testUpdate) (*testResponse, error)
-		Delete(id ...string) (*testResponse, error)
+		Delete(id string) (*testResponse, error)
 		Convert(r *testResponse) ([]string, *testCreate, *testUpdate, error)
 	}
 	testCRUD   struct{ client testClient }
