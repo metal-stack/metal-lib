@@ -269,11 +269,11 @@ error creating entity: creation error for id 1
 	}
 }
 
-func newMockCLI(t *testing.T, mockFn func(mock *mockTestClient), fileMockFn func(fs afero.Fs)) *GenericCLIv2[*testCreate, *testUpdate, *testResponse] {
+func newMockCLI(t *testing.T, mockFn func(mock *mockTestClient), fileMockFn func(fs afero.Fs)) *MultiArgGenericCLI[*testCreate, *testUpdate, *testResponse] {
 	client := newMockTestClient(t)
 	fs := afero.NewMemMapFs()
 
-	cli := GenericCLIv2[*testCreate, *testUpdate, *testResponse]{
+	cli := MultiArgGenericCLI[*testCreate, *testUpdate, *testResponse]{
 		crud:   testCRUD{client: client},
 		fs:     fs,
 		parser: MultiDocumentYAML[*testResponse]{fs: fs},

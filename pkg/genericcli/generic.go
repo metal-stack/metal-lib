@@ -3,12 +3,14 @@ package genericcli
 import (
 	"io"
 
+	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/metal-stack/metal-lib/pkg/multisort"
 	"github.com/spf13/afero"
 )
 
 type GenericCLI[C any, U any, R any] struct {
-	v2 GenericCLIv2[C, U, R]
+	// internally we map everyhing to multi arg cli to reduce code redundance
+	multiCLI MultiArgGenericCLI[C, U, R]
 }
 
 // CRUD must be implemented in order to get generic CLI functionality.
@@ -40,8 +42,8 @@ type CRUD[C any, U any, R any] interface {
 func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R] {
 	fs := afero.NewOsFs()
 	return &GenericCLI[C, U, R]{
-		v2: GenericCLIv2[C, U, R]{
-			crud:      v2mapper[C, U, R]{},
+		multiCLI: MultiArgGenericCLI[C, U, R]{
+			crud:      multiArgMapper[C, U, R]{},
 			fs:        fs,
 			parser:    MultiDocumentYAML[R]{fs: fs},
 			bulkPrint: false,
@@ -50,26 +52,26 @@ func NewGenericCLI[C any, U any, R any](crud CRUD[C, U, R]) *GenericCLI[C, U, R]
 }
 
 func (a *GenericCLI[C, U, R]) WithFS(fs afero.Fs) *GenericCLI[C, U, R] {
-	a.v2.fs = fs
-	a.v2.parser = MultiDocumentYAML[R]{fs: fs}
+	a.multiCLI.fs = fs
+	a.multiCLI.parser = MultiDocumentYAML[R]{fs: fs}
 	return a
 }
 
 func (a *GenericCLI[C, U, R]) WithSorter(sorter *multisort.Sorter[R]) *GenericCLI[C, U, R] {
-	a.v2.sorter = sorter
+	a.multiCLI.sorter = sorter
 	return a
 }
 
 // WithBulkPrint prints results in a bulk at the end on multi-entity operations, the results are a list.
 // default is printing results intermediately during the bulk operation, which causes single entities to be printed in sequence.
 func (a *GenericCLI[C, U, R]) WithBulkPrint() *GenericCLI[C, U, R] {
-	a.v2.bulkPrint = true
+	a.multiCLI.bulkPrint = true
 	return a
 }
 
 // WithBulkSecurityPrompt prints interactive prompts before a multi-entity operation if there is a tty.
 func (a *GenericCLI[C, U, R]) WithBulkSecurityPrompt(in io.Reader, out io.Writer) *GenericCLI[C, U, R] {
-	a.v2.bulkSecurityPrompt = &PromptConfig{
+	a.multiCLI.bulkSecurityPrompt = &PromptConfig{
 		In:  in,
 		Out: out,
 	}
@@ -78,18 +80,120 @@ func (a *GenericCLI[C, U, R]) WithBulkSecurityPrompt(in io.Reader, out io.Writer
 
 // WithBulkTimestamps prints out the duration of an operation to stdout during a bulk operation.
 func (a *GenericCLI[C, U, R]) WithTimestamps() *GenericCLI[C, U, R] {
-	a.v2.timestamps = true
+	a.multiCLI.timestamps = true
 	return a
 }
 
 // Interface returns the interface that was used to create this generic cli.
-func (a *GenericCLI[C, U, R]) Interface() CRUDv2[C, U, R] {
-	return a.v2.crud
+func (a *GenericCLI[C, U, R]) Interface() MultiArgCRUD[C, U, R] {
+	return a.multiCLI.crud
 }
 
 // Sorter returns the sorter of this generic cli.
 func (a *GenericCLI[C, U, R]) Sorter() *multisort.Sorter[R] {
-	return a.v2.sorter
+	return a.multiCLI.sorter
+}
+
+func (a *GenericCLI[C, U, R]) List(sortKeys ...multisort.Key) ([]R, error) {
+	return a.multiCLI.List(sortKeys...)
+}
+func (a *GenericCLI[C, U, R]) ListAndPrint(p printers.Printer, sortKeys ...multisort.Key) error {
+	return a.multiCLI.ListAndPrint(p, sortKeys...)
+}
+func (a *GenericCLI[C, U, R]) Describe(id string) (R, error) {
+	return a.multiCLI.Describe(id)
+}
+func (a *GenericCLI[C, U, R]) DescribeAndPrint(id string, p printers.Printer) error {
+	return a.multiCLI.DescribeAndPrint(p, id)
+}
+func (a *GenericCLI[C, U, R]) Delete(id string) (R, error) {
+	return a.multiCLI.Delete(id)
+}
+func (a *GenericCLI[C, U, R]) DeleteAndPrint(id string, p printers.Printer) error {
+	return a.multiCLI.DeleteAndPrint(p, id)
+}
+func (a *GenericCLI[C, U, R]) Create(rq C) (R, error) {
+	return a.multiCLI.Create(rq)
+}
+func (a *GenericCLI[C, U, R]) CreateAndPrint(rq C, p printers.Printer) error {
+	return a.multiCLI.CreateAndPrint(rq, p)
+}
+func (a *GenericCLI[C, U, R]) Update(rq U) (R, error) {
+	return a.multiCLI.Update(rq)
+}
+func (a *GenericCLI[C, U, R]) UpdateAndPrint(rq U, p printers.Printer) error {
+	return a.multiCLI.UpdateAndPrint(rq, p)
+}
+func (a *GenericCLI[C, U, R]) Edit(args []string) (R, error) {
+	return a.multiCLI.Edit(1, args)
+}
+func (a *GenericCLI[C, U, R]) EditAndPrint(args []string, p printers.Printer) error {
+	return a.multiCLI.EditAndPrint(1, args, p)
+}
+func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (BulkResults[R], error) {
+	return a.multiCLI.CreateFromFile(from)
+}
+func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Printer) error {
+	return a.multiCLI.CreateFromFileAndPrint(from, p)
+}
+func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (BulkResults[R], error) {
+	return a.multiCLI.UpdateFromFile(from)
+}
+func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Printer) error {
+	return a.multiCLI.UpdateFromFileAndPrint(from, p)
+}
+func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (BulkResults[R], error) {
+	return a.multiCLI.ApplyFromFile(from)
+}
+func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Printer) error {
+	return a.multiCLI.ApplyFromFileAndPrint(from, p)
+}
+func (a *GenericCLI[C, U, R]) DeleteFromFile(from string) (BulkResults[R], error) {
+	return a.multiCLI.DeleteFromFile(from)
+}
+func (a *GenericCLI[C, U, R]) DeleteFromFileAndPrint(from string, p printers.Printer) error {
+	return a.multiCLI.DeleteFromFileAndPrint(from, p)
+}
+
+type multiArgMapper[C any, U any, R any] struct {
+	v1 CRUD[C, U, R]
+}
+
+func (v multiArgMapper[C, U, R]) Get(ids ...string) (R, error) {
+	id, err := GetExactlyOneArg(ids)
+	if err != nil {
+		var zero R
+		return zero, err
+	}
+
+	return v.v1.Get(id)
+}
+
+func (v multiArgMapper[C, U, R]) List() ([]R, error) {
+	return v.v1.List()
+}
+
+func (v multiArgMapper[C, U, R]) Create(rq C) (R, error) {
+	return v.v1.Create(rq)
+}
+
+func (v multiArgMapper[C, U, R]) Update(rq U) (R, error) {
+	return v.v1.Update(rq)
+}
+
+func (v multiArgMapper[C, U, R]) Delete(ids ...string) (R, error) {
+	id, err := GetExactlyOneArg(ids)
+	if err != nil {
+		var zero R
+		return zero, err
+	}
+
+	return v.v1.Delete(id)
+}
+
+func (v multiArgMapper[C, U, R]) Convert(r R) ([]string, C, U, error) {
+	id, cr, ur, err := v.v1.Convert(r)
+	return []string{id}, cr, ur, err
 }
 
 // following only used for mock generation (has to be in non-test file), do not use:
@@ -117,44 +221,3 @@ type (
 		Name string `json:"name"`
 	}
 )
-
-type v2mapper[C any, U any, R any] struct {
-	v1 CRUD[C, U, R]
-}
-
-func (v v2mapper[C, U, R]) Get(ids ...string) (R, error) {
-	id, err := GetExactlyOneArg(ids)
-	if err != nil {
-		var zero R
-		return zero, err
-	}
-
-	return v.v1.Get(id)
-}
-
-func (v v2mapper[C, U, R]) List() ([]R, error) {
-	return v.v1.List()
-}
-
-func (v v2mapper[C, U, R]) Create(rq C) (R, error) {
-	return v.v1.Create(rq)
-}
-
-func (v v2mapper[C, U, R]) Update(rq U) (R, error) {
-	return v.v1.Update(rq)
-}
-
-func (v v2mapper[C, U, R]) Delete(ids ...string) (R, error) {
-	id, err := GetExactlyOneArg(ids)
-	if err != nil {
-		var zero R
-		return zero, err
-	}
-
-	return v.v1.Delete(id)
-}
-
-func (v v2mapper[C, U, R]) Convert(r R) ([]string, C, U, error) {
-	id, cr, ur, err := v.v1.Convert(r)
-	return []string{id}, cr, ur, err
-}

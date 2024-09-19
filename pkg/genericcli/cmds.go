@@ -48,7 +48,10 @@ func OnlyCmds(cmds ...DefaultCmd) map[DefaultCmd]bool {
 
 // CmdsConfig provides the configuration for the default commands.
 type CmdsConfig[C any, U any, R any] struct {
-	GenericCLI *GenericCLIv2[C, U, R]
+	// GenericCLI is the generic CLI used by the cobra commands. this uses only single positional arguments. if you have multiple, use multi arg generic cli.
+	GenericCLI *GenericCLI[C, U, R]
+	// MultiArgGenericCLI is the generic CLI used by the cobra commands. this can use n positional arguments.
+	MultiArgGenericCLI *MultiArgGenericCLI[C, U, R]
 
 	// OnlyCmds defines which default commands to include from the generic cli. if empty, all default commands will be added.
 	OnlyCmds map[DefaultCmd]bool
@@ -105,8 +108,11 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	if len(c.Args) == 0 {
 		c.Args = []string{"id"}
 	}
+	if c.GenericCLI != nil {
+		c.MultiArgGenericCLI = &c.GenericCLI.multiCLI
+	}
 	if c.Sorter != nil {
-		c.GenericCLI = c.GenericCLI.WithSorter(c.Sorter)
+		c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithSorter(c.Sorter)
 	}
 
 	Must(c.validate())
@@ -131,7 +137,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return err
 				}
 
-				return c.GenericCLI.ListAndPrint(c.ListPrinter(), sortKeys...)
+				return c.MultiArgGenericCLI.ListAndPrint(c.ListPrinter(), sortKeys...)
 			},
 		}
 
@@ -162,7 +168,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return err
 				}
 
-				return c.GenericCLI.DescribeAndPrint(c.DescribePrinter(), id...)
+				return c.MultiArgGenericCLI.DescribeAndPrint(c.DescribePrinter(), id...)
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -185,12 +191,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
-					return c.GenericCLI.CreateAndPrint(rq, c.DescribePrinter())
+					return c.MultiArgGenericCLI.CreateAndPrint(rq, c.DescribePrinter())
 				}
 
 				p := c.evalBulkFlags()
 
-				return c.GenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
+				return c.MultiArgGenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 
@@ -214,12 +220,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
-					return c.GenericCLI.UpdateAndPrint(rq, c.DescribePrinter())
+					return c.MultiArgGenericCLI.UpdateAndPrint(rq, c.DescribePrinter())
 				}
 
 				p := c.evalBulkFlags()
 
-				return c.GenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), p())
+				return c.MultiArgGenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), p())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -250,12 +256,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 						return err
 					}
 
-					return c.GenericCLI.DeleteAndPrint(c.DescribePrinter(), id...)
+					return c.MultiArgGenericCLI.DeleteAndPrint(c.DescribePrinter(), id...)
 				}
 
 				p := c.evalBulkFlags()
 
-				return c.GenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), p())
+				return c.MultiArgGenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), p())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -275,12 +281,12 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if !viper.GetBool("skip-security-prompts") {
-					c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
+					c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
 				p := c.evalBulkFlags()
 
-				return c.GenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), p())
+				return c.MultiArgGenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 
@@ -304,7 +310,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 			Use:   use,
 			Short: fmt.Sprintf("edit the %s through an editor and update", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return c.GenericCLI.EditAndPrint(len(c.Args), args, c.DescribePrinter())
+				return c.MultiArgGenericCLI.EditAndPrint(len(c.Args), args, c.DescribePrinter())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
@@ -367,7 +373,7 @@ func (c *CmdsConfig[C, U, R]) addFileFlags(cmd *cobra.Command) {
 }
 
 func (c *CmdsConfig[C, U, R]) validate() error {
-	if c.GenericCLI == nil {
+	if c.MultiArgGenericCLI == nil {
 		return fmt.Errorf("generic cli must not be nil, command: %s", c.Singular)
 	}
 	if c.DescribePrinter == nil {
@@ -400,17 +406,17 @@ func (c *CmdsConfig[C, U, R]) validate() error {
 
 func (c *CmdsConfig[C, U, R]) evalBulkFlags() func() printers.Printer {
 	if !viper.GetBool("skip-security-prompts") {
-		c.GenericCLI = c.GenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
+		c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 	}
 
 	if viper.GetBool("timestamps") {
-		c.GenericCLI = c.GenericCLI.WithTimestamps()
+		c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithTimestamps()
 	}
 
 	p := c.DescribePrinter
 	if viper.GetBool("bulk-output") {
 		p = c.ListPrinter
-		c.GenericCLI = c.GenericCLI.WithBulkPrint()
+		c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithBulkPrint()
 	}
 
 	return p

@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func (a *GenericCLIv2[C, U, R]) Edit(n int, args []string) (R, error) {
+func (a *MultiArgGenericCLI[C, U, R]) Edit(n int, args []string) (R, error) {
 	var zero R
 
 	id, err := GetExactlyNArgs(n, args)
@@ -88,7 +88,7 @@ func (a *GenericCLIv2[C, U, R]) Edit(n int, args []string) (R, error) {
 	return result, nil
 }
 
-func (a *GenericCLIv2[C, U, R]) EditAndPrint(n int, args []string, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) EditAndPrint(n int, args []string, p printers.Printer) error {
 	result, err := a.Edit(n, args)
 	if err != nil {
 		return err

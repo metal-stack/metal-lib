@@ -34,7 +34,7 @@ func GetExactlyNArgs(n int, args []string) ([]string, error) {
 	}
 }
 
-func (a *GenericCLIv2[C, U, R]) List(sortKeys ...multisort.Key) ([]R, error) {
+func (a *MultiArgGenericCLI[C, U, R]) List(sortKeys ...multisort.Key) ([]R, error) {
 	resp, err := a.crud.List()
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (a *GenericCLIv2[C, U, R]) List(sortKeys ...multisort.Key) ([]R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLIv2[C, U, R]) ListAndPrint(p printers.Printer, sortKeys ...multisort.Key) error {
+func (a *MultiArgGenericCLI[C, U, R]) ListAndPrint(p printers.Printer, sortKeys ...multisort.Key) error {
 	resp, err := a.List(sortKeys...)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (a *GenericCLIv2[C, U, R]) ListAndPrint(p printers.Printer, sortKeys ...mul
 	return p.Print(resp)
 }
 
-func (a *GenericCLIv2[C, U, R]) Describe(id ...string) (R, error) {
+func (a *MultiArgGenericCLI[C, U, R]) Describe(id ...string) (R, error) {
 	var zero R
 
 	resp, err := a.crud.Get(id...)
@@ -69,7 +69,7 @@ func (a *GenericCLIv2[C, U, R]) Describe(id ...string) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLIv2[C, U, R]) DescribeAndPrint(p printers.Printer, id ...string) error {
+func (a *MultiArgGenericCLI[C, U, R]) DescribeAndPrint(p printers.Printer, id ...string) error {
 	resp, err := a.Describe(id...)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (a *GenericCLIv2[C, U, R]) DescribeAndPrint(p printers.Printer, id ...strin
 	return p.Print(resp)
 }
 
-func (a *GenericCLIv2[C, U, R]) Delete(id ...string) (R, error) {
+func (a *MultiArgGenericCLI[C, U, R]) Delete(id ...string) (R, error) {
 	var zero R
 
 	resp, err := a.crud.Delete(id...)
@@ -89,7 +89,7 @@ func (a *GenericCLIv2[C, U, R]) Delete(id ...string) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLIv2[C, U, R]) DeleteAndPrint(p printers.Printer, id ...string) error {
+func (a *MultiArgGenericCLI[C, U, R]) DeleteAndPrint(p printers.Printer, id ...string) error {
 	resp, err := a.Delete(id...)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (a *GenericCLIv2[C, U, R]) DeleteAndPrint(p printers.Printer, id ...string)
 	return p.Print(resp)
 }
 
-func (a *GenericCLIv2[C, U, R]) Create(rq C) (R, error) {
+func (a *MultiArgGenericCLI[C, U, R]) Create(rq C) (R, error) {
 	var zero R
 
 	resp, err := a.crud.Create(rq)
@@ -109,7 +109,7 @@ func (a *GenericCLIv2[C, U, R]) Create(rq C) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLIv2[C, U, R]) CreateAndPrint(rq C, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) CreateAndPrint(rq C, p printers.Printer) error {
 	resp, err := a.Create(rq)
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (a *GenericCLIv2[C, U, R]) CreateAndPrint(rq C, p printers.Printer) error {
 	return p.Print(resp)
 }
 
-func (a *GenericCLIv2[C, U, R]) Update(rq U) (R, error) {
+func (a *MultiArgGenericCLI[C, U, R]) Update(rq U) (R, error) {
 	var zero R
 
 	resp, err := a.crud.Update(rq)
@@ -129,7 +129,7 @@ func (a *GenericCLIv2[C, U, R]) Update(rq U) (R, error) {
 	return resp, nil
 }
 
-func (a *GenericCLIv2[C, U, R]) UpdateAndPrint(rq U, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) UpdateAndPrint(rq U, p printers.Printer) error {
 	resp, err := a.Update(rq)
 	if err != nil {
 		return err
