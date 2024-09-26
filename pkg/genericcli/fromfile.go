@@ -96,7 +96,7 @@ func (ms BulkResults[R]) ToError(joinErrors bool) error {
 //
 // As this function uses response entities, it is possible that create and update entity representation
 // is inaccurate to a certain degree.
-func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (BulkResults[R], error) {
+func (a *MultiArgGenericCLI[C, U, R]) CreateFromFile(from string) (BulkResults[R], error) {
 	return a.multiOperation(&multiOperationArgs[C, U, R]{
 		from:       from,
 		op:         multiOperationCreate[C, U, R]{},
@@ -104,7 +104,7 @@ func (a *GenericCLI[C, U, R]) CreateFromFile(from string) (BulkResults[R], error
 	})
 }
 
-func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Printer) error {
 	return a.multiOperationPrint(from, p, multiOperationCreate[C, U, R]{})
 }
 
@@ -112,7 +112,7 @@ func (a *GenericCLI[C, U, R]) CreateFromFileAndPrint(from string, p printers.Pri
 //
 // As this function uses response entities, it is possible that create and update entity representation
 // is inaccurate to a certain degree.
-func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (BulkResults[R], error) {
+func (a *MultiArgGenericCLI[C, U, R]) UpdateFromFile(from string) (BulkResults[R], error) {
 	return a.multiOperation(&multiOperationArgs[C, U, R]{
 		from:       from,
 		op:         multiOperationUpdate[C, U, R]{},
@@ -120,7 +120,7 @@ func (a *GenericCLI[C, U, R]) UpdateFromFile(from string) (BulkResults[R], error
 	})
 }
 
-func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Printer) error {
 	return a.multiOperationPrint(from, p, multiOperationUpdate[C, U, R]{})
 }
 
@@ -129,7 +129,7 @@ func (a *GenericCLI[C, U, R]) UpdateFromFileAndPrint(from string, p printers.Pri
 //
 // As this function uses response entities, it is possible that create and update entity representation
 // is inaccurate to a certain degree.
-func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (BulkResults[R], error) {
+func (a *MultiArgGenericCLI[C, U, R]) ApplyFromFile(from string) (BulkResults[R], error) {
 	return a.multiOperation(&multiOperationArgs[C, U, R]{
 		from:       from,
 		op:         multiOperationApply[C, U, R]{},
@@ -137,7 +137,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFile(from string) (BulkResults[R], error)
 	})
 }
 
-func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Printer) error {
 	return a.multiOperationPrint(from, p, multiOperationApply[C, U, R]{})
 }
 
@@ -145,7 +145,7 @@ func (a *GenericCLI[C, U, R]) ApplyFromFileAndPrint(from string, p printers.Prin
 //
 // As this function uses response entities, it is possible that create and update entity representation
 // is inaccurate to a certain degree.
-func (a *GenericCLI[C, U, R]) DeleteFromFile(from string) (BulkResults[R], error) {
+func (a *MultiArgGenericCLI[C, U, R]) DeleteFromFile(from string) (BulkResults[R], error) {
 	return a.multiOperation(&multiOperationArgs[C, U, R]{
 		from:       from,
 		op:         multiOperationDelete[C, U, R]{},
@@ -153,13 +153,13 @@ func (a *GenericCLI[C, U, R]) DeleteFromFile(from string) (BulkResults[R], error
 	})
 }
 
-func (a *GenericCLI[C, U, R]) DeleteFromFileAndPrint(from string, p printers.Printer) error {
+func (a *MultiArgGenericCLI[C, U, R]) DeleteFromFileAndPrint(from string, p printers.Printer) error {
 	return a.multiOperationPrint(from, p, multiOperationDelete[C, U, R]{})
 }
 
 type (
 	multiOperation[C any, U any, R any] interface {
-		do(crud CRUD[C, U, R], doc R) BulkResult[R]
+		do(crud MultiArgCRUD[C, U, R], doc R) BulkResult[R]
 		verb() string
 	}
 	multiOperationCreate[C any, U any, R any] struct{}
@@ -200,7 +200,7 @@ func bulkPrintCallback[R any](p printers.Printer) func(BulkResults[R]) error {
 	}
 }
 
-func (a *GenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOperation[C, U, R]) func(R) error {
+func (a *MultiArgGenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOperation[C, U, R]) func(R) error {
 	return func(r R) error {
 		id, _, _, err := a.Interface().Convert(r)
 		if err != nil {
@@ -213,9 +213,6 @@ func (a *GenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOp
 		}
 
 		colored := PrintColoredYAML(raw)
-		if err != nil {
-			return err
-		}
 
 		c.Message = fmt.Sprintf("%s %q, continue?\n\n%s\n\n", op.verb(), id, colored)
 
@@ -223,7 +220,7 @@ func (a *GenericCLI[C, U, R]) securityPromptCallback(c *PromptConfig, op multiOp
 	}
 }
 
-func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printer, op multiOperation[C, U, R]) error {
+func (a *MultiArgGenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printer, op multiOperation[C, U, R]) error {
 	var (
 		beforeCallbacks []func(R) error
 		afterCallbacks  []func(BulkResult[R]) error
@@ -275,7 +272,7 @@ func (a *GenericCLI[C, U, R]) multiOperationPrint(from string, p printers.Printe
 	return err
 }
 
-func (a *GenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C, U, R]) (results BulkResults[R], err error) {
+func (a *MultiArgGenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C, U, R]) (results BulkResults[R], err error) {
 	var (
 		callbackErr = func(err error) (BulkResults[R], error) {
 			bulkErr := results.ToError(args.joinErrors)
@@ -339,7 +336,7 @@ func (m multiOperationCreate[C, U, R]) verb() string { //nolint:unused
 	return "creating"
 }
 
-func (m multiOperationCreate[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
+func (m multiOperationCreate[C, U, R]) do(crud MultiArgCRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	_, createDoc, _, err := crud.Convert(doc)
 	if err != nil {
 		return BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
@@ -357,7 +354,7 @@ func (m multiOperationUpdate[C, U, R]) verb() string { //nolint:unused
 	return "updating"
 }
 
-func (m multiOperationUpdate[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
+func (m multiOperationUpdate[C, U, R]) do(crud MultiArgCRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	_, _, updateDoc, err := crud.Convert(doc)
 	if err != nil {
 		return BulkResult[R]{Action: BulkErrorOnUpdate, Error: fmt.Errorf("error converting to update entity: %w", err)}
@@ -375,7 +372,7 @@ func (m multiOperationApply[C, U, R]) verb() string { //nolint:unused
 	return "applying"
 }
 
-func (m multiOperationApply[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
+func (m multiOperationApply[C, U, R]) do(crud MultiArgCRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	_, createDoc, _, err := crud.Convert(doc)
 	if err != nil {
 		return BulkResult[R]{Action: BulkErrorOnCreate, Error: fmt.Errorf("error converting to create entity: %w", err)}
@@ -398,13 +395,13 @@ func (m multiOperationDelete[C, U, R]) verb() string { //nolint:unused
 	return "deleting"
 }
 
-func (m multiOperationDelete[C, U, R]) do(crud CRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
+func (m multiOperationDelete[C, U, R]) do(crud MultiArgCRUD[C, U, R], doc R) BulkResult[R] { //nolint:unused
 	id, _, _, err := crud.Convert(doc)
 	if err != nil {
 		return BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error retrieving id from response entity: %w", err)}
 	}
 
-	result, err := crud.Delete(id)
+	result, err := crud.Delete(id...)
 	if err != nil {
 		return BulkResult[R]{Action: BulkErrorOnDelete, Error: fmt.Errorf("error deleting entity: %w", err)}
 	}

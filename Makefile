@@ -37,4 +37,4 @@ testenv:
 
 .PHONY: mocks
 mocks:
-	docker run --user $$(id -u):$$(id -g) --rm -w /work -v ${PWD}:/work vektra/mockery:v2.14.0 --name testClient --dir /work/pkg/genericcli --output /work/pkg/genericcli --filename generic_mock_test.go --testonly --inpackage
+	docker run --user $$(id -u):$$(id -g) --rm -w /work -v ${PWD}:/work vektra/mockery:v2.45.1 --name testClient --dir /work/pkg/genericcli --output /work/pkg/genericcli --filename generic_mock_test.go --testonly --inpackage
