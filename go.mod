@@ -18,6 +18,9 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/icza/dyno v0.0.0-20230330125955-09f820a8d9c0
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
+	github.com/lopezator/migrator v0.3.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/meilisearch/meilisearch-go v0.27.2
 	github.com/metal-stack/security v0.8.1
@@ -40,8 +43,6 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 	tailscale.com v1.54.0
 )
-
-require github.com/containerd/platforms v0.2.1 // indirect
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
@@ -71,6 +72,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/containerd/containerd v1.7.20 // indirect
 	github.com/containerd/log v0.1.0 // indirect
+	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/coreos/go-iptables v0.7.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect

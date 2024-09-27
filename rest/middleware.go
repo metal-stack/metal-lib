@@ -56,7 +56,13 @@ func RequestLoggerFilter(logger *slog.Logger) restful.FilterFunction {
 
 		requestID := req.HeaderParameter("X-Request-Id")
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				_, _ = resp.Write([]byte("unable to generate request uuid " + err.Error()))
+				resp.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			requestID = uuid.String()
 		}
 
 		fields := []any{
