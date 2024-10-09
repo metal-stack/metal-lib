@@ -41,6 +41,18 @@ func TestPromptCustom(t *testing.T) {
 			want: "Do you get it? [Ack/nack] ",
 		},
 		{
+			name:  "custom prompt config, default answer with empty input",
+			input: "\n",
+			c: &PromptConfig{
+				Message:         "Do you get it?",
+				ShowAnswers:     true,
+				AcceptedAnswers: []string{"ack", "a"},
+				DefaultAnswer:   "ack",
+				No:              "nack",
+			},
+			want: "Do you get it? [Ack/nack] ",
+		},
+		{
 			name:  "custom prompt config, default is no answer",
 			input: "ack\n",
 			c: &PromptConfig{
