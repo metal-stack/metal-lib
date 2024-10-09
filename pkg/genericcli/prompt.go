@@ -51,6 +51,9 @@ func Prompt() error {
 
 // PromptCustomAnswers the user to given compare text
 func PromptCustom(c *PromptConfig) error {
+	if c == nil {
+		c = promptDefaultConfig()
+	}
 	if c.Message == "" {
 		c.Message = PromptDefaultQuestion()
 	}
