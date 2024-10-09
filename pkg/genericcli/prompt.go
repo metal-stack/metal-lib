@@ -15,14 +15,16 @@ import (
 type PromptConfig struct {
 	// Message is a message shown by the prompt before the input prompt
 	Message string
-	// Shows accepted answers when set to true
-	ShowAnswers     bool
+	// ShowAnswers shows the accepted answers when set to true
+	ShowAnswers bool
+	// AcceptedAnswers contains the accepted answers to make the prompt succeed
 	AcceptedAnswers []string
-	// DefaultAnswer is an optional prompt configuration that uses this answer in case the input closes without any content
+	// DefaultAnswer is an optional prompt configuration that uses this answer in case the input closes without any content, it needs to be contained in the list of accepted answers or needs to be the "no" answer
 	DefaultAnswer string
-	No            string
-	In            io.Reader
-	Out           io.Writer
+	// No is shown in addition to the accepted answers, can be empty
+	No  string
+	In  io.Reader
+	Out io.Writer
 }
 
 func PromptDefaultQuestion() string {
@@ -33,18 +35,21 @@ func PromptDefaultAnswers() []string {
 	return []string{"y", "yes"}
 }
 
-// Prompt the user to given compare text
-func Prompt() error {
-	return PromptCustom(&PromptConfig{
+func promptDefaultConfig() *PromptConfig {
+	return &PromptConfig{
 		Message:         PromptDefaultQuestion(),
 		No:              "n",
 		AcceptedAnswers: PromptDefaultAnswers(),
 		ShowAnswers:     true,
-	})
+	}
+}
+
+// Prompt the user to given compare text
+func Prompt() error {
+	return PromptCustom(promptDefaultConfig())
 }
 
 // PromptCustomAnswers the user to given compare text
-// "no" can be an empty string, "yes" is the list of accepted yes answers.
 func PromptCustom(c *PromptConfig) error {
 	if c.Message == "" {
 		c.Message = PromptDefaultQuestion()
@@ -66,19 +71,39 @@ func PromptCustom(c *PromptConfig) error {
 			panic("configured prompt answer must not be an empty string")
 		}
 	}
-	if c.DefaultAnswer != "" && !slices.Contains(append(c.AcceptedAnswers, c.No), c.DefaultAnswer) {
-		panic("configured prompt default answer must be contained in accepted answer or no answer")
+
+	defaultAnswerIndex := slices.IndexFunc(c.AcceptedAnswers, func(answer string) bool {
+		return answer == c.DefaultAnswer
+	})
+
+	if c.DefaultAnswer != "" {
+		if defaultAnswerIndex < 0 && c.DefaultAnswer != c.No {
+			panic("configured prompt default answer must be contained in accepted answer or no answer")
+		}
 	}
 
 	if c.ShowAnswers {
-		runes := []rune(pointer.FirstOrZero(c.AcceptedAnswers))
-		runes[0] = unicode.ToUpper(runes[0])
-		answer := string(runes)
+		firstCharToUpper := func(s string) string {
+			runes := []rune(s)
+			runes[0] = unicode.ToUpper(runes[0])
+			return string(runes)
+		}
+
+		no := c.No
+		yes := pointer.FirstOrZero(c.AcceptedAnswers)
+
+		if c.DefaultAnswer != "" {
+			if c.DefaultAnswer == c.No {
+				no = firstCharToUpper(c.No)
+			} else {
+				yes = firstCharToUpper(c.AcceptedAnswers[defaultAnswerIndex])
+			}
+		}
 
 		if c.No == "" {
-			fmt.Fprintf(c.Out, "%s [%s] ", c.Message, answer)
+			fmt.Fprintf(c.Out, "%s [%s] ", c.Message, yes)
 		} else {
-			fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, answer, c.No)
+			fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, yes, no)
 		}
 	} else {
 		fmt.Fprintf(c.Out, "%s ", c.Message)
