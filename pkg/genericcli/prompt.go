@@ -5,18 +5,24 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 )
 
 type PromptConfig struct {
-	Message         string
-	No              string
-	AcceptedAnswers []string
+	// Message is a message shown by the prompt before the input prompt
+	Message string
+	// Shows accepted answers when set to true
 	ShowAnswers     bool
-	In              io.Reader
-	Out             io.Writer
+	AcceptedAnswers []string
+	// DefaultAnswer is an optional prompt configuration that uses this answer in case the input closes without any content
+	DefaultAnswer string
+	No            string
+	In            io.Reader
+	Out           io.Writer
 }
 
 func PromptDefaultQuestion() string {
@@ -41,10 +47,11 @@ func Prompt() error {
 // "no" can be an empty string, "yes" is the list of accepted yes answers.
 func PromptCustom(c *PromptConfig) error {
 	if c.Message == "" {
-		panic("internal error: prompt not properly configured")
+		c.Message = PromptDefaultQuestion()
 	}
 	if len(c.AcceptedAnswers) == 0 {
 		c.AcceptedAnswers = PromptDefaultAnswers()
+		c.DefaultAnswer = pointer.FirstOrZero(c.AcceptedAnswers)
 	}
 	if c.In == nil {
 		c.In = os.Stdin
@@ -53,11 +60,25 @@ func PromptCustom(c *PromptConfig) error {
 		c.Out = os.Stdout
 	}
 
+	// validate, we need to panic here because this is really a configuration error and code execution needs to stop
+	for _, answer := range c.AcceptedAnswers {
+		if len(answer) == 0 {
+			panic("configured prompt answer must not be an empty string")
+		}
+	}
+	if c.DefaultAnswer != "" && !slices.Contains(append(c.AcceptedAnswers, c.No), c.DefaultAnswer) {
+		panic("configured prompt default answer must be contained in accepted answer or no answer")
+	}
+
 	if c.ShowAnswers {
+		runes := []rune(pointer.FirstOrZero(c.AcceptedAnswers))
+		runes[0] = unicode.ToUpper(runes[0])
+		answer := string(runes)
+
 		if c.No == "" {
-			fmt.Fprintf(c.Out, "%s [%s] ", c.Message, pointer.FirstOrZero(c.AcceptedAnswers))
+			fmt.Fprintf(c.Out, "%s [%s] ", c.Message, answer)
 		} else {
-			fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, pointer.FirstOrZero(c.AcceptedAnswers), c.No)
+			fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, answer, c.No)
 		}
 	} else {
 		fmt.Fprintf(c.Out, "%s ", c.Message)
@@ -70,6 +91,11 @@ func PromptCustom(c *PromptConfig) error {
 	}
 
 	text := scanner.Text()
+
+	if text == "" {
+		text = c.DefaultAnswer
+	}
+
 	for _, accepted := range c.AcceptedAnswers {
 		if strings.EqualFold(text, accepted) {
 			return nil
