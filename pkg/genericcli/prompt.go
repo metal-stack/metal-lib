@@ -60,6 +60,7 @@ func PromptCustom(c *PromptConfig) error {
 	if len(c.AcceptedAnswers) == 0 {
 		c.AcceptedAnswers = PromptDefaultAnswers()
 		c.DefaultAnswer = pointer.FirstOrZero(c.AcceptedAnswers)
+		c.No = "n"
 	}
 	if c.In == nil {
 		c.In = os.Stdin
