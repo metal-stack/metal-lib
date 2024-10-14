@@ -87,7 +87,7 @@ func PromptCustom(c *PromptConfig) error {
 	}
 
 	if c.ShowAnswers {
-		firstCharToUpper := func(s string) string {
+		sentenceCase := func(s string) string {
 			runes := []rune(s)
 			runes[0] = unicode.ToUpper(runes[0])
 			return string(runes)
@@ -98,9 +98,9 @@ func PromptCustom(c *PromptConfig) error {
 
 		if c.DefaultAnswer != "" {
 			if c.DefaultAnswer == c.No {
-				no = firstCharToUpper(c.No)
+				no = sentenceCase(c.No)
 			} else {
-				yes = firstCharToUpper(c.AcceptedAnswers[defaultAnswerIndex])
+				yes = sentenceCase(c.AcceptedAnswers[defaultAnswerIndex])
 			}
 		}
 
