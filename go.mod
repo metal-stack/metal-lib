@@ -5,6 +5,7 @@ go 1.23
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/alicebob/miniredis/v2 v2.33.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/emicklei/go-restful-openapi/v2 v2.10.2
@@ -25,11 +26,13 @@ require (
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nsqio/nsq v1.3.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/redis/go-redis/v9 v9.7.0
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.33.0
+	github.com/tj/assert v0.0.3
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.8.0
 	google.golang.org/grpc v1.66.1
@@ -39,6 +42,13 @@ require (
 	k8s.io/apimachinery v0.31.0
 	sigs.k8s.io/yaml v1.4.0
 	tailscale.com v1.72.1
+)
+
+require (
+	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 )
 
 require (
