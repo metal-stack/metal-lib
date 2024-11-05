@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/auth"
 	libjwt "github.com/metal-stack/metal-lib/jwt/jwt"
