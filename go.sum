@@ -289,8 +289,8 @@ github.com/mdlayher/socket v0.5.0 h1:ilICZmJcQz70vrWVes1MFera4jGiWNocSkykwwoy3XI
 github.com/mdlayher/socket v0.5.0/go.mod h1:WkcBFfvyG8QENs5+hfQPl1X6Jpd2yeLIYgrGFmJiJxI=
 github.com/meilisearch/meilisearch-go v0.27.2 h1:3G21dJ5i208shnLPDsIEZ0L0Geg/5oeXABFV7nlK94k=
 github.com/meilisearch/meilisearch-go v0.27.2/go.mod h1:SxuSqDcPBIykjWz1PX+KzsYzArNLSCadQodWs8extS0=
-github.com/metal-stack/security v0.8.4-0.20241105084829-55653c3f1215 h1:2JH9amuAc2Uf2t34768B1T/Fznw5qklvCzrjNtUvebs=
-github.com/metal-stack/security v0.8.4-0.20241105084829-55653c3f1215/go.mod h1:6pQhJ4Kdu4BKnjB4zyzfK9skiHymqfrqt63Y+UmZBKA=
+github.com/metal-stack/security v0.9.0 h1:FYBXJfNJwUw2E0HBa+jay37XF7b6EikEuf4Mw8u04EY=
+github.com/metal-stack/security v0.9.0/go.mod h1:6pQhJ4Kdu4BKnjB4zyzfK9skiHymqfrqt63Y+UmZBKA=
 github.com/metal-stack/v v1.0.3 h1:Sh2oBlnxrCUD+mVpzfC8HiqL045YWkxs0gpTvkjppqs=
 github.com/metal-stack/v v1.0.3/go.mod h1:YTahEu7/ishwpYKnp/VaW/7nf8+PInogkfGwLcGPdXg=
 github.com/miekg/dns v1.1.58 h1:ca2Hdkz+cDg/7eNF6V56jjzuZ4aCAE+DbVkILdQWG/4=
