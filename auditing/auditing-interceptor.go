@@ -292,11 +292,16 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			auditReqContext.RemoteAddr = ar.Peer().Addr
 		}
 
+		// Right here user gets put into the Context, why is he not there?
 		user := security.GetUserFromContext(ctx)
 		if user != nil {
+			i.logger.Info("User in Context Ebu")
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 		}
+
+		//Checking if user is in context
+		i.logger.Info("User in Context", "Ctx Ebu", user)
 		err := i.auditing.Index(auditReqContext)
 		if err != nil {
 			return nil, err
