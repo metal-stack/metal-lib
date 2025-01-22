@@ -296,7 +296,7 @@ func Test_YamlIsEqual(t *testing.T) {
 			x:       []byte(`a: b`),
 			y:       []byte(`a: b: c`),
 			want:    false,
-			wantErr: errors.New("error converting YAML to JSON: yaml: mapping values are not allowed in this context"),
+			wantErr: fmt.Errorf("error converting YAML to JSON: %w", errors.New("yaml: mapping values are not allowed in this context")),
 		},
 	}
 	for _, tt := range tests {
