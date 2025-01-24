@@ -55,6 +55,7 @@ type (
 const (
 	equals sqlCompOp = "equals"
 	like   sqlCompOp = "like"
+	phrase sqlCompOp = "phrase"
 )
 
 func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
@@ -133,6 +134,10 @@ func (a *timescaleAuditing) initialize() error {
 					)`,
 				},
 				{
+					query: `ALTER TABLE traces ADD COLUMN ts tsvector GENERATED ALWAYS AS (to_tsvector('simple', entry)) STORED;
+`,
+				},
+				{
 					query: `SELECT create_hypertable('traces', 'timestamp', chunk_time_interval => $1::interval, if_not_exists => TRUE)`,
 					args:  []any{a.config.ChunkInterval},
 				},
@@ -148,6 +153,9 @@ func (a *timescaleAuditing) initialize() error {
 				},
 				{
 					query: `CREATE INDEX IF NOT EXISTS traces_gin_idx ON traces USING GIN (entry)`,
+				},
+				{
+					query: `CREATE INDEX IF NOT EXISTS ts_idx ON traces USING GIN (ts)`,
 				},
 				{
 					query: `SELECT add_retention_policy('traces', $1::interval)`,
@@ -234,6 +242,9 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 				where = append(where, fmt.Sprintf("entry ->> '%s'=:%s", field, field))
 			case like:
 				where = append(where, fmt.Sprintf("entry ->> '%s' like '%%' || :%s || '%%'", field, field))
+			case phrase:
+				// the additional "like" match allows matching partial words, too
+				where = append(where, fmt.Sprintf("ts @@ websearch_to_tsquery('simple', '$$' || :%s || '$$') or entry ->> '%s' like '%%' || :%s || '%%'", field, field, field))
 			default:
 				return fmt.Errorf("comp op not known")
 			}
@@ -242,7 +253,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 		}
 	)
 
-	if err := addFilter("body", filter.Body, like); err != nil {
+	if err := addFilter("body", filter.Body, phrase); err != nil {
 		return nil, err
 	}
 	if err := addFilter("component", filter.Component, equals); err != nil {
@@ -324,7 +335,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 		var entry Entry
 		err = json.Unmarshal(e.Entry, &entry)
 		if err != nil {
-			return nil, fmt.Errorf("error unmarshaling entry: %w", err)
+			return nil, fmt.Errorf("error unmarshalling entry: %w", err)
 		}
 
 		entries = append(entries, entry)

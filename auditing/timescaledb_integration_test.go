@@ -202,6 +202,50 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 			},
 		},
 		{
+			name: "filter on body missing one word",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: "This is body",
+				})
+				require.NoError(t, err)
+				assert.Len(t, entries, len(es))
+
+				entries, err = a.Search(ctx, EntryFilter{
+					Body: `"This is body"`,
+				})
+				require.NoError(t, err)
+				assert.Empty(t, entries)
+			},
+		},
+		{
+			name: "filter on body capital ignored",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: "this is the BODY",
+				})
+				require.NoError(t, err)
+				assert.Len(t, entries, len(es))
+			},
+		},
+		{
 			name: "filter on body",
 			t: func(t *testing.T, a Auditing) {
 				es := testEntries()
@@ -225,7 +269,30 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 			},
 		},
 		{
-			name: "filter on everything",
+			name: "filter on body partial words",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: fmt.Sprintf("002"),
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], es[2]); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
+		{
+			name: "filter on every filter field",
 			t: func(t *testing.T, a Auditing) {
 				es := testEntries()
 				for _, e := range es {
