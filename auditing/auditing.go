@@ -58,8 +58,9 @@ type Entry struct {
 	Type      EntryType
 	Timestamp time.Time
 
-	User   string
-	Tenant string
+	User    string
+	Tenant  string
+	Project string
 
 	// For `EntryDetailHTTP` the HTTP method get, post, put, delete, ...
 	// For `EntryDetailGRPC` unary, stream
@@ -109,8 +110,9 @@ type EntryFilter struct {
 	RequestId string    `json:"rqid" optional:"true"`      // starts with
 	Type      EntryType `json:"type" optional:"true"`      // exact match
 
-	User   string `json:"user" optional:"true"`   // exact match
-	Tenant string `json:"tenant" optional:"true"` // exact match
+	User    string `json:"user" optional:"true"`    // exact match
+	Tenant  string `json:"tenant" optional:"true"`  // exact match
+	Project string `json:"project" optional:"true"` // exact match
 
 	Detail EntryDetail `json:"detail" optional:"true"` // exact match
 	Phase  EntryPhase  `json:"phase" optional:"true"`  // exact match
