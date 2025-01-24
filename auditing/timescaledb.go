@@ -34,6 +34,10 @@ type (
 		// ChunkInterval defines after which period audit traces will be stored in a new chunk table, only settable on initial database usage.
 		// If this needs to be changed over time, you need to do this manually. Defaults to '1 days'.
 		ChunkInterval string
+
+		MaxIdleConns    *int
+		ConnMaxLifetime *time.Duration
+		MaxOpenConns    *int
 	}
 
 	timescaleAuditing struct {
@@ -101,6 +105,24 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 		config:    &tc,
 	}
 
+	maxIdleConns := 5
+	if tc.MaxIdleConns != nil {
+		maxIdleConns = *tc.MaxIdleConns
+	}
+	a.db.SetMaxIdleConns(maxIdleConns)
+
+	connMaxLifetime := 2 * time.Minute
+	if tc.ConnMaxLifetime != nil {
+		connMaxLifetime = *tc.ConnMaxLifetime
+	}
+	a.db.SetConnMaxLifetime(connMaxLifetime)
+
+	maxOpenConns := 95
+	if tc.MaxOpenConns != nil {
+		maxOpenConns = *tc.MaxOpenConns
+	}
+	a.db.SetMaxOpenConns(maxOpenConns)
+
 	err = a.initialize()
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize timescaledb backend: %w", err)
@@ -130,12 +152,9 @@ func (a *timescaleAuditing) initialize() error {
 				{
 					query: `CREATE TABLE IF NOT EXISTS traces (
 						timestamp timestamp NOT NULL,
-						entry jsonb NOT NULL
+						entry jsonb NOT NULL,
+						ts tsvector GENERATED ALWAYS AS (to_tsvector('simple', entry)) STORED
 					)`,
-				},
-				{
-					query: `ALTER TABLE traces ADD COLUMN ts tsvector GENERATED ALWAYS AS (to_tsvector('simple', entry)) STORED;
-`,
 				},
 				{
 					query: `SELECT create_hypertable('traces', 'timestamp', chunk_time_interval => $1::interval, if_not_exists => TRUE)`,
@@ -170,10 +189,6 @@ func (a *timescaleAuditing) initialize() error {
 			return nil
 		},
 	}
-
-	a.db.SetMaxIdleConns(5)
-	a.db.SetConnMaxLifetime(2 * time.Minute)
-	a.db.SetMaxOpenConns(95)
 
 	m, err := migrator.New(
 		migrator.WithLogger(migrator.LoggerFunc(func(msg string, args ...interface{}) {
