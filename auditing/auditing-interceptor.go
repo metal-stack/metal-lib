@@ -57,6 +57,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 			auditReqContext.Project = user.Project
+			logger.Debug("user found in context with project", "project", user.Project)
 		}
 
 		err = a.Index(auditReqContext)
