@@ -117,7 +117,7 @@ func (a *meiliAuditing) Index(entry Entry) error {
 		a.log.Error("index", "error", err)
 		return err
 	}
-	a.log.Debug("index", "task", task.TaskUID, "index", index.UID)
+	a.log.Debug("index", "task", task.TaskUID, "index", index.UID, "entry", entry)
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 		predicates = append(predicates, fmt.Sprintf("tenant = %q", filter.Tenant))
 	}
 	if filter.Project != "" {
-		predicates = append(predicates, fmt.Sprintf("project= %q", filter.Project))
+		predicates = append(predicates, fmt.Sprintf("project = %q", filter.Project))
 	}
 	if filter.RequestId != "" {
 		predicates = append(predicates, fmt.Sprintf("rqid = %q", filter.RequestId))
