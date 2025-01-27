@@ -59,7 +59,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			auditReqContext.Project = user.Project
 		}
 
-		logger.Debug("auditing unary request", "request", auditReqContext)
+		logger.Debug("auditing request", "request", auditReqContext)
 		err = a.Index(auditReqContext)
 		if err != nil {
 			return nil, err
@@ -81,6 +81,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			return nil, err
 		}
 
+		logger.Debug("auditing request", "request", auditReqContext)
 		err = a.Index(auditReqContext)
 		return resp, err
 	}, nil
@@ -122,6 +123,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 			auditReqContext.Project = user.Project
 		}
 
+		logger.Debug("auditing request", "request", auditReqContext)
 		err := a.Index(auditReqContext)
 		if err != nil {
 			return err
@@ -141,6 +143,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		}
 
 		auditReqContext.Phase = EntryPhaseClosed
+		logger.Debug("auditing request", "request", auditReqContext)
 		err = a.Index(auditReqContext)
 
 		return err
@@ -183,6 +186,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			auditReqContext.Project = user.Project
 		}
 
+		a.logger.Debug("auditing request", "request", auditReqContext)
 		err := a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
@@ -194,6 +198,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		auditReqContext.Phase = EntryPhaseClosed
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
+		a.logger.Debug("auditing request", "request", auditReqContext)
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
@@ -239,6 +244,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			auditReqContext.Project = user.Project
 		}
 
+		a.logger.Debug("auditing request", "request", auditReqContext)
 		err := a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
@@ -258,6 +264,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		}
 
 		auditReqContext.Phase = EntryPhaseClosed
+		a.logger.Debug("auditing request", "request", auditReqContext)
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
@@ -303,7 +310,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			auditReqContext.Tenant = user.Tenant
 			auditReqContext.Project = user.Project
 		}
-		i.logger.Debug("auditing unary request", "request", auditReqContext)
+		i.logger.Debug("auditing request", "request", auditReqContext)
 		err := i.auditing.Index(auditReqContext)
 		if err != nil {
 			return nil, err
@@ -326,6 +333,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			return nil, err
 		}
 
+		i.logger.Debug("auditing request", "request", auditReqContext)
 		err = i.auditing.Index(auditReqContext)
 		return resp, err
 	}
@@ -418,6 +426,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 			}
 		}
 
+		logger.Debug("auditing request", "request", auditReqContext)
 		err := a.Index(auditReqContext)
 		if err != nil {
 			logger.Error("unable to index", "error", err)
@@ -443,6 +452,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 			auditReqContext.Error = err
 		}
 
+		logger.Debug("auditing request", "request", auditReqContext)
 		err = a.Index(auditReqContext)
 		if err != nil {
 			logger.Error("unable to index", "error", err)
