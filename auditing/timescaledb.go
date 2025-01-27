@@ -277,19 +277,19 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	if err := addFilter("detail", filter.Detail, equals); err != nil {
 		return nil, err
 	}
-	if err := addFilter("error", filter.Error, equals); err != nil {
+	if err := addFilter("error", filter.Error, phrase); err != nil {
 		return nil, err
 	}
-	if err := addFilter("forwardedfor", filter.ForwardedFor, equals); err != nil {
+	if err := addFilter("forwardedfor", filter.ForwardedFor, like); err != nil {
 		return nil, err
 	}
-	if err := addFilter("path", filter.Path, equals); err != nil {
+	if err := addFilter("path", filter.Path, like); err != nil {
 		return nil, err
 	}
 	if err := addFilter("phase", filter.Phase, equals); err != nil {
 		return nil, err
 	}
-	if err := addFilter("remoteaddr", filter.RemoteAddr, equals); err != nil {
+	if err := addFilter("remoteaddr", filter.RemoteAddr, like); err != nil {
 		return nil, err
 	}
 	if err := addFilter("rqid", filter.RequestId, equals); err != nil {
