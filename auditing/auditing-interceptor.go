@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/rest"
@@ -58,6 +59,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			auditReqContext.Tenant = user.Tenant
 			auditReqContext.Project = user.Project
 		}
+		spew.Dump(auditReqContext)
 
 		err = a.Index(auditReqContext)
 		if err != nil {
