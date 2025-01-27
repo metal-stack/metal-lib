@@ -57,7 +57,6 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
 			auditReqContext.Project = user.Project
-			logger.Debug("user found in context with project", "project", user.Project)
 		}
 
 		err = a.Index(auditReqContext)
@@ -399,6 +398,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 		if user != nil {
 			auditReqContext.User = user.EMail
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		if r.Method != http.MethodGet && r.Body != nil {
