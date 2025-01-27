@@ -117,7 +117,7 @@ func (a *meiliAuditing) Index(entry Entry) error {
 		a.log.Error("index", "error", err)
 		return err
 	}
-	a.log.Debug("index", "task", task.TaskUID, "index", index.UID, "entry", entry)
+	a.log.Debug("index", "task", task.TaskUID, "index", index.UID)
 	return nil
 }
 
