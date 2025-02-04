@@ -135,6 +135,9 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	if filter.Tenant != "" {
 		predicates = append(predicates, fmt.Sprintf("tenant = %q", filter.Tenant))
 	}
+	if filter.Project != "" {
+		predicates = append(predicates, fmt.Sprintf("project = %q", filter.Project))
+	}
 	if filter.RequestId != "" {
 		predicates = append(predicates, fmt.Sprintf("rqid = %q", filter.RequestId))
 	}
@@ -251,6 +254,9 @@ func (a *meiliAuditing) encodeEntry(entry Entry) map[string]any {
 	if entry.Tenant != "" {
 		doc["tenant"] = entry.Tenant
 	}
+	if entry.Project != "" {
+		doc["project"] = entry.Project
+	}
 	if entry.RequestId != "" {
 		doc["rqid"] = entry.RequestId
 	}
@@ -322,6 +328,9 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 	}
 	if tenant, ok := doc["tenant"].(string); ok {
 		entry.Tenant = tenant
+	}
+	if project, ok := doc["project"].(string); ok {
+		entry.Project = project
 	}
 	if rqid, ok := doc["rqid"].(string); ok {
 		entry.RequestId = rqid
@@ -439,6 +448,7 @@ func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
 			"timestamp",
 			"user",
 			"tenant",
+			"project",
 			"detail",
 			"phase",
 			"path",
