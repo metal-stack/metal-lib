@@ -77,7 +77,7 @@ func TestDelayErrors(t *testing.T) {
 			},
 		},
 		{
-			name: "ignores first error after intial success",
+			name: "ignores first error after initial success",
 			hc: DelayErrors(log, 1, &recordedCheck{
 				name: "record",
 				states: []currentState{

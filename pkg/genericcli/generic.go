@@ -14,7 +14,7 @@ import (
 // U is the update request for an entity.
 // R is the response object of an entity.
 type GenericCLI[C any, U any, R any] struct {
-	// internally we map everyhing to multi arg cli to reduce code redundance
+	// internally we map everything to multi arg cli to reduce code redundance
 	multiCLI *MultiArgGenericCLI[C, U, R]
 }
 
