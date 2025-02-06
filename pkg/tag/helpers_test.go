@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTagMap_Contains(t *testing.T) {
@@ -173,6 +174,31 @@ func TestTagMap_Get(t *testing.T) {
 			if diff := cmp.Diff(gotValue, tt.wantValue); diff != "" {
 				t.Errorf("TagMap.Get() diff = %s", diff)
 			}
+		})
+	}
+}
+
+func TestTagMap_Slice(t *testing.T) {
+	tests := []struct {
+		name string
+		tm   TagMap
+		want []string
+	}{
+		{
+			name: "no duplicates",
+			tm:   NewTagMap([]string{"color=red", "size=small"}),
+			want: []string{"color=red", "size=small"},
+		},
+		{
+			name: "with duplicates",
+			tm:   NewTagMap([]string{"color=red", "color=red", "size=small"}),
+			want: []string{"color=red", "size=small"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.tm.Slice()
+			require.ElementsMatch(t, tt.want, got)
 		})
 	}
 }
