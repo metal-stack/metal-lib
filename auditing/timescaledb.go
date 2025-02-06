@@ -301,6 +301,9 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	if err := addFilter("tenant", filter.Tenant, equals); err != nil {
 		return nil, err
 	}
+	if err := addFilter("project", filter.Project, equals); err != nil {
+		return nil, err
+	}
 	if err := addFilter("type", filter.Type, equals); err != nil {
 		return nil, err
 	}

@@ -62,6 +62,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err = a.Index(auditReqContext)
@@ -128,6 +129,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err := a.Index(auditReqContext)
@@ -193,6 +195,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err := a.auditing.Index(auditReqContext)
@@ -253,6 +256,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err := a.auditing.Index(auditReqContext)
@@ -322,6 +326,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 		err := i.auditing.Index(auditReqContext)
 		if err != nil {
@@ -427,6 +432,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 		if user != nil {
 			auditReqContext.User = user.EMail
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		if r.Method != http.MethodGet && r.Body != nil {

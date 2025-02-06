@@ -22,6 +22,15 @@ func NewTagMap(labels []string) TagMap {
 	return result
 }
 
+// Slice returns the tagMap as a slice, duplicates removed
+func (tm TagMap) Slice() []string {
+	var result []string
+	for k, v := range tm {
+		result = append(result, fmt.Sprintf("%s=%s", k, v))
+	}
+	return result
+}
+
 // Contains returns true when the given key is contained in the label map.
 func (tm TagMap) Contains(key, value string) bool {
 	v, ok := tm[key]
