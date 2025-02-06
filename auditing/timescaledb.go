@@ -17,6 +17,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const timescaleDbIndexTimeout = 2 * time.Second
+
 type (
 	TimescaleDbConfig struct {
 		Host     string
@@ -230,7 +232,7 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 		Entry:     e,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timescaleDbIndexTimeout)
 	defer cancel()
 
 	_, err = a.db.NamedExecContext(ctx, q, row)
