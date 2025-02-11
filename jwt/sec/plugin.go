@@ -37,7 +37,7 @@ func genericOidcExtractUser(ic *security.IssuerConfig, claims *security.GenericO
 	if ic.Annotations != nil {
 		directory = ic.Annotations[OidcDirectory]
 	}
-	grps, err := fn(ic.Tenant, directory, claims.Roles)
+	grps, err := fn(ic.Tenant, directory, claims.Memberships())
 	if err != nil {
 		return nil, err
 	}
