@@ -18,6 +18,9 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/icza/dyno v0.0.0-20230330125955-09f820a8d9c0
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
+	github.com/lopezator/migrator v0.3.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/meilisearch/meilisearch-go v0.27.2
 	github.com/metal-stack/security v0.9.3
