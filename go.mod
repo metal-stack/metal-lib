@@ -23,7 +23,7 @@ require (
 	github.com/lopezator/migrator v0.3.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/meilisearch/meilisearch-go v0.27.2
-	github.com/metal-stack/security v0.9.2
+	github.com/metal-stack/security v0.9.3
 	github.com/metal-stack/v v1.0.3
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nsqio/nsq v1.3.0
