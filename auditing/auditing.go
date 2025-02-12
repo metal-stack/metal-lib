@@ -11,6 +11,10 @@ import (
 type Config struct {
 	Component string
 	Log       *slog.Logger
+
+	Async        bool
+	AsyncRetry   int
+	AsyncTimeout time.Duration
 }
 
 type Interval string

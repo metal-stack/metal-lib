@@ -74,6 +74,10 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 		c.Component = component
 	}
 
+	if c.Async {
+		return nil, fmt.Errorf("timescaledb backend does not support async indexing")
+	}
+
 	if tc.Port == "" {
 		tc.Port = "5432"
 	}
