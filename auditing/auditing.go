@@ -17,6 +17,8 @@ type Config struct {
 	Async bool
 	// AsyncRetry defines the amount of attempts to retry sending an audit trace to a backend in case it failed.
 	AsyncRetry int
+	// AsyncBackoff defines the backoff after a failed attempt to index an audit trace to a backend.
+	AsyncBackoff time.Duration
 	// AsyncTimeout sets a timeout for indexing a trace for the backend.
 	AsyncTimeout time.Duration
 }

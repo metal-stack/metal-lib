@@ -28,6 +28,7 @@ type (
 
 		async        bool
 		asyncRetry   int
+		asyncBackoff time.Duration
 		asyncTimeout time.Duration
 
 		client *http.Client
@@ -69,6 +70,7 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 	var (
 		endpoint     = "http://localhost:8088"
 		sourceType   = "_json"
+		asyncBackoff = 200 * time.Millisecond
 		asyncTimeout = 5 * time.Second
 	)
 
@@ -92,11 +94,16 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 		asyncTimeout = c.AsyncTimeout
 	}
 
+	if c.Async && c.AsyncBackoff > 0 {
+		asyncBackoff = c.AsyncBackoff
+	}
+
 	a := &splunkAuditing{
 		component:    c.Component,
 		log:          c.Log.WithGroup("auditing"),
 		async:        c.Async,
 		asyncRetry:   c.AsyncRetry,
+		asyncBackoff: asyncBackoff,
 		asyncTimeout: asyncTimeout,
 		client:       &http.Client{Transport: &http.Transport{TLSClientConfig: sc.TlsConfig}},
 		endpoint:     endpoint,
@@ -180,7 +187,7 @@ func (a *splunkAuditing) Index(entry Entry) error {
 			cancel()
 			if err != nil {
 				a.log.Error("error indexing audit entry in splunk, retrying in 200ms", "error", err)
-				time.Sleep(200 * time.Millisecond)
+				time.Sleep(a.asyncBackoff)
 				continue
 			}
 			defer resp.Body.Close()
