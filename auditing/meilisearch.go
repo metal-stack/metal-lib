@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -16,6 +14,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/meilisearch/meilisearch-go"
 )
+
+type MeilisearchConfig struct {
+	URL    string
+	APIKey string
+
+	IndexPrefix      string
+	RotationInterval Interval
+	Keep             int64
+}
 
 type meiliAuditing struct {
 	component        string
@@ -39,32 +46,33 @@ const (
 	meiliIndexCreationWaitInterval = 100 * time.Millisecond
 )
 
-func New(c Config) (Auditing, error) {
+func NewMeilisearch(c Config, mc MeilisearchConfig) (Auditing, error) {
 	if c.Component == "" {
-		ex, err := os.Executable()
+		component, err := defaultComponent()
 		if err != nil {
 			return nil, err
 		}
-		c.Component = filepath.Base(ex)
+
+		c.Component = component
 	}
 
 	client := meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   c.URL,
-		APIKey: c.APIKey,
+		Host:   mc.URL,
+		APIKey: mc.APIKey,
 	})
 	v, err := client.GetVersion()
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to meilisearch at:%s %w", c.URL, err)
+		return nil, fmt.Errorf("unable to connect to meilisearch at:%s %w", mc.URL, err)
 	}
-	c.Log.Info("meilisearch", "connected to", v, "index rotated", c.RotationInterval, "index keep", c.Keep)
+	c.Log.Info("meilisearch", "connected to", v, "index rotated", mc.RotationInterval, "index keep", mc.Keep)
 
 	a := &meiliAuditing{
 		component:        c.Component,
 		client:           client,
 		log:              c.Log.WithGroup("auditing"),
-		indexPrefix:      c.IndexPrefix,
-		rotationInterval: c.RotationInterval,
-		keep:             c.Keep,
+		indexPrefix:      mc.IndexPrefix,
+		rotationInterval: mc.RotationInterval,
+		keep:             mc.Keep,
 	}
 	return a, nil
 }
@@ -121,7 +129,7 @@ func (a *meiliAuditing) Index(entry Entry) error {
 	return nil
 }
 
-func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
+func (a *meiliAuditing) Search(_ context.Context, filter EntryFilter) ([]Entry, error) {
 	predicates := make([]string, 0)
 	if filter.Component != "" {
 		predicates = append(predicates, fmt.Sprintf("component = %q", filter.Component))
@@ -134,6 +142,9 @@ func (a *meiliAuditing) Search(filter EntryFilter) ([]Entry, error) {
 	}
 	if filter.Tenant != "" {
 		predicates = append(predicates, fmt.Sprintf("tenant = %q", filter.Tenant))
+	}
+	if filter.Project != "" {
+		predicates = append(predicates, fmt.Sprintf("project = %q", filter.Project))
 	}
 	if filter.RequestId != "" {
 		predicates = append(predicates, fmt.Sprintf("rqid = %q", filter.RequestId))
@@ -251,6 +262,9 @@ func (a *meiliAuditing) encodeEntry(entry Entry) map[string]any {
 	if entry.Tenant != "" {
 		doc["tenant"] = entry.Tenant
 	}
+	if entry.Project != "" {
+		doc["project"] = entry.Project
+	}
 	if entry.RequestId != "" {
 		doc["rqid"] = entry.RequestId
 	}
@@ -322,6 +336,9 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 	}
 	if tenant, ok := doc["tenant"].(string); ok {
 		entry.Tenant = tenant
+	}
+	if project, ok := doc["project"].(string); ok {
+		entry.Project = project
 	}
 	if rqid, ok := doc["rqid"].(string); ok {
 		entry.RequestId = rqid
@@ -439,6 +456,7 @@ func (a *meiliAuditing) migrateIndexSettings(index *meilisearch.Index) error {
 			"timestamp",
 			"user",
 			"tenant",
+			"project",
 			"detail",
 			"phase",
 			"path",

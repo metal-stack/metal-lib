@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/emicklei/go-restful/v3"
@@ -39,12 +40,17 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return nil, err
+			}
+			requestID = uuid.String()
 		}
 
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp: time.Now(),
 			RequestId: requestID,
 			Type:      EntryTypeGRPC,
 			Detail:    EntryDetailGRPCUnary,
@@ -56,6 +62,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err = a.Index(auditReqContext)
@@ -97,7 +104,11 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return err
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ss.Context(), rest.RequestIDKey, requestID)
 		childSS := grpcServerStreamWithContext{
@@ -106,6 +117,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		}
 
 		auditReqContext := Entry{
+			Timestamp: time.Now(),
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
 			Path:      info.FullMethod,
@@ -117,6 +129,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err := a.Index(auditReqContext)
@@ -161,11 +174,16 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				a.logger.Error("unable to generate uuid", "error", err)
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp: time.Now(),
 			RequestId: requestID,
 			Detail:    EntryDetailGRPCStream,
 			Path:      s.Procedure,
@@ -177,6 +195,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err := a.auditing.Index(auditReqContext)
@@ -210,11 +229,16 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return err
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp:    time.Now(),
 			RequestId:    requestID,
 			Detail:       EntryDetailGRPCStream,
 			Path:         shc.Spec().Procedure,
@@ -232,6 +256,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		err := a.auditing.Index(auditReqContext)
@@ -273,11 +298,16 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				return nil, err
+			}
+			requestID = uuid.String()
 		}
 		childCtx := context.WithValue(ctx, rest.RequestIDKey, requestID)
 
 		auditReqContext := Entry{
+			Timestamp:    time.Now(),
 			RequestId:    requestID,
 			Detail:       EntryDetailGRPCUnary,
 			Path:         ar.Spec().Procedure,
@@ -296,6 +326,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 		err := i.auditing.Index(auditReqContext)
 		if err != nil {
@@ -406,9 +437,17 @@ func HttpFilter(a Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful
 			requestID = str
 		}
 		if requestID == "" {
-			requestID = uuid.NewString()
+			uuid, err := uuid.NewV7()
+			if err != nil {
+				logger.Error("unable to generate uuid", "error", err)
+				_, _ = response.Write([]byte("unable to generate request uuid " + err.Error()))
+				response.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			requestID = uuid.String()
 		}
 		auditReqContext := Entry{
+			Timestamp:    time.Now(),
 			RequestId:    requestID,
 			Type:         EntryTypeHTTP,
 			Detail:       EntryDetail(r.Method),
@@ -421,6 +460,7 @@ func HttpFilter(a Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful
 		if user != nil {
 			auditReqContext.User = user.EMail
 			auditReqContext.Tenant = user.Tenant
+			auditReqContext.Project = user.Project
 		}
 
 		if r.Method != http.MethodGet && r.Body != nil {

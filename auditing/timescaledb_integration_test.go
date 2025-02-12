@@ -19,67 +19,18 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-type connectionDetails struct {
-	Endpoint string
-	Password string
-}
-
-func StartMeilisearch(t testing.TB) (container testcontainers.Container, c *connectionDetails, err error) {
-	meilisearchMasterKey := "meili"
-
+func TestAuditing_TimescaleDB(t *testing.T) {
 	ctx := context.Background()
-	var log testcontainers.Logging
-	if t != nil {
-		log = testcontainers.TestLogger(t)
-	}
-
-	meiliContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image:        "getmeili/meilisearch:v1.7.1",
-			ExposedPorts: []string{"7700/tcp"},
-			Env: map[string]string{
-				"MEILI_MASTER_KEY":   meilisearchMasterKey,
-				"MEILI_NO_ANALYTICS": "true",
-			},
-			WaitingFor: wait.ForAll(
-				wait.ForListeningPort("7700/tcp"),
-			),
-		},
-		Started: true,
-		Logger:  log,
+	container, auditing := StartTimescaleDB(t, Config{
+		Log: slog.Default(),
 	})
-	if err != nil {
-		panic(err.Error())
-	}
-
-	host, err := meiliContainer.Host(ctx)
-	if err != nil {
-		return meiliContainer, nil, err
-	}
-	port, err := meiliContainer.MappedPort(ctx, "7700")
-	if err != nil {
-		return meiliContainer, nil, err
-	}
-
-	conn := &connectionDetails{
-		Endpoint: "http://" + host + ":" + port.Port(),
-		Password: meilisearchMasterKey,
-	}
-
-	return meiliContainer, conn, err
-}
-
-func TestAuditing_Meilisearch(t *testing.T) {
-	ctx := context.Background()
-	container, c, err := StartMeilisearch(t)
-	require.NoError(t, err)
 	defer func() {
 		err := container.Terminate(context.Background())
 		require.NoError(t, err)
 	}()
 
-	now := time.Now()
-	// meilisearch does not store the nano seconds, so we neglect them for comparison:
+	now := time.Now().UTC()
+	// postgres does not store the nano seconds, so we neglect them for comparison:
 	timeComparer := cmp.Comparer(func(x, y time.Time) bool {
 		return x.Unix() == y.Unix()
 	})
@@ -93,6 +44,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 				Timestamp:    now,
 				User:         "admin",
 				Tenant:       "global",
+				Project:      "project",
 				Detail:       "POST",
 				Phase:        EntryPhaseResponse,
 				Path:         "/v1/test/0",
@@ -109,6 +61,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 				Timestamp:    now.Add(1 * time.Second),
 				User:         "admin",
 				Tenant:       "global",
+				Project:      "project",
 				Detail:       "POST",
 				Phase:        EntryPhaseResponse,
 				Path:         "/v1/test/1",
@@ -125,6 +78,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 				Timestamp:    now.Add(2 * time.Second),
 				User:         "admin",
 				Tenant:       "global",
+				Project:      "project",
 				Detail:       "POST",
 				Phase:        EntryPhaseRequest,
 				Path:         "/v1/test/2",
@@ -152,8 +106,9 @@ func TestAuditing_Meilisearch(t *testing.T) {
 		{
 			name: "insert one entry",
 			t: func(t *testing.T, a Auditing) {
-				err = a.Index(Entry{
-					Body: "test",
+				err := a.Index(Entry{
+					Timestamp: now,
+					Body:      "test",
 				})
 				require.NoError(t, err)
 				err = a.Flush()
@@ -171,11 +126,11 @@ func TestAuditing_Meilisearch(t *testing.T) {
 			t: func(t *testing.T, a Auditing) {
 				es := testEntries()
 				for _, e := range es {
-					err = a.Index(e)
+					err := a.Index(e)
 					require.NoError(t, err)
 				}
 
-				err = a.Flush()
+				err := a.Flush()
 				require.NoError(t, err)
 
 				entries, err := a.Search(ctx, EntryFilter{})
@@ -191,6 +146,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 				entries, err = a.Search(ctx, EntryFilter{
 					Body: "This",
 				})
+
 				require.NoError(t, err)
 				assert.Len(t, entries, len(es))
 			},
@@ -200,11 +156,11 @@ func TestAuditing_Meilisearch(t *testing.T) {
 			t: func(t *testing.T, a Auditing) {
 				es := testEntries()
 				for _, e := range es {
-					err = a.Index(e)
+					err := a.Index(e)
 					require.NoError(t, err)
 				}
 
-				err = a.Flush()
+				err := a.Flush()
 				require.NoError(t, err)
 
 				entries, err := a.Search(ctx, EntryFilter{
@@ -224,7 +180,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 				es := testEntries()
 				var wantEntries []Entry
 				for _, e := range es {
-					err = a.Index(e)
+					err := a.Index(e)
 					require.NoError(t, err)
 
 					if e.Phase == EntryPhaseResponse {
@@ -232,7 +188,7 @@ func TestAuditing_Meilisearch(t *testing.T) {
 					}
 				}
 
-				err = a.Flush()
+				err := a.Flush()
 				require.NoError(t, err)
 
 				entries, err := a.Search(ctx, EntryFilter{
@@ -249,28 +205,149 @@ func TestAuditing_Meilisearch(t *testing.T) {
 			},
 		},
 		{
+			name: "filter on body missing one word",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: "This is body",
+				})
+				require.NoError(t, err)
+				assert.Len(t, entries, len(es))
+
+				entries, err = a.Search(ctx, EntryFilter{
+					Body: `"This is body"`,
+				})
+				require.NoError(t, err)
+				assert.Empty(t, entries)
+			},
+		},
+		{
+			name: "filter on body capital ignored",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: "this is the BODY",
+				})
+				require.NoError(t, err)
+				assert.Len(t, entries, len(es))
+			},
+		},
+		{
 			name: "filter on body",
 			t: func(t *testing.T, a Auditing) {
 				es := testEntries()
 				for _, e := range es {
-					err = a.Index(e)
+					err := a.Index(e)
 					require.NoError(t, err)
 				}
 
-				err = a.Flush()
+				err := a.Flush()
 				require.NoError(t, err)
 
 				entries, err := a.Search(ctx, EntryFilter{
-					// we want to run a phrase search as otherwise we return the other entries as well
-					// https://www.meilisearch.com/docs/reference/api/search#phrase-search-2
-					Body: fmt.Sprintf("%q", es[0].Body.(string)),
+					Body: fmt.Sprintf("%s", es[0].Body.(string)),
 				})
 				require.NoError(t, err)
 				require.Len(t, entries, 1)
 
-				if diff := cmp.Diff(entries[0], es[0], cmpopts.IgnoreFields(Entry{}, "Id"), timeComparer); diff != "" {
+				if diff := cmp.Diff(entries[0], es[0]); diff != "" {
 					t.Errorf("diff (+got -want):\n %s", diff)
 				}
+			},
+		},
+		{
+			name: "filter on body partial words",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Body: fmt.Sprintf("002"),
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], es[2]); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
+		{
+			name: "filter on every filter field",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					Limit:        1,
+					From:         now.Add(-1 * time.Minute),
+					To:           now.Add(1 * time.Minute),
+					Component:    "auditing.test",
+					RequestId:    "00000000-0000-0000-0000-000000000000",
+					Type:         "http",
+					User:         "admin",
+					Tenant:       "global",
+					Project:      "project",
+					Detail:       "POST",
+					Phase:        "response",
+					Path:         "/v1/test/0",
+					ForwardedFor: "127.0.0.1",
+					RemoteAddr:   "10.0.0.0",
+					Body:         fmt.Sprintf("%s", es[0].Body.(string)),
+					StatusCode:   200,
+					Error:        "",
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], es[0]); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
+		{
+			name: "filter on nothing",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{})
+				require.NoError(t, err)
+				require.Len(t, entries, len(testEntries()))
 			},
 		},
 	}
@@ -278,30 +355,50 @@ func TestAuditing_Meilisearch(t *testing.T) {
 		tt := tt
 
 		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
-			a, err := NewMeilisearch(Config{
-				Log: slog.Default(),
-			}, MeilisearchConfig{
-				URL:         c.Endpoint,
-				APIKey:      c.Password,
-				IndexPrefix: fmt.Sprintf("test-%d", i),
-			})
-			require.NoError(t, err)
+			defer func() {
+				a := auditing.(*timescaleAuditing)
+				a.db.MustExec("DELETE FROM traces;")
+			}()
 
-			tt.t(t, a)
-
-			// cleanup
-
-			m := a.(*meiliAuditing)
-			indexes, err := m.getAllIndexes()
-			require.NoError(t, err)
-
-			for _, index := range indexes.Results {
-				_, err := m.client.DeleteIndex(index.UID)
-				require.NoError(t, err)
-			}
-
-			err = a.Flush()
-			require.NoError(t, err)
+			tt.t(t, auditing)
 		})
 	}
+}
+
+func StartTimescaleDB(t testing.TB, config Config) (testcontainers.Container, Auditing) {
+	req := testcontainers.ContainerRequest{
+		Image:        "timescale/timescaledb:2.16.1-pg16",
+		ExposedPorts: []string{"5432/tcp"},
+		Env:          map[string]string{"POSTGRES_PASSWORD": "password"},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections"),
+			wait.ForListeningPort("5432/tcp"),
+		),
+		Cmd: []string{"postgres", "-c", "max_connections=200"},
+	}
+
+	ctx := context.Background()
+
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err)
+
+	ip, err := container.Host(ctx)
+	require.NoError(t, err)
+
+	port, err := container.MappedPort(ctx, "5432")
+	require.NoError(t, err)
+
+	auditing, err := NewTimescaleDB(config, TimescaleDbConfig{
+		Host:     ip,
+		Port:     port.Port(),
+		DB:       "postgres",
+		User:     "postgres",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	return container, auditing
 }

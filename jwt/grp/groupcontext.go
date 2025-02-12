@@ -14,7 +14,7 @@ import (
 	TenantPrefix:   	Tn = Tenant-Prefix
 	GroupType:			Pg = PermissionGroup
 	SecondLevelOU:		Srv
-	Referenz:			App (App-Permission)
+	Reference:			App (App-Permission)
 	innerGroupName:		kaas-clustername-namespace-role
 	Permission:			Full | Mod | Read
 

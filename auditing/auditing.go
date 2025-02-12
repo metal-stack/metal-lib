@@ -1,18 +1,16 @@
 package auditing
 
 import (
+	"context"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 type Config struct {
-	Component        string
-	URL              string
-	APIKey           string
-	IndexPrefix      string
-	RotationInterval Interval
-	Keep             int64
-	Log              *slog.Logger
+	Component string
+	Log       *slog.Logger
 }
 
 type Interval string
@@ -52,31 +50,32 @@ const (
 const EntryFilterDefaultLimit int64 = 100
 
 type Entry struct {
-	Id        string // filled by the auditing driver
-	Component string
-	RequestId string `json:"rqid"`
-	Type      EntryType
-	Timestamp time.Time
+	Id        string    `json:"-"` // filled by the auditing driver
+	Component string    `json:"component"`
+	RequestId string    `json:"rqid"`
+	Type      EntryType `json:"type"`
+	Timestamp time.Time `json:"timestamp"`
 
-	User   string
-	Tenant string
+	User    string `json:"user"`
+	Tenant  string `json:"tenant"`
+	Project string `json:"project"`
 
 	// For `EntryDetailHTTP` the HTTP method get, post, put, delete, ...
 	// For `EntryDetailGRPC` unary, stream
-	Detail EntryDetail
+	Detail EntryDetail `json:"detail"`
 	// e.g. Request, Response, Error, Opened, Close
-	Phase EntryPhase
+	Phase EntryPhase `json:"phase"`
 	// For `EntryDetailHTTP` /api/v1/...
 	// For `EntryDetailGRPC` /api.v1/... (the method name)
-	Path         string
-	ForwardedFor string
-	RemoteAddr   string
+	Path         string `json:"path"`
+	ForwardedFor string `json:"forwardedfor"`
+	RemoteAddr   string `json:"remoteaddr"`
 
-	Body       any // JSON, string or numbers
-	StatusCode int // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
+	Body       any `json:"body"`       // JSON, string or numbers
+	StatusCode int `json:"statuscode"` // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
 
 	// Internal errors
-	Error error
+	Error error `json:"error"`
 }
 
 func (e *Entry) prepareForNextPhase() {
@@ -109,8 +108,9 @@ type EntryFilter struct {
 	RequestId string    `json:"rqid" optional:"true"`      // starts with
 	Type      EntryType `json:"type" optional:"true"`      // exact match
 
-	User   string `json:"user" optional:"true"`   // exact match
-	Tenant string `json:"tenant" optional:"true"` // exact match
+	User    string `json:"user" optional:"true"`    // exact match
+	Tenant  string `json:"tenant" optional:"true"`  // exact match
+	Project string `json:"project" optional:"true"` // exact match
 
 	Detail EntryDetail `json:"detail" optional:"true"` // exact match
 	Phase  EntryPhase  `json:"phase" optional:"true"`  // exact match
@@ -135,5 +135,14 @@ type Auditing interface {
 	// Searches for entries matching the given filter.
 	// By default only recent entries will be returned.
 	// The returned entries will be sorted by timestamp in descending order.
-	Search(EntryFilter) ([]Entry, error)
+	Search(context.Context, EntryFilter) ([]Entry, error)
+}
+
+func defaultComponent() (string, error) {
+	ex, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Base(ex), nil
 }
