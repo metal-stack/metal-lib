@@ -12,8 +12,12 @@ type Config struct {
 	Component string
 	Log       *slog.Logger
 
-	Async        bool
-	AsyncRetry   int
+	// Async indexes audit traces asynchronously if set to true. if this functionality is implemented depends on the audit backend implementation.
+	// If this is set to true it can occur that audit traces get lost in case the backend is not available for receiving the trace.
+	Async bool
+	// AsyncRetry defines the amount of attempts to retry sending an audit trace to a backend in case it failed.
+	AsyncRetry int
+	// AsyncTimeout sets a timeout for indexing a trace for the backend.
 	AsyncTimeout time.Duration
 }
 
