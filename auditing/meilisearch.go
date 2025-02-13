@@ -56,6 +56,10 @@ func NewMeilisearch(c Config, mc MeilisearchConfig) (Auditing, error) {
 		c.Component = component
 	}
 
+	if c.Async {
+		return nil, fmt.Errorf("meilisearch backend does not support async indexing")
+	}
+
 	client := meilisearch.NewClient(meilisearch.ClientConfig{
 		Host:   mc.URL,
 		APIKey: mc.APIKey,
