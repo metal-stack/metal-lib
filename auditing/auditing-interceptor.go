@@ -366,10 +366,38 @@ func NewConnectInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(ful
 	}, nil
 }
 
-func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error) {
+type (
+	httpFilterOpt interface{}
+
+	httpFilterErrorCallback struct {
+		callback func(err error, response *restful.Response)
+	}
+)
+
+func NewHttpFilterErrorCallback(callback func(err error, response *restful.Response)) *httpFilterErrorCallback {
+	return &httpFilterErrorCallback{callback: callback}
+}
+
+func HttpFilter(a Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful.FilterFunction, error) {
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create http middleware")
 	}
+
+	errorCallback := func(err error, response *restful.Response) {
+		if err := response.WriteError(http.StatusInternalServerError, err); err != nil {
+			logger.Error("unable to write http response", "error", err)
+		}
+	}
+
+	for _, opt := range opts {
+		switch o := opt.(type) {
+		case *httpFilterErrorCallback:
+			errorCallback = o.callback
+		default:
+			return nil, fmt.Errorf("unknown filter option: %T", opt)
+		}
+	}
+
 	return func(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
 		r := request.Request
 
@@ -441,7 +469,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 			r.Body = io.NopCloser(bytes.NewReader(body))
 			if err != nil {
 				logger.Error("unable to read request body", "error", err)
-				response.WriteHeader(http.StatusInternalServerError)
+				errorCallback(err, response)
 				return
 			}
 			err = json.Unmarshal(body, &auditReqContext.Body)
@@ -453,7 +481,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 		err := a.Index(auditReqContext)
 		if err != nil {
 			logger.Error("unable to index", "error", err)
-			response.WriteHeader(http.StatusInternalServerError)
+			errorCallback(err, response)
 			return
 		}
 
@@ -478,7 +506,7 @@ func HttpFilter(a Auditing, logger *slog.Logger) (restful.FilterFunction, error)
 		err = a.Index(auditReqContext)
 		if err != nil {
 			logger.Error("unable to index", "error", err)
-			response.WriteHeader(http.StatusInternalServerError)
+			errorCallback(err, response)
 			return
 		}
 	}, nil
