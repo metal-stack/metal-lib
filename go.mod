@@ -10,7 +10,7 @@ require (
 	github.com/emicklei/go-restful-openapi/v2 v2.10.2
 	github.com/emicklei/go-restful/v3 v3.12.1
 	github.com/fatih/color v1.17.0
-	github.com/go-jose/go-jose/v4 v4.0.4
+	github.com/go-jose/go-jose/v4 v4.0.5
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-task/slim-sprig/v3 v3.0.0
 	github.com/goccy/go-yaml v1.12.0
