@@ -350,10 +350,36 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				require.Len(t, entries, len(testEntries()))
 			},
 		},
+		{
+			name: "filter on query does not affect other filters",
+			t: func(t *testing.T, a Auditing) {
+				es := testEntries()
+				for _, e := range es {
+					err := a.Index(e)
+					require.NoError(t, err)
+				}
+
+				err := a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					From:      now.Add(-1 * time.Minute),
+					To:        now.Add(1 * time.Minute),
+					RequestId: "00000000-0000-0000-0000-000000000000",
+					Phase:     "response",
+					Path:      "/v1/test/0",
+					Body:      "00000000",
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], es[0]); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
 	}
 	for i, tt := range tests {
-		tt := tt
-
 		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
 			defer func() {
 				a := auditing.(*timescaleAuditing)
