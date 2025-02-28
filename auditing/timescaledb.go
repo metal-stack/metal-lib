@@ -261,7 +261,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 				where = append(where, fmt.Sprintf("entry ->> '%s' like '%%' || :%s || '%%'", field, field))
 			case phrase:
 				// the additional "like" match allows matching partial words, too
-				where = append(where, fmt.Sprintf("ts @@ websearch_to_tsquery('simple', '$$' || :%s || '$$') or entry ->> '%s' like '%%' || :%s || '%%'", field, field, field))
+				where = append(where, fmt.Sprintf("(ts @@ websearch_to_tsquery('simple', '$$' || :%s || '$$') or entry ->> '%s' like '%%' || :%s || '%%')", field, field, field))
 			default:
 				return fmt.Errorf("comp op not known")
 			}
