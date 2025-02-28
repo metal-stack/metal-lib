@@ -108,7 +108,11 @@ func (a *meiliAuditing) Index(entry Entry) error {
 		return err
 	}
 	if entry.Id == "" {
-		entry.Id = uuid.NewString()
+		uuid, err := uuid.NewV7()
+		if err != nil {
+			return err
+		}
+		entry.Id = uuid.String()
 	}
 	if entry.Component == "" {
 		entry.Component = a.component
