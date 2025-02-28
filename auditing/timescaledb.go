@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -216,8 +215,11 @@ func (a *timescaleAuditing) Flush() error {
 }
 
 func (a *timescaleAuditing) Index(entry Entry) error {
+	if entry.Component == "" {
+		entry.Component = a.component
+	}
 	if entry.Timestamp.IsZero() {
-		return errors.New("timestamp is not set")
+		entry.Timestamp = time.Now()
 	}
 
 	q := "INSERT INTO traces (timestamp, entry) VALUES (:timestamp, :entry)"

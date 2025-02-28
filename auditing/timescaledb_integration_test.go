@@ -378,6 +378,22 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "fields are defaulted during indexing",
+			t: func(t *testing.T, a Auditing) {
+				err := a.Index(Entry{})
+				require.NoError(t, err)
+
+				err = a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{})
+				require.NoError(t, err)
+				assert.Len(t, entries, 1)
+				assert.Equal(t, "auditing.test", entries[0].Component)
+				assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
+			},
+		},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {

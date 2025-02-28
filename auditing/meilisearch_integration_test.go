@@ -275,8 +275,6 @@ func TestAuditing_Meilisearch(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		tt := tt
-
 		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
 			a, err := NewMeilisearch(Config{
 				Log: slog.Default(),
