@@ -380,8 +380,6 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		tt := tt
-
 		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
 			defer func() {
 				a := auditing.(*timescaleAuditing)
