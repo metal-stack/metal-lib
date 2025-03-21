@@ -14,7 +14,7 @@ require (
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-task/slim-sprig/v3 v3.0.0
 	github.com/goccy/go-yaml v1.12.0
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/icza/dyno v0.0.0-20230330125955-09f820a8d9c0
