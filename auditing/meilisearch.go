@@ -366,7 +366,7 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 		entry.StatusCode = int(statusCode)
 	}
 	if err, ok := doc["error"].(string); ok {
-		entry.Error = &err
+		entry.Error = errors.New(err)
 	}
 	if body, ok := doc["body"]; ok {
 		entry.Body = body
