@@ -416,6 +416,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				require.Len(t, entries, 1)
 
 				if diff := cmp.Diff(entries[0], Entry{
+					Component: "auditing.test",
 					RequestId: "1",
 					Timestamp: now,
 					Error:     map[string]any{}, // unfortunately this was a regression and the error was marshalled as an empty map because error does export any fields
