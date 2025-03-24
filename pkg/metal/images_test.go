@@ -19,21 +19,21 @@ func TestGetOsAndSemverFromImage(t *testing.T) {
 	}{
 		{
 			name:       "shorthand syntax",
-			id:         "ubuntu-19.04",
+			id:         "ubuntu-19.4",
 			want:       "ubuntu",
-			wantSemver: semver.MustParse("19.04"),
+			wantSemver: semver.MustParse("19.4"),
 		},
 		{
 			name:       "fqn syntax",
-			id:         "ubuntu-19.04.20200408",
+			id:         "ubuntu-19.4.20200408",
 			want:       "ubuntu",
-			wantSemver: semver.MustParse("19.04.20200408"),
+			wantSemver: semver.MustParse("19.4.20200408"),
 		},
 		{
 			name:       "dashes in os variant",
-			id:         "ubuntu-slim-19.04.20200408",
+			id:         "ubuntu-slim-19.4.20200408",
 			want:       "ubuntu-slim",
-			wantSemver: semver.MustParse("19.04.20200408"),
+			wantSemver: semver.MustParse("19.4.20200408"),
 		},
 		{
 			name:    "no version contained",
