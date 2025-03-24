@@ -394,6 +394,36 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 			},
 		},
+		{
+			name: "backwards compatibility with old error type",
+			t: func(t *testing.T, a Auditing) {
+				err := a.Index(Entry{
+					RequestId: "1",
+					Timestamp: now,
+					Error:     fmt.Errorf("an error"),
+				})
+				require.NoError(t, err)
+
+				err = a.Flush()
+				require.NoError(t, err)
+
+				entries, err := a.Search(ctx, EntryFilter{
+					From:      now.Add(-1 * time.Minute),
+					To:        now.Add(1 * time.Minute),
+					RequestId: "1",
+				})
+				require.NoError(t, err)
+				require.Len(t, entries, 1)
+
+				if diff := cmp.Diff(entries[0], Entry{
+					RequestId: "1",
+					Timestamp: now,
+					Error:     map[string]any{}, // unfortunately this was a regression and the error was marshalled as an empty map because error does export any fields
+				}); diff != "" {
+					t.Errorf("diff (+got -want):\n %s", diff)
+				}
+			},
+		},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
