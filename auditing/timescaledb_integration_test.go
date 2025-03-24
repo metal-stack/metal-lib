@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -86,7 +87,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 				RemoteAddr:   "10.0.0.2",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000002",
 				StatusCode:   0,
-				Error:        nil,
+				Error:        pointer.Pointer("an error"),
 			},
 		}
 	}

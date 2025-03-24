@@ -75,7 +75,7 @@ type Entry struct {
 	StatusCode int `json:"statuscode"` // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
 
 	// Internal errors
-	Error error `json:"error"`
+	Error *string `json:"error"`
 }
 
 func (e *Entry) prepareForNextPhase() {

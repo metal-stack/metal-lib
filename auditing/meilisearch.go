@@ -291,7 +291,7 @@ func (a *meiliAuditing) encodeEntry(entry Entry) map[string]any {
 		doc["status-code"] = entry.StatusCode
 	}
 	if entry.Error != nil {
-		doc["error"] = entry.Error.Error()
+		doc["error"] = entry.Error
 	}
 	if entry.Body != nil {
 		doc["body"] = entry.Body
@@ -366,7 +366,7 @@ func (a *meiliAuditing) decodeEntry(doc map[string]any) Entry {
 		entry.StatusCode = int(statusCode)
 	}
 	if err, ok := doc["error"].(string); ok {
-		entry.Error = errors.New(err)
+		entry.Error = &err
 	}
 	if body, ok := doc["body"]; ok {
 		entry.Body = body

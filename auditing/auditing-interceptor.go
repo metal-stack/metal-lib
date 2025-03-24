@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/rest"
 	"github.com/metal-stack/security"
 	"google.golang.org/grpc"
@@ -78,7 +79,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = pointer.Pointer(err.Error())
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Error("unable to index", "error", err2)
@@ -142,7 +143,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = pointer.Pointer(err.Error())
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Error("unable to index", "error", err2)
@@ -269,7 +270,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = pointer.Pointer(err.Error())
 			err2 := a.auditing.Index(auditReqContext)
 			if err2 != nil {
 				a.logger.Error("unable to index", "error", err2)
@@ -342,7 +343,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = pointer.Pointer(err.Error())
 			err2 := i.auditing.Index(auditReqContext)
 			if err2 != nil {
 				i.logger.Error("unable to index", "error", err2)
@@ -500,7 +501,7 @@ func HttpFilter(a Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful
 		err = json.Unmarshal(body, &auditReqContext.Body)
 		if err != nil {
 			auditReqContext.Body = strBody
-			auditReqContext.Error = err
+			auditReqContext.Error = pointer.Pointer(err.Error())
 		}
 
 		err = a.Index(auditReqContext)
