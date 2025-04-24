@@ -347,6 +347,79 @@ var (
 				},
 			},
 			{
+				name: "define a limit higher than amount of results",
+				t: func(t *testing.T, a auditing.Auditing) {
+					es := testEntries()
+					for _, e := range es {
+						err := a.Index(e)
+						require.NoError(t, err)
+					}
+
+					err := a.Flush()
+					require.NoError(t, err)
+
+					entries, err := a.Search(ctx, auditing.EntryFilter{
+						Limit: 1,
+					})
+					require.NoError(t, err)
+					require.Len(t, entries, 1)
+
+					if diff := cmp.Diff(entries[0], es[0]); diff != "" {
+						t.Errorf("diff (+got -want):\n %s", diff)
+					}
+				},
+			},
+			{
+				name: "define a limit equal the amount of results",
+				t: func(t *testing.T, a auditing.Auditing) {
+					es := testEntries()
+					for _, e := range es {
+						err := a.Index(e)
+						require.NoError(t, err)
+					}
+
+					err := a.Flush()
+					require.NoError(t, err)
+
+					entries, err := a.Search(ctx, auditing.EntryFilter{
+						Limit: 3,
+					})
+					require.NoError(t, err)
+					require.Len(t, entries, 3)
+
+					if diff := cmp.Diff(entries, es); diff != "" {
+						t.Errorf("diff (+got -want):\n %s", diff)
+					}
+				},
+			},
+			{
+				name: "define a limit smaller than amount of results",
+				t: func(t *testing.T, a auditing.Auditing) {
+					err := a.Index(auditing.Entry{
+						RequestId: "1",
+						Timestamp: now,
+					})
+					require.NoError(t, err)
+
+					err = a.Flush()
+					require.NoError(t, err)
+
+					entries, err := a.Search(ctx, auditing.EntryFilter{
+						Limit: 5,
+					})
+					require.NoError(t, err)
+					require.Len(t, entries, 1)
+
+					if diff := cmp.Diff(entries[0], auditing.Entry{
+						Component: "auditing.test",
+						RequestId: "1",
+						Timestamp: now,
+					}); diff != "" {
+						t.Errorf("diff (+got -want):\n %s", diff)
+					}
+				},
+			},
+			{
 				name: "filter search on rqid",
 				t: func(t *testing.T, a auditing.Auditing) {
 					es := testEntries()

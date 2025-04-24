@@ -173,7 +173,7 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		entries = append(entries, e)
 	}
 
-	if filter.Limit != 0 {
+	if filter.Limit != 0 && filter.Limit < int64(len(entries)) {
 		entries = entries[:filter.Limit]
 	}
 
