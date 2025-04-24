@@ -16,7 +16,7 @@ type (
 		component string
 		log       *slog.Logger
 
-		memory map[string]Entry
+		memory []Entry
 		mutex  sync.RWMutex
 
 		config *MemoryConfig
@@ -41,7 +41,7 @@ func NewMemory(c Config, tc MemoryConfig) (Auditing, error) {
 	a := &memoryAuditing{
 		component: c.Component,
 		log:       c.Log.WithGroup("auditing"),
-		memory:    map[string]Entry{},
+		memory:    []Entry{},
 		config:    &tc,
 	}
 
@@ -65,7 +65,7 @@ func (a *memoryAuditing) Index(entry Entry) error {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	a.memory[entry.RequestId+string(entry.Phase)] = entry
+	a.memory = append(a.memory, entry)
 
 	return nil
 }
