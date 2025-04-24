@@ -26,7 +26,7 @@ type (
 // NewMemory returns a new auditing backend that runs in memory.
 // The main intention of this backend is to be used for testing purposes to avoid mocking.
 //
-// Please not that this backend is not intended to be used for production because it is ephemeral
+// Please note that this backend is not intended to be used for production because it is ephemeral
 // and it is not guaranteed to have feature-equality with other auditing backends.
 func NewMemory(c Config, tc MemoryConfig) (Auditing, error) {
 	if c.Component == "" {
