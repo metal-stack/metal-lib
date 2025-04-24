@@ -101,7 +101,7 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 
 	a := &timescaleAuditing{
 		component: c.Component,
-		log:       c.Log.WithGroup("auditing"),
+		log:       c.Log.WithGroup("auditing").With("audit-backend", "timescaledb"),
 		db:        db,
 		config:    &tc,
 	}

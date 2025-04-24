@@ -27,8 +27,8 @@ type (
 // The main intention of this backend is to be used for testing purposes to avoid mocking.
 //
 // Please note that this backend is not intended to be used for production because it is ephemeral
-// and it is not guaranteed to have feature-equality with other auditing backends.
-func NewMemory(c Config, tc MemoryConfig) (Auditing, error) {
+// and it is not guaranteed to have feature-parity with other auditing backends.
+func NewMemory(c Config, mc MemoryConfig) (Auditing, error) {
 	if c.Component == "" {
 		component, err := defaultComponent()
 		if err != nil {
@@ -40,9 +40,9 @@ func NewMemory(c Config, tc MemoryConfig) (Auditing, error) {
 
 	a := &memoryAuditing{
 		component: c.Component,
-		log:       c.Log.WithGroup("auditing"),
+		log:       c.Log.WithGroup("auditing").With("audit-backend", "memory"),
 		memory:    []Entry{},
-		config:    &tc,
+		config:    &mc,
 	}
 
 	a.log.Info("connected to memory backend")
@@ -140,7 +140,7 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		filters = append(filters, func(e Entry) bool { return filter.User == e.User })
 	}
 
-	// to make queries more efficient for memory, we always provide from
+	// we always provide From
 	if filter.From.IsZero() {
 		filter.From = time.Now().Add(-24 * time.Hour).UTC()
 	}
@@ -173,6 +173,7 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		entries = append(entries, e)
 	}
 
+	// as this backend is only for dev purposes, just cut the result to the limit here is fine
 	if filter.Limit != 0 && filter.Limit < int64(len(entries)) {
 		entries = entries[:filter.Limit]
 	}
