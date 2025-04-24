@@ -1,4 +1,4 @@
-package auditing
+package auditing_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,9 +23,9 @@ func TestAuditing_Memory(t *testing.T) {
 				t.Skipf("skipping because memory backend does not support this")
 			}
 
-			auditing, err := NewMemory(Config{
+			auditing, err := auditing.NewMemory(auditing.Config{
 				Log: slog.Default(),
-			}, MemoryConfig{})
+			}, auditing.MemoryConfig{})
 			require.NoError(t, err)
 
 			tt.t(t, auditing)
