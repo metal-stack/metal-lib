@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/rest"
 	"github.com/metal-stack/security"
 	"google.golang.org/grpc"
@@ -494,7 +495,7 @@ func HttpFilter(a Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful
 		chain.ProcessFilter(request, response)
 
 		auditReqContext.Phase = EntryPhaseResponse
-		auditReqContext.StatusCode = response.StatusCode()
+		auditReqContext.StatusCode = pointer.Pointer(response.StatusCode())
 		strBody := bufferedResponseWriter.Content()
 		body := []byte(strBody)
 		err = json.Unmarshal(body, &auditReqContext.Body)
@@ -547,11 +548,11 @@ func (s grpcServerStreamWithContext) Context() context.Context {
 	return s.ctx
 }
 
-func statusCodeFromGrpc(err error) int {
+func statusCodeFromGrpc(err error) *int {
 	s, ok := status.FromError(err)
 	if !ok {
-		return int(codes.Unknown)
+		return pointer.Pointer(int(codes.Unknown))
 	}
 
-	return int(s.Code())
+	return pointer.Pointer(int(s.Code()))
 }

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type (
@@ -124,8 +126,8 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 	if filter.RequestId != "" {
 		filters = append(filters, func(e Entry) bool { return filter.RequestId == e.RequestId })
 	}
-	if filter.StatusCode != 0 {
-		filters = append(filters, func(e Entry) bool { return filter.StatusCode == e.StatusCode })
+	if filter.StatusCode != nil {
+		filters = append(filters, func(e Entry) bool { return cmp.Equal(filter.StatusCode, e.StatusCode) })
 	}
 	if filter.Tenant != "" {
 		filters = append(filters, func(e Entry) bool { return filter.Tenant == e.Tenant })

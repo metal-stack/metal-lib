@@ -71,8 +71,8 @@ type Entry struct {
 	ForwardedFor string `json:"forwardedfor"`
 	RemoteAddr   string `json:"remoteaddr"`
 
-	Body       any `json:"body"`       // JSON, string or numbers
-	StatusCode int `json:"statuscode"` // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
+	Body       any  `json:"body"`       // JSON, string or numbers
+	StatusCode *int `json:"statuscode"` // for `EntryDetailHTTP` the HTTP status code, for EntryDetailGRPC` the grpc status code
 
 	// Internal errors
 	Error any `json:"error"`
@@ -120,7 +120,7 @@ type EntryFilter struct {
 	RemoteAddr   string `json:"remote_addr" optional:"true"`   // free text
 
 	Body       string `json:"body" optional:"true"`        // free text
-	StatusCode int    `json:"status_code" optional:"true"` // exact match
+	StatusCode *int   `json:"status_code" optional:"true"` // exact match
 
 	Error string `json:"error" optional:"true"` // free text
 }
