@@ -1,33 +1,28 @@
 package bus
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 
 	"github.com/nsqio/go-nsq"
 )
 
-// A TLSConfig represents the TLS config of an NSQ publisher/consumer.
-type TLSConfig struct {
-	CACertFile     string
-	ClientCertFile string
-}
-
-// Inactive a TLSConfig considered inactive if neither a ca-cert nor a client-cert is present
-func (cfg *TLSConfig) Inactive() bool {
-	return cfg == nil || len(cfg.CACertFile) == 0 || len(cfg.ClientCertFile) == 0
-}
+const (
+	defaultWriteTimeout = 10 * time.Second
+)
 
 // A PublisherConfig represents the config of an NSQ publisher.
 type PublisherConfig struct {
 	TCPAddress   string
 	HTTPEndpoint string
-	TLS          *TLSConfig
 	NSQ          *nsq.Config
 }
 
@@ -92,6 +87,41 @@ func LogLevel(v Level) Option {
 	}
 }
 
+// CreateNSQConfig creates and configures a TLS enabled NSQ configuration.
+func CreateNSQConfig(caCert, clientCert, clientCertKey string) (*nsq.Config, error) {
+	caCertRaw, err := os.ReadFile(caCert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ca cert: %w", err)
+	}
+
+	caCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+
+	ok := caCertPool.AppendCertsFromPEM(caCertRaw)
+	if !ok {
+		return nil, fmt.Errorf("unable to add ca to cert pool")
+	}
+
+	cert, err := tls.LoadX509KeyPair(clientCert, clientCertKey)
+	if err != nil {
+		return nil, err
+	}
+
+	config := nsq.NewConfig()
+	config.TlsConfig = &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    caCertPool,
+		RootCAs:      caCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+	config.TlsV1 = true
+
+	return config, nil
+}
+
 func NSQDs(nsqds ...string) Option {
 	return func(c *Consumer) *Consumer {
 		c.nsqds = nsqds
@@ -107,15 +137,18 @@ func MaxInFlight(num int) Option {
 }
 
 // NewConsumer returns a consumer and stores the addresses of the lookupd's.
-func NewConsumer(log *slog.Logger, tlsCfg *TLSConfig, lookupds ...string) (*Consumer, error) {
-	cfg := CreateNSQConfig(tlsCfg)
-	cfg.LookupdPollInterval = time.Second * 5
-	cfg.HeartbeatInterval = time.Second * 5
-	cfg.DefaultRequeueDelay = time.Second * 5
-	cfg.MaxInFlight = 10
+func NewConsumer(log *slog.Logger, config *nsq.Config, lookupds ...string) (*Consumer, error) {
+	if config == nil {
+		config = nsq.NewConfig()
+	}
+
+	config.LookupdPollInterval = time.Second * 5
+	config.HeartbeatInterval = time.Second * 5
+	config.DefaultRequeueDelay = time.Second * 5
+	config.MaxInFlight = 10
 
 	return &Consumer{
-		config:   cfg,
+		config:   config,
 		lookupds: lookupds,
 		log:      log,
 		logLevel: nsq.LogLevelInfo,
@@ -328,7 +361,12 @@ func (p *nsqPublisher) Output(num int, msg string) error {
 
 // NewPublisher creates a new publisher to produce events for topics.
 func NewPublisher(zlog *slog.Logger, publisherCfg *PublisherConfig) (Publisher, error) {
-	publisherCfg.ConfigureNSQ()
+	if publisherCfg.NSQ == nil {
+		publisherCfg.NSQ = nsq.NewConfig()
+	}
+
+	publisherCfg.NSQ.WriteTimeout = defaultWriteTimeout
+
 	p, err := nsq.NewProducer(publisherCfg.TCPAddress, publisherCfg.NSQ)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create producer with nsqd=%q: %w", publisherCfg.TCPAddress, err)
