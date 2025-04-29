@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -106,7 +105,7 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 
 	a := &timescaleAuditing{
 		component: c.Component,
-		log:       c.Log.WithGroup("auditing"),
+		log:       c.Log.WithGroup("auditing").With("audit-backend", "timescaledb"),
 		db:        db,
 		config:    &tc,
 	}
@@ -220,8 +219,11 @@ func (a *timescaleAuditing) Flush() error {
 }
 
 func (a *timescaleAuditing) Index(entry Entry) error {
+	if entry.Component == "" {
+		entry.Component = a.component
+	}
 	if entry.Timestamp.IsZero() {
-		return errors.New("timestamp is not set")
+		entry.Timestamp = time.Now()
 	}
 
 	q := "INSERT INTO traces (timestamp, entry) VALUES (:timestamp, :entry)"
@@ -265,7 +267,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 				where = append(where, fmt.Sprintf("entry ->> '%s' like '%%' || :%s || '%%'", field, field))
 			case phrase:
 				// the additional "like" match allows matching partial words, too
-				where = append(where, fmt.Sprintf("ts @@ websearch_to_tsquery('simple', '$$' || :%s || '$$') or entry ->> '%s' like '%%' || :%s || '%%'", field, field, field))
+				where = append(where, fmt.Sprintf("(ts @@ websearch_to_tsquery('simple', '$$' || :%s || '$$') or entry ->> '%s' like '%%' || :%s || '%%')", field, field, field))
 			default:
 				return fmt.Errorf("comp op not known")
 			}

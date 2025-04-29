@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +44,7 @@ func Test_splunkAuditing_Index(t *testing.T) {
 				ForwardedFor: "entry-forwarded",
 				RemoteAddr:   "entry-remote-addr",
 				Body:         nil,
-				StatusCode:   0,
+				StatusCode:   pointer.Pointer(200),
 				Error:        nil,
 			},
 			want: splunkEvent{
@@ -65,7 +66,7 @@ func Test_splunkAuditing_Index(t *testing.T) {
 					ForwardedFor: "entry-forwarded",
 					RemoteAddr:   "entry-remote-addr",
 					Body:         nil,
-					StatusCode:   0,
+					StatusCode:   pointer.Pointer(200),
 					Error:        nil,
 				},
 			},
