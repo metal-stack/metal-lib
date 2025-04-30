@@ -186,7 +186,7 @@ func (a *splunkAuditing) Index(entry Entry) error {
 			resp, err := a.client.Do(req)
 			cancel()
 			if err != nil {
-				a.log.Error("error indexing audit entry in splunk, retrying in 200ms", "error", err)
+				a.log.Error("error indexing audit entry in splunk, retrying", "backoff", a.asyncBackoff.String(), "error", err)
 				time.Sleep(a.asyncBackoff)
 				continue
 			}
