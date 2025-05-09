@@ -11,6 +11,8 @@ import (
 type Config struct {
 	Component string
 	Log       *slog.Logger
+	// IndexTimeout sets a timeout for indexing a trace for the backend.
+	IndexTimeout time.Duration
 }
 
 type Interval string
@@ -126,9 +128,6 @@ type EntryFilter struct {
 }
 
 type Auditing interface {
-	// Commits all pending entries to the index.
-	// Should be called before shutting down the application.
-	Flush() error
 	// Adds the given entry to the index.
 	// Some fields like `Id`, `Component` and `Timestamp` will be filled by the auditing driver if not given.
 	Index(Entry) error
