@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const spunkIndexTimeout = 5 * time.Second
+
 type (
 	SplunkConfig struct {
 		Endpoint   string
@@ -23,13 +25,9 @@ type (
 	}
 
 	splunkAuditing struct {
-		component string
-		log       *slog.Logger
-
-		async        bool
-		asyncRetry   int
-		asyncBackoff time.Duration
-		asyncTimeout time.Duration
+		component    string
+		log          *slog.Logger
+		indexTimeout time.Duration
 
 		client *http.Client
 
@@ -66,12 +64,13 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 
 		c.Component = component
 	}
+	if c.IndexTimeout == 0 {
+		c.IndexTimeout = spunkIndexTimeout
+	}
 
 	var (
-		endpoint     = "http://localhost:8088"
-		sourceType   = "_json"
-		asyncBackoff = 200 * time.Millisecond
-		asyncTimeout = 5 * time.Second
+		endpoint   = "http://localhost:8088"
+		sourceType = "_json"
 	)
 
 	if sc.Endpoint != "" {
@@ -90,21 +89,10 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 		endpoint = sc.Endpoint
 	}
 
-	if c.Async && c.AsyncTimeout > 0 {
-		asyncTimeout = c.AsyncTimeout
-	}
-
-	if c.Async && c.AsyncBackoff > 0 {
-		asyncBackoff = c.AsyncBackoff
-	}
-
 	a := &splunkAuditing{
 		component:    c.Component,
 		log:          c.Log.WithGroup("auditing"),
-		async:        c.Async,
-		asyncRetry:   c.AsyncRetry,
-		asyncBackoff: asyncBackoff,
-		asyncTimeout: asyncTimeout,
+		indexTimeout: c.IndexTimeout,
 		client:       &http.Client{Transport: &http.Transport{TLSClientConfig: sc.TlsConfig}},
 		endpoint:     endpoint,
 		hecToken:     sc.HECToken,
@@ -116,10 +104,6 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 	a.log.Info("initialized splunk client")
 
 	return a, nil
-}
-
-func (a *splunkAuditing) Flush() error {
-	return nil
 }
 
 func (a *splunkAuditing) Index(entry Entry) error {
@@ -141,60 +125,21 @@ func (a *splunkAuditing) Index(entry Entry) error {
 		return fmt.Errorf("error marshaling splunk event: %w", err)
 	}
 
-	if !a.async {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), a.indexTimeout)
+	defer cancel()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.endpoint+"/services/collector", bytes.NewBuffer(e))
-		if err != nil {
-			return err
-		}
-
-		req.Header.Add("Authorization", "Splunk "+a.hecToken)
-
-		resp, err := a.client.Do(req)
-		if err != nil {
-			return fmt.Errorf("error indexing audit entry in splunk: %w", err)
-		}
-		defer resp.Body.Close()
-
-		return nil
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.endpoint+"/services/collector", bytes.NewBuffer(e))
+	if err != nil {
+		return err
 	}
 
-	go func() {
-		count := 0
+	req.Header.Add("Authorization", "Splunk "+a.hecToken)
 
-		for {
-			if count > a.asyncRetry {
-				a.log.Error("maximum amount of retries reached for sending event to splunk, giving up", "retries", a.asyncRetry, "entry-id", entry.Id)
-				return
-			}
-
-			count++
-
-			ctx, cancel := context.WithTimeout(context.Background(), a.asyncTimeout)
-
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.endpoint+"/services/collector", bytes.NewBuffer(e))
-			if err != nil {
-				cancel()
-				a.log.Error("error creating request", "error", err)
-				return
-			}
-
-			req.Header.Add("Authorization", "Splunk "+a.hecToken)
-
-			resp, err := a.client.Do(req)
-			cancel()
-			if err != nil {
-				a.log.Error("error indexing audit entry in splunk, retrying", "backoff", a.asyncBackoff.String(), "error", err)
-				time.Sleep(a.asyncBackoff)
-				continue
-			}
-			defer resp.Body.Close()
-
-			return
-		}
-	}()
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error indexing audit entry in splunk: %w", err)
+	}
+	defer resp.Body.Close()
 
 	return nil
 }

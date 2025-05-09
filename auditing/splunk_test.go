@@ -19,18 +19,12 @@ func Test_splunkAuditing_Index(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name         string
-		async        bool
-		asyncRetry   int
-		asyncTimeout time.Duration
-		entry        Entry
-		want         splunkEvent
+		name  string
+		entry Entry
+		want  splunkEvent
 	}{
 		{
-			name:         "index some entry with async",
-			async:        true,
-			asyncRetry:   0,
-			asyncTimeout: 500 * time.Millisecond,
+			name: "index some entry with async",
 			entry: Entry{
 				Component:    "entry-component",
 				RequestId:    "request-id",
@@ -74,9 +68,6 @@ func Test_splunkAuditing_Index(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			received := make(chan bool)
-			defer close(received)
-
 			mux := http.NewServeMux()
 			mux.HandleFunc("/services/collector", func(w http.ResponseWriter, r *http.Request) {
 				body, err := io.ReadAll(r.Body)
@@ -91,18 +82,13 @@ func Test_splunkAuditing_Index(t *testing.T) {
 				}
 
 				w.WriteHeader(http.StatusOK)
-
-				received <- true
 			})
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
 			a, err := NewSplunk(Config{
-				Component:    "metal-lib",
-				Log:          slog.Default(),
-				Async:        tt.async,
-				AsyncRetry:   tt.asyncRetry,
-				AsyncTimeout: tt.asyncTimeout,
+				Component: "metal-lib",
+				Log:       slog.Default(),
 			}, SplunkConfig{
 				Endpoint: server.URL,
 				HECToken: "test-hec",
@@ -113,10 +99,6 @@ func Test_splunkAuditing_Index(t *testing.T) {
 
 			err = a.Index(tt.entry)
 			require.NoError(t, err)
-
-			if tt.async {
-				<-received
-			}
 		})
 	}
 }
