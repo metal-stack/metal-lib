@@ -42,9 +42,10 @@ type (
 	}
 
 	timescaleAuditing struct {
-		component string
-		db        *sqlx.DB
-		log       *slog.Logger
+		component    string
+		db           *sqlx.DB
+		log          *slog.Logger
+		indexTimeout time.Duration
 
 		config *TimescaleDbConfig
 	}
@@ -71,6 +72,9 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 		}
 
 		c.Component = component
+	}
+	if c.IndexTimeout == 0 {
+		c.IndexTimeout = timescaleDbIndexTimeout
 	}
 
 	if tc.Port == "" {
@@ -100,10 +104,11 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 	}
 
 	a := &timescaleAuditing{
-		component: c.Component,
-		log:       c.Log.WithGroup("auditing").With("audit-backend", "timescaledb"),
-		db:        db,
-		config:    &tc,
+		component:    c.Component,
+		indexTimeout: c.IndexTimeout,
+		log:          c.Log.WithGroup("auditing").With("audit-backend", "timescaledb"),
+		db:           db,
+		config:       &tc,
 	}
 
 	maxIdleConns := 5
@@ -210,10 +215,6 @@ func (a *timescaleAuditing) initialize() error {
 	return nil
 }
 
-func (a *timescaleAuditing) Flush() error {
-	return nil
-}
-
 func (a *timescaleAuditing) Index(entry Entry) error {
 	if entry.Component == "" {
 		entry.Component = a.component
@@ -234,7 +235,7 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 		Entry:     e,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timescaleDbIndexTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), a.indexTimeout)
 	defer cancel()
 
 	_, err = a.db.NamedExecContext(ctx, q, row)
