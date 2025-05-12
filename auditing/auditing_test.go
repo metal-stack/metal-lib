@@ -103,8 +103,6 @@ var (
 						Body:      "test",
 					})
 					require.NoError(t, err)
-					err = a.Flush()
-					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Body: "test",
@@ -121,9 +119,6 @@ var (
 						err := a.Index(e)
 						require.NoError(t, err)
 					}
-
-					err := a.Flush()
-					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{})
 					require.NoError(t, err)
@@ -153,9 +148,6 @@ var (
 					})
 					require.NoError(t, err)
 
-					err = a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						From:      now.Add(-1 * time.Minute),
 						To:        now.Add(1 * time.Minute),
@@ -181,9 +173,6 @@ var (
 						RequestId:    "1",
 						Timestamp:    now,
 					})
-					require.NoError(t, err)
-
-					err = a.Flush()
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
@@ -212,9 +201,6 @@ var (
 					})
 					require.NoError(t, err)
 
-					err = a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Path: "/b/c", // partial match
 					})
@@ -239,9 +225,6 @@ var (
 						RequestId:  "1",
 						Timestamp:  now,
 					})
-					require.NoError(t, err)
-
-					err = a.Flush()
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
@@ -276,9 +259,6 @@ var (
 					})
 					require.NoError(t, err)
 
-					err = a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						StatusCode: pointer.Pointer(0),
 					})
@@ -303,9 +283,6 @@ var (
 						RequestId: "1",
 						Timestamp: now,
 					})
-					require.NoError(t, err)
-
-					err = a.Flush()
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
@@ -334,9 +311,6 @@ var (
 					})
 					require.NoError(t, err)
 
-					err = a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Project: "a",
 					})
@@ -361,9 +335,6 @@ var (
 						RequestId: "1",
 						Timestamp: now,
 					})
-					require.NoError(t, err)
-
-					err = a.Flush()
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
@@ -391,9 +362,6 @@ var (
 						require.NoError(t, err)
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Limit: 1,
 					})
@@ -414,9 +382,6 @@ var (
 						require.NoError(t, err)
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Limit: 3,
 					})
@@ -435,9 +400,6 @@ var (
 						RequestId: "1",
 						Timestamp: now,
 					})
-					require.NoError(t, err)
-
-					err = a.Flush()
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
@@ -464,9 +426,6 @@ var (
 						require.NoError(t, err)
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						RequestId: es[0].RequestId,
 					})
@@ -492,9 +451,6 @@ var (
 						}
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Phase: auditing.EntryPhaseResponse,
 					})
@@ -516,9 +472,6 @@ var (
 						err := a.Index(e)
 						require.NoError(t, err)
 					}
-
-					err := a.Flush()
-					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Body: "This is body",
@@ -542,9 +495,6 @@ var (
 						require.NoError(t, err)
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Body: "this is the BODY",
 					})
@@ -560,9 +510,6 @@ var (
 						err := a.Index(e)
 						require.NoError(t, err)
 					}
-
-					err := a.Flush()
-					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Body: fmt.Sprintf("%s", es[0].Body.(string)),
@@ -584,9 +531,6 @@ var (
 						require.NoError(t, err)
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Body: fmt.Sprintf("002"),
 					})
@@ -606,9 +550,6 @@ var (
 						err := a.Index(e)
 						require.NoError(t, err)
 					}
-
-					err := a.Flush()
-					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						Limit:        1,
@@ -646,9 +587,6 @@ var (
 						require.NoError(t, err)
 					}
 
-					err := a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{})
 					require.NoError(t, err)
 					require.Len(t, entries, len(testEntries()))
@@ -662,9 +600,6 @@ var (
 						err := a.Index(e)
 						require.NoError(t, err)
 					}
-
-					err := a.Flush()
-					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
 						From:      now.Add(-1 * time.Minute),
@@ -688,9 +623,6 @@ var (
 					err := a.Index(auditing.Entry{})
 					require.NoError(t, err)
 
-					err = a.Flush()
-					require.NoError(t, err)
-
 					entries, err := a.Search(ctx, auditing.EntryFilter{})
 					require.NoError(t, err)
 					assert.Len(t, entries, 1)
@@ -706,9 +638,6 @@ var (
 						Timestamp: now,
 						Error:     fmt.Errorf("an error"),
 					})
-					require.NoError(t, err)
-
-					err = a.Flush()
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
