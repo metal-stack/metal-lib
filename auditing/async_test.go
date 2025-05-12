@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -100,18 +101,25 @@ func Test_asyncAuditing_Index(t *testing.T) {
 				require.True(t, tt.wantTimeout, "unexpected timeout occurred")
 			}
 
+			backend.mutex.Lock()
+			defer backend.mutex.Unlock()
+
 			assert.Equal(t, tt.wantCount, backend.count)
 		})
 	}
 }
 
 type testBackend struct {
+	mutex sync.Mutex
 	done  chan bool
 	count int
 	idxFn func(count int) error
 }
 
 func (t *testBackend) Index(e Entry) error {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	if t.idxFn != nil {
 		if err := t.idxFn(t.count); err != nil {
 			t.count++

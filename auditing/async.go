@@ -31,6 +31,9 @@ type (
 // NewAsync takes another audit backend and allows indexing audit traces asynchronously.
 // If this is used it can occur that audit traces get lost in case the backend is not available for receiving the trace.
 // The advantage is that it does not block.
+//
+// Dev note: For a backend wrapped in async, it is strictly required that the index function does not modify internal state
+// as otherwise race conditions will occur!
 func NewAsync(backend Auditing, log *slog.Logger, ac AsyncConfig) (Auditing, error) {
 	wrappedBackendType := fmt.Sprintf("%T", backend)
 
