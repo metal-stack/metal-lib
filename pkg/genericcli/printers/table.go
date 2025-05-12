@@ -76,9 +76,14 @@ func (p *TablePrinter) Print(data any) error {
 	if !p.c.NoHeaders {
 		p.table.Header(header)
 	}
-	p.table.Bulk(rows)
 
-	p.table.Render()
+	if err := p.table.Bulk(rows); err != nil {
+		return err
+	}
+
+	if err := p.table.Render(); err != nil {
+		return err
+	}
 
 	return nil
 }
