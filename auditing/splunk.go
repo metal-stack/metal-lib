@@ -91,7 +91,7 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 
 	a := &splunkAuditing{
 		component:    c.Component,
-		log:          c.Log.WithGroup("auditing"),
+		log:          c.Log.WithGroup("auditing").With("audit-backend", "splunk"),
 		indexTimeout: c.IndexTimeout,
 		client:       &http.Client{Transport: &http.Transport{TLSClientConfig: sc.TlsConfig}},
 		endpoint:     endpoint,
