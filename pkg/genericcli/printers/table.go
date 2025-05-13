@@ -109,10 +109,10 @@ func (p *TablePrinter) initTable() error {
 			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
 				Borders: tw.Border{Left: tw.On, Top: tw.Off, Right: tw.On, Bottom: tw.Off},
 				Symbols: symbols,
-				Settings: tw.Settings{Lines: tw.Lines{
-					ShowHeaderLine: tw.On,
-					ShowFooterLine: tw.Off,
-				}},
+				Settings: tw.Settings{
+					Lines:      tw.Lines{},
+					Separators: tw.Separators{},
+				},
 			})),
 		)
 	} else {
@@ -124,9 +124,8 @@ func (p *TablePrinter) initTable() error {
 				Borders: tw.BorderNone,
 				Symbols: symbols,
 				Settings: tw.Settings{
-					Lines: tw.Lines{
-						ShowHeaderLine: tw.Off,
-					},
+					Lines:      tw.Lines{},
+					Separators: tw.Separators{},
 				},
 			})),
 			tablewriter.WithConfig(tablewriter.Config{
