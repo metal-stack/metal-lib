@@ -7,6 +7,8 @@ import (
 
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 // TablePrinter prints data into a table
@@ -38,7 +40,7 @@ func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
 		config.Out = os.Stdout
 	}
 	if config.CustomPadding == nil {
-		config.CustomPadding = pointer.Pointer("   ")
+		config.CustomPadding = pointer.Pointer(" ")
 	}
 
 	return &TablePrinter{
@@ -72,11 +74,16 @@ func (p *TablePrinter) Print(data any) error {
 	}
 
 	if !p.c.NoHeaders {
-		p.table.SetHeader(header)
+		p.table.Header(header)
 	}
-	p.table.AppendBulk(rows)
 
-	p.table.Render()
+	if err := p.table.Bulk(rows); err != nil {
+		return err
+	}
+
+	if err := p.table.Render(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -89,22 +96,51 @@ func (p *TablePrinter) initTable() error {
 		return fmt.Errorf("padding must be set")
 	}
 
-	p.table = tablewriter.NewWriter(p.c.Out)
-
 	if p.c.Markdown {
-		p.table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		p.table.SetCenterSeparator("|")
+
+		symbols := tw.NewSymbolCustom("Markdown").
+			WithRow("-").
+			WithColumn("|").
+			WithCenter("|").
+			WithMidLeft("|").
+			WithMidRight("|")
+
+		p.table = tablewriter.NewTable(p.c.Out,
+			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.Border{Left: tw.On, Top: tw.Off, Right: tw.On, Bottom: tw.Off},
+				Symbols: symbols,
+				Settings: tw.Settings{
+					Lines:      tw.Lines{},
+					Separators: tw.Separators{},
+				},
+			})),
+		)
 	} else {
-		p.table.SetHeaderLine(false)
-		p.table.SetAlignment(tablewriter.ALIGN_LEFT)
-		p.table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-		p.table.SetBorder(false)
-		p.table.SetCenterSeparator("")
-		p.table.SetColumnSeparator("")
-		p.table.SetRowSeparator("")
-		p.table.SetRowLine(false)
-		p.table.SetTablePadding(*p.c.CustomPadding)
-		p.table.SetNoWhiteSpace(true) // no whitespace in front of every line
+		symbols := tw.NewSymbolCustom("Default").
+			WithCenter("").WithColumn("").WithRow("")
+
+		p.table = tablewriter.NewTable(p.c.Out,
+			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.BorderNone,
+				Symbols: symbols,
+				Settings: tw.Settings{
+					Lines:      tw.Lines{},
+					Separators: tw.Separators{},
+				},
+			})),
+			tablewriter.WithConfig(tablewriter.Config{
+				Header: tw.CellConfig{
+					Formatting: tw.CellFormatting{
+						Alignment: tw.AlignLeft,
+					},
+				},
+				Row: tw.CellConfig{
+					Formatting: tw.CellFormatting{
+						Alignment: tw.AlignLeft,
+					},
+				},
+			}),
+		)
 	}
 
 	return nil
