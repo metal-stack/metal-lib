@@ -339,7 +339,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		resp, err := next(childCtx, ar)
 
 		auditReqContext.Phase = EntryPhaseResponse
-		auditReqContext.Body = resp
+		auditReqContext.Body = resp.Any()
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
