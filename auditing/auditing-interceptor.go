@@ -339,7 +339,6 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		resp, err := next(childCtx, ar)
 
 		auditReqContext.Phase = EntryPhaseResponse
-		auditReqContext.Body = resp
 		auditReqContext.StatusCode = statusCodeFromGrpc(err)
 
 		if err != nil {
@@ -349,6 +348,8 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 				i.logger.Error("unable to index", "error", err2)
 			}
 			return nil, err
+		} else if resp != nil {
+			auditReqContext.Body = resp.Any()
 		}
 
 		err = i.auditing.Index(auditReqContext)
