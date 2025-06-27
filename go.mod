@@ -70,7 +70,7 @@ require (
 	github.com/bmizerany/perks v0.0.0-20230307044200-03f9df79da1e // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/coder/websocket v1.8.12 // indirect
-	github.com/containerd/containerd v1.7.20 // indirect
+	github.com/containerd/containerd v1.7.27 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/coreos/go-iptables v0.7.1-0.20240112124308-65c67c9f46e6 // indirect
@@ -140,7 +140,8 @@ require (
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
-	github.com/moby/sys/user v0.1.0 // indirect
+	github.com/moby/sys/user v0.3.0 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/nsqio/go-diskqueue v1.1.0 // indirect
