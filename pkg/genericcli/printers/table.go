@@ -110,10 +110,28 @@ func (p *TablePrinter) initTable() error {
 				Borders: tw.Border{Left: tw.On, Top: tw.Off, Right: tw.On, Bottom: tw.Off},
 				Symbols: symbols,
 				Settings: tw.Settings{
-					Lines:      tw.Lines{},
-					Separators: tw.Separators{},
+					Lines: tw.Lines{
+						ShowHeaderLine: tw.On,
+						ShowFooterLine: tw.On,
+					},
+					Separators: tw.Separators{
+						ShowHeader: tw.On,
+						ShowFooter: tw.On,
+					},
 				},
 			})),
+			tablewriter.WithConfig(tablewriter.Config{
+				Header: tw.CellConfig{
+					Formatting: tw.CellFormatting{
+						Alignment: tw.AlignLeft,
+					},
+				},
+				Row: tw.CellConfig{
+					Formatting: tw.CellFormatting{
+						Alignment: tw.AlignLeft,
+					},
+				},
+			}),
 		)
 	} else {
 		symbols := tw.NewSymbolCustom("Default").
@@ -124,8 +142,13 @@ func (p *TablePrinter) initTable() error {
 				Borders: tw.BorderNone,
 				Symbols: symbols,
 				Settings: tw.Settings{
-					Lines:      tw.Lines{},
-					Separators: tw.Separators{},
+					Lines: tw.Lines{},
+					Separators: tw.Separators{
+						BetweenRows:    tw.Off,
+						BetweenColumns: tw.Off,
+						ShowHeader:     tw.Off,
+						ShowFooter:     tw.Off,
+					},
 				},
 			})),
 			tablewriter.WithConfig(tablewriter.Config{
