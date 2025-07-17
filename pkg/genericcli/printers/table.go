@@ -113,13 +113,13 @@ func (p *TablePrinter) initTable() error {
 			})),
 			tablewriter.WithConfig(tablewriter.Config{
 				Header: tw.CellConfig{
-					Formatting: tw.CellFormatting{
-						Alignment: tw.AlignLeft,
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
 					},
 				},
 				Row: tw.CellConfig{
-					Formatting: tw.CellFormatting{
-						Alignment: tw.AlignLeft,
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
 					},
 				},
 			}),
@@ -147,15 +147,16 @@ func (p *TablePrinter) initTable() error {
 			})),
 			tablewriter.WithConfig(tablewriter.Config{
 				Header: tw.CellConfig{
-					Formatting: tw.CellFormatting{
-						Alignment: tw.AlignLeft,
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
 					},
 				},
 				Row: tw.CellConfig{
-					Formatting: tw.CellFormatting{
-						Alignment: tw.AlignLeft,
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
 					},
 				},
+				Behavior: tw.Behavior{TrimSpace: tw.On},
 			}),
 		)
 	}
