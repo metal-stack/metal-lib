@@ -28,9 +28,9 @@ func TestBasicTablePrinter(t *testing.T) {
 		t.Error(err)
 	}
 	got := buffer.String()
-	want := ` A  B 
- 1  2 
- 3  4 
+	want := `A  B  
+1  2  
+3  4  
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)

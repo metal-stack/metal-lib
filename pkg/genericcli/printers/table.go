@@ -128,6 +128,12 @@ func (p *TablePrinter) initTable() error {
 		symbols := tw.NewSymbolCustom("Default").
 			WithColumn("")
 
+		padding := tw.CellPadding{
+			Global: tw.Padding{
+				Right: "  ",
+			},
+		}
+
 		p.table = tablewriter.NewTable(p.c.Out,
 			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
 				Borders: tw.BorderNone,
@@ -150,11 +156,13 @@ func (p *TablePrinter) initTable() error {
 					Alignment: tw.CellAlignment{
 						Global: tw.AlignLeft,
 					},
+					Padding: padding,
 				},
 				Row: tw.CellConfig{
 					Alignment: tw.CellAlignment{
 						Global: tw.AlignLeft,
 					},
+					Padding: padding,
 				},
 				Behavior: tw.Behavior{TrimSpace: tw.On},
 			}),
