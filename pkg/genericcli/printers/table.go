@@ -30,6 +30,8 @@ type TablePrinterConfig struct {
 	Out io.Writer
 	// DisableDefaultErrorPrinter disables the default error printer when the given print data is of type error.
 	DisableDefaultErrorPrinter bool
+	// Autowrap Text
+	DisableAutoWrap bool
 }
 
 func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
@@ -47,9 +49,12 @@ func (p *TablePrinter) WithOut(out io.Writer) *TablePrinter {
 	return p
 }
 
-// MutateTable can be used to alter the table element. Try not to do it all the time but rather propose an API change in this project.
-func (p *TablePrinter) MutateTable(mutateFn func(table *tablewriter.Table)) {
-	mutateFn(p.table)
+func wrapOption(config *TablePrinterConfig) int {
+	if config.DisableAutoWrap {
+		return tw.WrapNone
+	}
+
+	return tw.WrapNormal
 }
 
 func (p *TablePrinter) Print(data any) error {
@@ -116,10 +121,16 @@ func (p *TablePrinter) initTable() error {
 					Alignment: tw.CellAlignment{
 						Global: tw.AlignLeft,
 					},
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
 				},
 				Row: tw.CellConfig{
 					Alignment: tw.CellAlignment{
 						Global: tw.AlignLeft,
+					},
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
 					},
 				},
 			}),
@@ -157,12 +168,18 @@ func (p *TablePrinter) initTable() error {
 						Global: tw.AlignLeft,
 					},
 					Padding: padding,
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
 				},
 				Row: tw.CellConfig{
 					Alignment: tw.CellAlignment{
 						Global: tw.AlignLeft,
 					},
 					Padding: padding,
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
 				},
 				Behavior: tw.Behavior{TrimSpace: tw.On},
 			}),
