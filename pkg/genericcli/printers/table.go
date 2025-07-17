@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/renderer"
 	"github.com/olekukonko/tablewriter/tw"
@@ -29,8 +28,6 @@ type TablePrinterConfig struct {
 	NoHeaders bool
 	// Out defines the output writer for the printer, will default to os.stdout
 	Out io.Writer
-	// CustomPadding defines the table padding, defaults to three whitespaces
-	CustomPadding *string
 	// DisableDefaultErrorPrinter disables the default error printer when the given print data is of type error.
 	DisableDefaultErrorPrinter bool
 }
@@ -38,9 +35,6 @@ type TablePrinterConfig struct {
 func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
 	if config.Out == nil {
 		config.Out = os.Stdout
-	}
-	if config.CustomPadding == nil {
-		config.CustomPadding = pointer.Pointer(" ")
 	}
 
 	return &TablePrinter{
@@ -92,9 +86,6 @@ func (p *TablePrinter) initTable() error {
 	if p.c.ToHeaderAndRows == nil {
 		return fmt.Errorf("missing to header and rows function in printer configuration")
 	}
-	if p.c.CustomPadding == nil {
-		return fmt.Errorf("padding must be set")
-	}
 
 	if p.c.Markdown {
 
@@ -135,14 +126,17 @@ func (p *TablePrinter) initTable() error {
 		)
 	} else {
 		symbols := tw.NewSymbolCustom("Default").
-			WithCenter("").WithColumn("").WithRow("")
+			WithColumn("")
 
 		p.table = tablewriter.NewTable(p.c.Out,
 			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
 				Borders: tw.BorderNone,
 				Symbols: symbols,
 				Settings: tw.Settings{
-					Lines: tw.Lines{},
+					Lines: tw.Lines{
+						ShowHeaderLine: tw.Off,
+						ShowFooterLine: tw.Off,
+					},
 					Separators: tw.Separators{
 						BetweenRows:    tw.Off,
 						BetweenColumns: tw.Off,
