@@ -51,12 +51,12 @@ func TestApplyFromFile(t *testing.T) {
 			wantOutput: `
 | ID | NAME |
 |----|------|
-|  1 | one  |
+| 1  | one  |
 `,
 			wantBulkOutput: `
 | ID | NAME |
 |----|------|
-|  1 | one  |
+| 1  | one  |
 `,
 		},
 		{
@@ -93,16 +93,16 @@ name: two
 			wantOutput: `
 | ID | NAME |
 |----|------|
-|  1 | one  |
+| 1  | one  |
 | ID | NAME |
 |----|------|
-|  2 | two  |
+| 2  | two  |
 `,
 			wantBulkOutput: `
 | ID | NAME |
 |----|------|
-|  1 | one  |
-|  2 | two  |
+| 1  | one  |
+| 2  | two  |
 `,
 		},
 		{
@@ -140,16 +140,16 @@ name: two
 			wantOutput: `
 | ID | NAME |
 |----|------|
-|  1 | one  |
+| 1  | one  |
 | ID | NAME |
 |----|------|
-|  2 | two  |
+| 2  | two  |
 `,
 			wantBulkOutput: `
 | ID | NAME |
 |----|------|
-|  1 | one  |
-|  2 | two  |
+| 1  | one  |
+| 2  | two  |
 `,
 		},
 		{
@@ -185,12 +185,12 @@ name: two
 error creating entity: creation error for id 1
 | ID | NAME |
 |----|------|
-|  2 | two  |
+| 2  | two  |
 `,
 			wantBulkOutput: `
 | ID | NAME |
 |----|------|
-|  2 | two  |
+| 2  | two  |
 `,
 			wantErr: fmt.Errorf("error creating entity: creation error for id 1"),
 		},
