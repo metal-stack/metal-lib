@@ -19,4 +19,8 @@ const (
 	ClusterEgress = "cluster.metal-stack.io/id/egress"
 	// ClusterOwner tag to store the name of the cluster owner
 	ClusterOwner = "cluster.metal-stack.io/owner"
+	// Partition tags to store the type of the cluster partition
+	RegionalAutospread = "partition.metal-stack.io/type=regional-autospread"
+	MultiZonal         = "partition.metal-stack.io/type=multi-zonal"
+	SingleZone         = "partition.metal-stack.io/type=single-zone"
 )
