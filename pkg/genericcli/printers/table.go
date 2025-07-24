@@ -30,7 +30,7 @@ type TablePrinterConfig struct {
 	Out io.Writer
 	// DisableDefaultErrorPrinter disables the default error printer when the given print data is of type error.
 	DisableDefaultErrorPrinter bool
-	// Autowrap Text
+	// Autowrap Text by default, set true to disable
 	DisableAutoWrap bool
 }
 
@@ -47,6 +47,10 @@ func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
 func (p *TablePrinter) WithOut(out io.Writer) *TablePrinter {
 	p.c.Out = out
 	return p
+}
+
+func (p *TablePrinter) SetAutoWrap(autoWrap bool) {
+	p.c.DisableAutoWrap = !autoWrap
 }
 
 func (p *TablePrinter) DisableAutoWrap(disable bool) {
