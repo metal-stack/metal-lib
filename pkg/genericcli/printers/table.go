@@ -49,10 +49,6 @@ func (p *TablePrinter) WithOut(out io.Writer) *TablePrinter {
 	return p
 }
 
-func (p *TablePrinter) SetAutoWrap(autoWrap bool) {
-	p.c.DisableAutoWrap = !autoWrap
-}
-
 func (p *TablePrinter) DisableAutoWrap(disable bool) {
 	p.c.DisableAutoWrap = disable
 }
