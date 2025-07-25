@@ -5,8 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 // TablePrinter prints data into a table
@@ -27,18 +28,15 @@ type TablePrinterConfig struct {
 	NoHeaders bool
 	// Out defines the output writer for the printer, will default to os.stdout
 	Out io.Writer
-	// CustomPadding defines the table padding, defaults to three whitespaces
-	CustomPadding *string
 	// DisableDefaultErrorPrinter disables the default error printer when the given print data is of type error.
 	DisableDefaultErrorPrinter bool
+	// Autowrap Text by default, set true to disable
+	DisableAutoWrap bool
 }
 
 func NewTablePrinter(config *TablePrinterConfig) *TablePrinter {
 	if config.Out == nil {
 		config.Out = os.Stdout
-	}
-	if config.CustomPadding == nil {
-		config.CustomPadding = pointer.Pointer("   ")
 	}
 
 	return &TablePrinter{
@@ -51,9 +49,16 @@ func (p *TablePrinter) WithOut(out io.Writer) *TablePrinter {
 	return p
 }
 
-// MutateTable can be used to alter the table element. Try not to do it all the time but rather propose an API change in this project.
-func (p *TablePrinter) MutateTable(mutateFn func(table *tablewriter.Table)) {
-	mutateFn(p.table)
+func (p *TablePrinter) DisableAutoWrap(disable bool) {
+	p.c.DisableAutoWrap = disable
+}
+
+func wrapOption(config *TablePrinterConfig) int {
+	if config.DisableAutoWrap {
+		return tw.WrapNone
+	}
+
+	return tw.WrapNormal
 }
 
 func (p *TablePrinter) Print(data any) error {
@@ -72,11 +77,16 @@ func (p *TablePrinter) Print(data any) error {
 	}
 
 	if !p.c.NoHeaders {
-		p.table.SetHeader(header)
+		p.table.Header(header)
 	}
-	p.table.AppendBulk(rows)
 
-	p.table.Render()
+	if err := p.table.Bulk(rows); err != nil {
+		return err
+	}
+
+	if err := p.table.Render(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -85,26 +95,99 @@ func (p *TablePrinter) initTable() error {
 	if p.c.ToHeaderAndRows == nil {
 		return fmt.Errorf("missing to header and rows function in printer configuration")
 	}
-	if p.c.CustomPadding == nil {
-		return fmt.Errorf("padding must be set")
-	}
-
-	p.table = tablewriter.NewWriter(p.c.Out)
 
 	if p.c.Markdown {
-		p.table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		p.table.SetCenterSeparator("|")
+
+		symbols := tw.NewSymbolCustom("Markdown").
+			WithRow("-").
+			WithColumn("|").
+			WithCenter("|").
+			WithMidLeft("|").
+			WithMidRight("|")
+
+		p.table = tablewriter.NewTable(p.c.Out,
+			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.Border{Left: tw.On, Top: tw.Off, Right: tw.On, Bottom: tw.Off},
+				Symbols: symbols,
+				Settings: tw.Settings{
+					Lines: tw.Lines{
+						ShowHeaderLine: tw.On,
+						ShowFooterLine: tw.On,
+					},
+					Separators: tw.Separators{
+						ShowHeader: tw.On,
+						ShowFooter: tw.On,
+					},
+				},
+			})),
+			tablewriter.WithConfig(tablewriter.Config{
+				Header: tw.CellConfig{
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
+					},
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
+				},
+				Row: tw.CellConfig{
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
+					},
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
+				},
+			}),
+		)
 	} else {
-		p.table.SetHeaderLine(false)
-		p.table.SetAlignment(tablewriter.ALIGN_LEFT)
-		p.table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-		p.table.SetBorder(false)
-		p.table.SetCenterSeparator("")
-		p.table.SetColumnSeparator("")
-		p.table.SetRowSeparator("")
-		p.table.SetRowLine(false)
-		p.table.SetTablePadding(*p.c.CustomPadding)
-		p.table.SetNoWhiteSpace(true) // no whitespace in front of every line
+		symbols := tw.NewSymbolCustom("Default").
+			WithColumn("")
+
+		padding := tw.CellPadding{
+			Global: tw.Padding{
+				Right: "  ",
+			},
+		}
+
+		p.table = tablewriter.NewTable(p.c.Out,
+			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.BorderNone,
+				Symbols: symbols,
+				Settings: tw.Settings{
+					Lines: tw.Lines{
+						ShowHeaderLine: tw.Off,
+						ShowFooterLine: tw.Off,
+					},
+					Separators: tw.Separators{
+						BetweenRows:    tw.Off,
+						BetweenColumns: tw.Off,
+						ShowHeader:     tw.Off,
+						ShowFooter:     tw.Off,
+					},
+				},
+			})),
+			tablewriter.WithConfig(tablewriter.Config{
+				Header: tw.CellConfig{
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
+					},
+					Padding: padding,
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
+				},
+				Row: tw.CellConfig{
+					Alignment: tw.CellAlignment{
+						Global: tw.AlignLeft,
+					},
+					Padding: padding,
+					Formatting: tw.CellFormatting{
+						AutoWrap: wrapOption(p.c),
+					},
+				},
+				Behavior: tw.Behavior{TrimSpace: tw.On},
+			}),
+		)
 	}
 
 	return nil
