@@ -182,7 +182,6 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		}
 
 		if e.Error != nil {
-			fmt.Println(string(e.Error.([]byte)))
 			var parsed map[string]any
 			err := json.Unmarshal(e.Error.([]byte), &parsed)
 			if err != nil {

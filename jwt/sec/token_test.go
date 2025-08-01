@@ -1,7 +1,6 @@
 package sec
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -81,7 +80,6 @@ func TestParseTokenUnvalidated(t *testing.T) {
 				t.Errorf("ParseTokenUnvalidated() got User = %v, want %v", got, tt.wantUser)
 			}
 			if !reflect.DeepEqual(got1, tt.wantClaims) {
-				fmt.Println(cmp.Diff(got1, tt.wantClaims))
 				t.Errorf("ParseTokenUnvalidated() got1 Claims = %v, want %v", got1, tt.wantClaims)
 			}
 		})
@@ -228,7 +226,6 @@ func TestParseTokenUnvalidatedUnfiltered(t *testing.T) {
 				t.Errorf("ParseTokenUnvalidatedUnfiltered() gotUser = %v, want %v, diff %s", gotUser, tt.wantUser, diff)
 			}
 			if !reflect.DeepEqual(gotClaims, tt.wantClaims) {
-				fmt.Println(cmp.Diff(gotClaims, tt.wantClaims))
 				t.Errorf("ParseTokenUnvalidated() got1 Claims = %v, want %v", gotClaims, tt.wantClaims)
 			}
 		})
