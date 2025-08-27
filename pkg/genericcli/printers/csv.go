@@ -59,11 +59,11 @@ func (cp *CSVPrinter) Print(data any) error {
 	}
 
 	if !cp.c.NoHeaders {
-		fmt.Fprintln(cp.c.Out, strings.Join(headers, string(cp.c.Delimiter)))
+		_, _ = fmt.Fprintln(cp.c.Out, strings.Join(headers, string(cp.c.Delimiter)))
 	}
 
 	for _, row := range rows {
-		fmt.Fprintln(cp.c.Out, strings.Join(row, string(cp.c.Delimiter)))
+		_, _ = fmt.Fprintln(cp.c.Out, strings.Join(row, string(cp.c.Delimiter)))
 	}
 
 	return nil

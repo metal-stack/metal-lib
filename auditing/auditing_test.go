@@ -516,7 +516,7 @@ var (
 					}
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
-						Body: fmt.Sprintf("%s", es[0].Body.(string)),
+						Body: es[0].Body.(string),
 					})
 					require.NoError(t, err)
 					require.Len(t, entries, 1)
@@ -570,7 +570,7 @@ var (
 						Path:         "/v1/test/0",
 						ForwardedFor: "127.0.0.1",
 						RemoteAddr:   "10.0.0.0",
-						Body:         fmt.Sprintf("%s", es[0].Body.(string)),
+						Body:         es[0].Body.(string),
 						StatusCode:   pointer.Pointer(200),
 						Error:        "",
 					})
