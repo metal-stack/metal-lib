@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,6 +14,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
+	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/rest"
 	"github.com/metal-stack/security"
@@ -76,10 +78,11 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = SerializableError(err)
+
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Error("unable to index", "error", err2)
@@ -140,10 +143,11 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 
 		auditReqContext.prepareForNextPhase()
 		err = handler(srv, childSS)
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = SerializableError(err)
+
 			err2 := a.Index(auditReqContext)
 			if err2 != nil {
 				logger.Error("unable to index", "error", err2)
@@ -208,7 +212,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		scc := next(childCtx, s)
 
 		auditReqContext.Phase = EntryPhaseClosed
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
@@ -267,10 +271,11 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 
 		auditReqContext.prepareForNextPhase()
 		err = next(childCtx, shc)
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = SerializableError(err)
+
 			err2 := a.auditing.Index(auditReqContext)
 			if err2 != nil {
 				a.logger.Error("unable to index", "error", err2)
@@ -339,10 +344,11 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		resp, err := next(childCtx, ar)
 
 		auditReqContext.Phase = EntryPhaseResponse
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
-			auditReqContext.Error = err
+			auditReqContext.Error = SerializableError(err)
+
 			err2 := i.auditing.Index(auditReqContext)
 			if err2 != nil {
 				i.logger.Error("unable to index", "error", err2)
@@ -549,11 +555,79 @@ func (s grpcServerStreamWithContext) Context() context.Context {
 	return s.ctx
 }
 
-func statusCodeFromGrpc(err error) *int {
+func statusCodeFromGrpcOrConnect(err error) *int {
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return pointer.Pointer(int(connectErr.Code()))
+	}
+
 	s, ok := status.FromError(err)
 	if !ok {
 		return pointer.Pointer(int(codes.Unknown))
 	}
 
 	return pointer.Pointer(int(s.Code()))
+}
+
+type ConnectError struct {
+	Code    uint32 `json:"code"`
+	Message string `json:"message"`
+	Err     string `json:"error"`
+}
+
+func (c ConnectError) Error() string {
+	return fmt.Sprintf("%s (%d %s)", c.Err, c.Code, c.Message)
+}
+
+type GrpcError struct {
+	Code    uint32 `json:"code"`
+	Message string `json:"message"`
+	Err     string `json:"error"`
+}
+
+func (c GrpcError) Error() string {
+	return fmt.Sprintf("%s (%d %s)", c.Err, c.Code, c.Message)
+}
+
+// SerializableError attempts to turn an error into something that is usable for the audit backends.
+//
+// most errors do not contain public fields (e.g. connect error) and when being serialized will turn into
+// an empty map.
+//
+// some error types (e.g. httperror of this library) can be serialized without any issues, so these
+// should stay untouched.
+func SerializableError(err error) any {
+	if err == nil {
+		return nil
+	}
+
+	var connectErr *connect.Error
+	if ok := errors.As(err, &connectErr); ok {
+		return ConnectError{
+			Code:    uint32(connectErr.Code()),
+			Message: connectErr.Code().String(),
+			Err:     connectErr.Error(),
+		}
+	}
+
+	s, ok := status.FromError(err)
+	if ok {
+		return GrpcError{
+			Code:    uint32(s.Code()),
+			Message: s.Code().String(),
+			Err:     s.Message(),
+		}
+	}
+
+	var httpErr *httperrors.HTTPErrorResponse
+	if ok := errors.As(err, &httpErr); ok {
+		return *httpErr
+	}
+
+	// fallback to string (which is better than nothing)
+	return struct {
+		Error string `json:"error"`
+	}{
+		Error: err.Error(),
+	}
 }
