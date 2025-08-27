@@ -463,12 +463,7 @@ func TestKubeconfigFromEnv(t *testing.T) {
 		_ = os.Remove(tmpfile.Name())
 	}() // clean up
 
-	err := os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
-	require.NoError(t, err)
-	defer func() {
-		err := os.Setenv(RecommendedConfigPathEnvVar, "")
-		assert.NoError(t, err)
-	}()
+	t.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
 
 	_, filename, isDefault, err := LoadKubeConfig("")
 	require.NoError(t, err)
@@ -482,12 +477,7 @@ func TestAuthContextFromEnv(t *testing.T) {
 		_ = os.Remove(tmpfile.Name())
 	}() // clean up
 
-	err := os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
-	require.NoError(t, err)
-	defer func() {
-		err := os.Setenv(RecommendedConfigPathEnvVar, "")
-		assert.NoError(t, err)
-	}()
+	t.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
 
 	authCtx, err := GetAuthContext("", testCloudContextName)
 	require.NoError(t, err)
@@ -503,12 +493,7 @@ func TestKubeconfigDefault(t *testing.T) {
 }
 
 func TestKubeconfigFromEnvDoesNotExist(t *testing.T) {
-	err := os.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig")
-	require.NoError(t, err)
-	defer func() {
-		err := os.Setenv(RecommendedConfigPathEnvVar, "")
-		assert.NoError(t, err)
-	}()
+	t.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig")
 
 	authCtx, filename, isDefault, err := LoadKubeConfig("")
 	require.NoError(t, err)
@@ -524,24 +509,15 @@ func TestAuthContextFromEnvDoesNotExist(t *testing.T) {
 		_ = os.Remove(tmpfile.Name())
 	}() // clean up
 
-	err := os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
-	require.NoError(t, err)
-	defer func() {
-		err = os.Setenv(RecommendedConfigPathEnvVar, "")
-		assert.NoError(t, err)
-	}()
+	t.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
 
-	_, err = CurrentAuthContext("")
+	_, err := CurrentAuthContext("")
 	require.NoError(t, err)
 }
 
 func TestKubeconfigFromEnvMultiplePaths(t *testing.T) {
-	err := os.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig:/another/path")
-	require.NoError(t, err)
-	defer func() {
-		err := os.Setenv(RecommendedConfigPathEnvVar, "")
-		assert.NoError(t, err)
-	}()
+	t.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig:/another/path")
+
 	_, filename, isDefault, err := LoadKubeConfig("")
 	require.EqualError(t, err, "there are multiple files in env KUBECONFIG, don't know which one to update - please use cmdline-option")
 	require.Equal(t, "", filename)
