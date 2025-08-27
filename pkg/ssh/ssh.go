@@ -75,7 +75,7 @@ func NewClient(user, host string, port int, opts ...ConnectOpt) (*Client, error)
 		return nil, err
 	}
 
-	fmt.Fprintf(out, "ssh to %s@%s:%d\n", user, host, port)
+	_, _ = fmt.Fprintf(out, "ssh to %s@%s:%d\n", user, host, port)
 
 	sshServerAddress := fmt.Sprintf("%s:%d", host, port)
 	client, err := ssh.Dial("tcp", sshServerAddress, sshConfig)
@@ -95,7 +95,9 @@ func (c *Client) Connect(env *Env) error {
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer func() {
+		_ = session.Close()
+	}()
 
 	if env != nil {
 		var errs []error
@@ -135,7 +137,7 @@ func (c *Client) Connect(env *Env) error {
 		defer func() {
 			err = term.Restore(fileDescriptor, originalState)
 			if err != nil {
-				fmt.Fprintf(c.out, "error restoring ssh terminal:%v\n", err)
+				_, _ = fmt.Fprintf(c.out, "error restoring ssh terminal:%v\n", err)
 			}
 		}()
 

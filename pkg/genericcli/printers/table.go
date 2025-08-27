@@ -63,7 +63,7 @@ func wrapOption(config *TablePrinterConfig) int {
 
 func (p *TablePrinter) Print(data any) error {
 	if err, ok := data.(error); ok && !p.c.DisableDefaultErrorPrinter {
-		fmt.Fprintf(p.c.Out, "%s\n", err)
+		_, _ = fmt.Fprintf(p.c.Out, "%s\n", err)
 		return nil
 	}
 

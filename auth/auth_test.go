@@ -61,7 +61,9 @@ func Test_NewUpdateKubeConfigHandler(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer func() {
+		_ = os.Remove(file.Name())
+	}()
 
 	var b bytes.Buffer
 	thf := NewUpdateKubeConfigHandler(file.Name(), &b)
@@ -88,7 +90,9 @@ func Test_NewUpdateKubeConfigHandlerWithContext(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer os.Remove(file.Name())
+	defer func() {
+		_ = os.Remove(file.Name())
+	}() // clean up
 
 	var b bytes.Buffer
 	thf := NewUpdateKubeConfigHandler(file.Name(), &b, WithContextName("ctx123"))

@@ -58,7 +58,7 @@ func (p *ProtoYAMLPrinter) Print(data any) error {
 		return err
 	}
 
-	fmt.Fprintf(p.out, "%s", string(content))
+	_, _ = fmt.Fprintf(p.out, "%s", string(content))
 
 	return nil
 }

@@ -167,7 +167,6 @@ func expectSuccess(expected TestAuthContext) validateFn {
 }
 
 func (s *successData) validateSuccess(t *testing.T, authCtx AuthContext, err error) error {
-
 	if err != nil {
 		return err
 	}
@@ -190,7 +189,6 @@ type errorData struct {
 }
 
 func (e *errorData) validateError(t *testing.T, ctx AuthContext, err error) error {
-
 	if err == nil {
 		return fmt.Errorf("expected error '%s', got none", e.errorMessage)
 	}
@@ -240,7 +238,6 @@ var demoToken2 = TokenInfo{
 }
 
 func TestUpdateUserNewFile(t *testing.T) {
-
 	tmpFile, err := os.CreateTemp("", "this_file_must_not_exist_*")
 	require.NoError(t, err)
 	tmpfileName := tmpFile.Name()
@@ -253,7 +250,9 @@ func TestUpdateUserNewFile(t *testing.T) {
 	_, err = UpdateKubeConfig(tmpfileName, ti, ExtractEMail)
 	require.NoError(t, err)
 
-	defer os.Remove(tmpfileName)
+	defer func() {
+		_ = os.Remove(tmpfileName)
+	}()
 
 	// check it is written
 	require.FileExists(t, tmpfileName, "expected file to exist")
@@ -288,7 +287,9 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 	_, err = UpdateKubeConfig(tmpfileName, ti, ExtractName)
 	require.NoError(t, err)
 
-	defer os.Remove(tmpfileName)
+	defer func() {
+		_ = os.Remove(tmpfileName)
+	}()
 
 	// check it is written
 	require.FileExists(t, tmpfileName, "expected file to ")
@@ -310,7 +311,6 @@ func TestUpdateUserWithNameExtractorNewFile(t *testing.T) {
 }
 
 func TestLoadExistingConfigWithOIDC(t *testing.T) {
-
 	authContext, err := CurrentAuthContext("./testdata/UEMCgivenConfig")
 
 	require.NoError(t, err)
@@ -326,9 +326,10 @@ func TestLoadExistingConfigWithOIDC(t *testing.T) {
 }
 
 func TestUpdateUserExistingConfig(t *testing.T) {
-
 	tmpfile := writeTemplate(t, "./testdata/UEUgivenConfig")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
 	_, err := UpdateKubeConfig(tmpfile.Name(), demoToken, ExtractEMail)
 	if err != nil {
@@ -339,9 +340,10 @@ func TestUpdateUserExistingConfig(t *testing.T) {
 }
 
 func TestUpdateIncompleteConfig(t *testing.T) {
-
 	tmpfile := writeTemplate(t, "./testdata/configIncomplete")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
 	_, err := UpdateKubeConfig(tmpfile.Name(), demoToken, ExtractEMail)
 	if err != nil {
@@ -352,9 +354,10 @@ func TestUpdateIncompleteConfig(t *testing.T) {
 }
 
 func TestUpdateExistingCloudctlConfig(t *testing.T) {
-
 	tmpfile := writeTemplate(t, "./testdata/UEMCgivenConfig")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
 	_, err := UpdateKubeConfig(tmpfile.Name(), demoToken2, ExtractEMail)
 	if err != nil {
@@ -372,9 +375,10 @@ func TestUpdateExistingCloudctlConfig(t *testing.T) {
 }
 
 func TestUpdateExistingProdConfig(t *testing.T) {
-
 	tmpfile := writeTemplate(t, "./testdata/UEMCgivenProdConfig")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
 	_, err := UpdateKubeConfigContext(tmpfile.Name(), demoToken2, ExtractEMail, testCloudContextNameProd)
 	if err != nil {
@@ -392,7 +396,6 @@ func TestUpdateExistingProdConfig(t *testing.T) {
 }
 
 func TestManipulateEncodeKubeconfig(t *testing.T) {
-
 	// load full kubeconfig
 	cfg, _, _, err := LoadKubeConfig("./testdata/UEUgivenConfig")
 	require.NoError(t, err)
@@ -432,7 +435,6 @@ func TestManipulateEncodeKubeconfig(t *testing.T) {
 }
 
 func TestReduceAndEncodeKubeconfig(t *testing.T) {
-
 	// load full kubeconfig
 	cfg, _, _, err := LoadKubeConfig("./testdata/UEMCgivenConfig")
 	require.NoError(t, err)
@@ -456,12 +458,17 @@ func TestReduceAndEncodeKubeconfig(t *testing.T) {
 }
 
 func TestKubeconfigFromEnv(t *testing.T) {
-
 	tmpfile := writeTemplate(t, "./testdata/UEMCgivenConfig")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
-	os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
-	defer os.Setenv(RecommendedConfigPathEnvVar, "")
+	err := os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
+	require.NoError(t, err)
+	defer func() {
+		err := os.Setenv(RecommendedConfigPathEnvVar, "")
+		assert.NoError(t, err)
+	}()
 
 	_, filename, isDefault, err := LoadKubeConfig("")
 	require.NoError(t, err)
@@ -470,12 +477,17 @@ func TestKubeconfigFromEnv(t *testing.T) {
 }
 
 func TestAuthContextFromEnv(t *testing.T) {
-
 	tmpfile := writeTemplate(t, "./testdata/UEMCgivenConfig")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
-	os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
-	defer os.Setenv(RecommendedConfigPathEnvVar, "")
+	err := os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
+	require.NoError(t, err)
+	defer func() {
+		err := os.Setenv(RecommendedConfigPathEnvVar, "")
+		assert.NoError(t, err)
+	}()
 
 	authCtx, err := GetAuthContext("", testCloudContextName)
 	require.NoError(t, err)
@@ -484,7 +496,6 @@ func TestAuthContextFromEnv(t *testing.T) {
 }
 
 func TestKubeconfigDefault(t *testing.T) {
-
 	// TODO we can't control the default location without mocking the fileaccess
 	// it would be good to test the "path will be created if default location does not exist" feature
 	_, _, isDefault, _ := LoadKubeConfig("")
@@ -492,9 +503,12 @@ func TestKubeconfigDefault(t *testing.T) {
 }
 
 func TestKubeconfigFromEnvDoesNotExist(t *testing.T) {
-
-	os.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig")
-	defer os.Setenv(RecommendedConfigPathEnvVar, "")
+	err := os.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig")
+	require.NoError(t, err)
+	defer func() {
+		err := os.Setenv(RecommendedConfigPathEnvVar, "")
+		assert.NoError(t, err)
+	}()
 
 	authCtx, filename, isDefault, err := LoadKubeConfig("")
 	require.NoError(t, err)
@@ -506,20 +520,28 @@ func TestKubeconfigFromEnvDoesNotExist(t *testing.T) {
 func TestAuthContextFromEnvDoesNotExist(t *testing.T) {
 
 	tmpfile := writeTemplate(t, "./testdata/UEMCgivenConfig")
-	defer os.Remove(tmpfile.Name()) // clean up
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
 
-	os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
-	defer os.Setenv(RecommendedConfigPathEnvVar, "")
+	err := os.Setenv(RecommendedConfigPathEnvVar, tmpfile.Name())
+	require.NoError(t, err)
+	defer func() {
+		err = os.Setenv(RecommendedConfigPathEnvVar, "")
+		assert.NoError(t, err)
+	}()
 
-	_, err := CurrentAuthContext("")
+	_, err = CurrentAuthContext("")
 	require.NoError(t, err)
 }
 
 func TestKubeconfigFromEnvMultiplePaths(t *testing.T) {
-
-	os.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig:/another/path")
-	defer os.Setenv(RecommendedConfigPathEnvVar, "")
-
+	err := os.Setenv(RecommendedConfigPathEnvVar, "/tmp/path/to/kubeconfig:/another/path")
+	require.NoError(t, err)
+	defer func() {
+		err := os.Setenv(RecommendedConfigPathEnvVar, "")
+		assert.NoError(t, err)
+	}()
 	_, filename, isDefault, err := LoadKubeConfig("")
 	require.EqualError(t, err, "there are multiple files in env KUBECONFIG, don't know which one to update - please use cmdline-option")
 	require.Equal(t, "", filename)

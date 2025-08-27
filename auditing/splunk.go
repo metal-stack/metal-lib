@@ -139,7 +139,9 @@ func (a *splunkAuditing) Index(entry Entry) error {
 	if err != nil {
 		return fmt.Errorf("error indexing audit entry in splunk: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	return nil
 }

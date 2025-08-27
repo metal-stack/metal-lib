@@ -157,7 +157,9 @@ func TestNewHealth(t *testing.T) {
 			container.ServeHTTP(w, createReq)
 
 			resp := w.Result()
-			defer resp.Body.Close()
+			defer func() {
+				_ = resp.Body.Close()
+			}()
 			var s HealthResponse
 			err = json.NewDecoder(resp.Body).Decode(&s)
 			require.NoError(t, err)

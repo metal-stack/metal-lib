@@ -60,14 +60,13 @@ func (p *Plugin) ExtractUserProcessGroups(claims *security.Claims) (user *securi
 
 // extractUser returns the User, groups are extracted with the given fn.
 func extractUser(claims *security.Claims, fn extractGroupsFn) (user *security.User, err error) {
-
 	tenant := ""
 	if claims.FederatedClaims == nil {
-		return nil, errors.New("Invalid Token, no FederatedClaims")
+		return nil, errors.New("invalid token, no FederatedClaims")
 	}
 	cid := claims.FederatedClaims["connector_id"]
 	if cid == "" {
-		return nil, errors.New("Invalid Token, no connector_id")
+		return nil, errors.New("invalid token, no connector_id")
 	}
 
 	directory := ""

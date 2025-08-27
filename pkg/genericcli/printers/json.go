@@ -31,7 +31,7 @@ func (p *JSONPrinter) WithDisableDefaultErrorPrinter() *JSONPrinter {
 
 func (p *JSONPrinter) Print(data any) error {
 	if err, ok := data.(error); ok && !p.disableDefaultErrorPrinter {
-		fmt.Fprintf(p.out, "%s\n", err)
+		_, _ = fmt.Fprintf(p.out, "%s\n", err)
 		return nil
 	}
 
@@ -40,7 +40,7 @@ func (p *JSONPrinter) Print(data any) error {
 		return err
 	}
 
-	fmt.Fprintf(p.out, "%s\n", string(content))
+	_, _ = fmt.Fprintf(p.out, "%s\n", string(content))
 
 	return nil
 }

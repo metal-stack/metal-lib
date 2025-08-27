@@ -99,7 +99,7 @@ func (p *TemplatePrinter) print(data any) error {
 	}
 
 	if !p.omitEmpty || buf.Len() > 0 {
-		fmt.Fprintf(p.out, "%s\n", buf.String())
+		_, _ = fmt.Fprintf(p.out, "%s\n", buf.String())
 	}
 
 	return nil
