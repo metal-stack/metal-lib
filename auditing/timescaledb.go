@@ -343,7 +343,12 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			a.log.Error("unable to close rows", "error", err)
+		}
+	}()
 
 	var entries []Entry
 

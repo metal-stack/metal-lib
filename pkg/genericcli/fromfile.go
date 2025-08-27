@@ -12,10 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var alreadyExistsError = errors.New("entity already exists")
+var errAlreadyExists = errors.New("entity already exists")
 
 func AlreadyExistsError() error {
-	return alreadyExistsError
+	return errAlreadyExists
 }
 
 const (
