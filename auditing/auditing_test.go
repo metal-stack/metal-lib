@@ -16,6 +16,7 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 )
 
 var (
@@ -661,7 +662,7 @@ var (
 					require.NoError(t, err)
 					assert.Len(t, entries, 1)
 					assert.Equal(t, "auditing.test", entries[0].Component)
-					assert.Equal(t, map[string]any{"code": "already_exists", "error": "already_exists: already exists"}, entries[0].Error)
+					assert.Equal(t, map[string]any{"code": float64(codes.AlreadyExists), "error": "already_exists: already exists", "message": "already_exists"}, entries[0].Error)
 					assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 				},
 			},

@@ -78,7 +78,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 
 		auditReqContext.Phase = EntryPhaseResponse
 		auditReqContext.Body = resp
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
 			auditReqContext.Error = SerializableError(err)
@@ -143,7 +143,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 
 		auditReqContext.prepareForNextPhase()
 		err = handler(srv, childSS)
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
 			auditReqContext.Error = SerializableError(err)
@@ -212,7 +212,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		scc := next(childCtx, s)
 
 		auditReqContext.Phase = EntryPhaseClosed
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
@@ -271,7 +271,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 
 		auditReqContext.prepareForNextPhase()
 		err = next(childCtx, shc)
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
 			auditReqContext.Error = SerializableError(err)
@@ -344,7 +344,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		resp, err := next(childCtx, ar)
 
 		auditReqContext.Phase = EntryPhaseResponse
-		auditReqContext.StatusCode = statusCodeFromGrpc(err)
+		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
 			auditReqContext.Error = SerializableError(err)
@@ -555,7 +555,12 @@ func (s grpcServerStreamWithContext) Context() context.Context {
 	return s.ctx
 }
 
-func statusCodeFromGrpc(err error) *int {
+func statusCodeFromGrpcOrConnect(err error) *int {
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return pointer.Pointer(int(connectErr.Code()))
+	}
+
 	s, ok := status.FromError(err)
 	if !ok {
 		return pointer.Pointer(int(codes.Unknown))
@@ -565,12 +570,23 @@ func statusCodeFromGrpc(err error) *int {
 }
 
 type ConnectError struct {
-	Code string `json:"code"`
-	Err  string `json:"error"`
+	Code    uint32 `json:"code"`
+	Message string `json:"message"`
+	Err     string `json:"error"`
 }
 
 func (c ConnectError) Error() string {
-	return fmt.Sprintf("%s (%s)", c.Err, c.Code)
+	return fmt.Sprintf("%s (%d %s)", c.Err, c.Code, c.Message)
+}
+
+type GrpcError struct {
+	Code    uint32 `json:"code"`
+	Message string `json:"message"`
+	Err     string `json:"error"`
+}
+
+func (c GrpcError) Error() string {
+	return fmt.Sprintf("%s (%d %s)", c.Err, c.Code, c.Message)
 }
 
 // SerializableError attempts to turn an error into something that is usable for the audit backends.
@@ -588,8 +604,18 @@ func SerializableError(err error) any {
 	var connectErr *connect.Error
 	if ok := errors.As(err, &connectErr); ok {
 		return ConnectError{
-			Code: connectErr.Code().String(),
-			Err:  connectErr.Error(),
+			Code:    uint32(connectErr.Code()),
+			Message: connectErr.Code().String(),
+			Err:     connectErr.Error(),
+		}
+	}
+
+	s, ok := status.FromError(err)
+	if ok {
+		return GrpcError{
+			Code:    uint32(s.Code()),
+			Message: s.Code().String(),
+			Err:     s.Message(),
 		}
 	}
 
