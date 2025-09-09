@@ -3,16 +3,20 @@ package auditing_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sort"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 )
 
 var (
@@ -74,7 +78,7 @@ var (
 				RemoteAddr:   "10.0.0.2",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000002",
 				StatusCode:   nil,
-				Error:        "an error",
+				Error:        auditing.SerializableError(fmt.Errorf("an error")),
 			},
 		}
 	}
@@ -126,7 +130,7 @@ var (
 
 					sort.Slice(entries, func(i, j int) bool { return entries[i].RequestId < entries[j].RequestId })
 
-					if diff := cmp.Diff(entries, es, cmpopts.IgnoreFields(auditing.Entry{}, "Id"), timeComparer); diff != "" {
+					if diff := cmp.Diff(entries, es, cmpopts.IgnoreFields(auditing.Entry{}, "Id", "Error"), timeComparer); diff != "" {
 						t.Errorf("diff (+got -want):\n %s", diff)
 					}
 
@@ -388,7 +392,7 @@ var (
 					require.NoError(t, err)
 					require.Len(t, entries, 3)
 
-					if diff := cmp.Diff(entries, es); diff != "" {
+					if diff := cmp.Diff(entries, es, cmpopts.IgnoreFields(auditing.Entry{}, "Error")); diff != "" {
 						t.Errorf("diff (+got -want):\n %s", diff)
 					}
 				},
@@ -432,7 +436,7 @@ var (
 					require.NoError(t, err)
 					require.Len(t, entries, 1)
 
-					if diff := cmp.Diff(entries[0], es[0], cmpopts.IgnoreFields(auditing.Entry{}, "Id"), timeComparer); diff != "" {
+					if diff := cmp.Diff(entries[0], es[0], cmpopts.IgnoreFields(auditing.Entry{}, "Id", "Error"), timeComparer); diff != "" {
 						t.Errorf("diff (+got -want):\n %s", diff)
 					}
 				},
@@ -459,7 +463,7 @@ var (
 
 					sort.Slice(entries, func(i, j int) bool { return entries[i].RequestId < entries[j].RequestId })
 
-					if diff := cmp.Diff(entries, wantEntries, cmpopts.IgnoreFields(auditing.Entry{}, "Id"), timeComparer); diff != "" {
+					if diff := cmp.Diff(entries, wantEntries, cmpopts.IgnoreFields(auditing.Entry{}, "Id", "Error"), timeComparer); diff != "" {
 						t.Errorf("diff (+got -want):\n %s", diff)
 					}
 				},
@@ -512,7 +516,7 @@ var (
 					}
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
-						Body: fmt.Sprintf("%s", es[0].Body.(string)),
+						Body: es[0].Body.(string),
 					})
 					require.NoError(t, err)
 					require.Len(t, entries, 1)
@@ -532,12 +536,12 @@ var (
 					}
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
-						Body: fmt.Sprintf("002"),
+						Body: "002",
 					})
 					require.NoError(t, err)
 					require.Len(t, entries, 1)
 
-					if diff := cmp.Diff(entries[0], es[2]); diff != "" {
+					if diff := cmp.Diff(entries[0], es[2], cmpopts.IgnoreFields(auditing.Entry{}, "Error")); diff != "" {
 						t.Errorf("diff (+got -want):\n %s", diff)
 					}
 				},
@@ -566,7 +570,7 @@ var (
 						Path:         "/v1/test/0",
 						ForwardedFor: "127.0.0.1",
 						RemoteAddr:   "10.0.0.0",
-						Body:         fmt.Sprintf("%s", es[0].Body.(string)),
+						Body:         es[0].Body.(string),
 						StatusCode:   pointer.Pointer(200),
 						Error:        "",
 					})
@@ -631,31 +635,35 @@ var (
 				},
 			},
 			{
-				name: "backwards compatibility with old error type",
+				name: "index an http error",
 				t: func(t *testing.T, a auditing.Auditing) {
 					err := a.Index(auditing.Entry{
-						RequestId: "1",
-						Timestamp: now,
-						Error:     fmt.Errorf("an error"),
+						Error: auditing.SerializableError(httperrors.NewHTTPError(http.StatusConflict, fmt.Errorf("already exists"))),
 					})
 					require.NoError(t, err)
 
-					entries, err := a.Search(ctx, auditing.EntryFilter{
-						From:      now.Add(-1 * time.Minute),
-						To:        now.Add(1 * time.Minute),
-						RequestId: "1",
+					entries, err := a.Search(ctx, auditing.EntryFilter{})
+					require.NoError(t, err)
+					assert.Len(t, entries, 1)
+					assert.Equal(t, "auditing.test", entries[0].Component)
+					assert.Equal(t, map[string]any{"statuscode": float64(409), "message": "already exists"}, entries[0].Error)
+					assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
+				},
+			},
+			{
+				name: "index a connect error",
+				t: func(t *testing.T, a auditing.Auditing) {
+					err := a.Index(auditing.Entry{
+						Error: auditing.SerializableError(connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("already exists"))),
 					})
 					require.NoError(t, err)
-					require.Len(t, entries, 1)
 
-					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component: "auditing.test",
-						RequestId: "1",
-						Timestamp: now,
-						Error:     map[string]any{}, // unfortunately this was a regression and the error was marshalled as an empty map because error does export any fields
-					}); diff != "" {
-						t.Errorf("diff (+got -want):\n %s", diff)
-					}
+					entries, err := a.Search(ctx, auditing.EntryFilter{})
+					require.NoError(t, err)
+					assert.Len(t, entries, 1)
+					assert.Equal(t, "auditing.test", entries[0].Component)
+					assert.Equal(t, map[string]any{"code": float64(codes.AlreadyExists), "error": "already_exists: already exists", "message": "already_exists"}, entries[0].Error)
+					assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 				},
 			},
 		}

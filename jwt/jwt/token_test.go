@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -82,10 +81,8 @@ func TestGenerateFullToken(t *testing.T) {
 	require.NoError(t, err, "error creating token")
 	assert.NotEmpty(t, token)
 
-	fmt.Println(token)
-	bytes, err := publicKey.MarshalJSON()
+	_, err = publicKey.MarshalJSON()
 	require.NoError(t, err)
-	fmt.Println(string(bytes))
 
 	webToken, err := jwt.ParseSigned(token, []jose.SignatureAlgorithm{alg})
 	require.NoError(t, err)

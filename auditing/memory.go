@@ -3,6 +3,7 @@ package auditing
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -62,6 +63,14 @@ func (a *memoryAuditing) Index(entry Entry) error {
 	}
 	if entry.Timestamp.IsZero() {
 		entry.Timestamp = time.Now()
+	}
+	if entry.Error != nil {
+		raw, err := json.Marshal(entry.Error)
+		if err != nil {
+			return fmt.Errorf("unable to serialize error: %w", err)
+		}
+
+		entry.Error = raw
 	}
 
 	a.mutex.Lock()
@@ -170,6 +179,16 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 
 		if !match {
 			continue
+		}
+
+		if e.Error != nil {
+			var parsed map[string]any
+			err := json.Unmarshal(e.Error.([]byte), &parsed)
+			if err != nil {
+				return nil, fmt.Errorf("unable to deserialize error: %w", err)
+			}
+
+			e.Error = parsed
 		}
 
 		entries = append(entries, e)

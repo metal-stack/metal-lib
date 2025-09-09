@@ -105,12 +105,12 @@ func PromptCustom(c *PromptConfig) error {
 		}
 
 		if c.No == "" {
-			fmt.Fprintf(c.Out, "%s [%s] ", c.Message, yes)
+			_, _ = fmt.Fprintf(c.Out, "%s [%s] ", c.Message, yes)
 		} else {
-			fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, yes, no)
+			_, _ = fmt.Fprintf(c.Out, "%s [%s/%s] ", c.Message, yes, no)
 		}
 	} else {
-		fmt.Fprintf(c.Out, "%s ", c.Message)
+		_, _ = fmt.Fprintf(c.Out, "%s ", c.Message)
 	}
 
 	scanner := bufio.NewScanner(c.In)

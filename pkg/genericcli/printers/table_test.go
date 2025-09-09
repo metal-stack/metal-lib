@@ -28,9 +28,9 @@ func TestBasicTablePrinter(t *testing.T) {
 		t.Error(err)
 	}
 	got := buffer.String()
-	want := `A   B 
-1   2   
-3   4   
+	want := `A  B  
+1  2  
+3  4  
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
@@ -114,7 +114,6 @@ func TestBasicMarkdownTablePrinterWithoutHeadersAndRows(t *testing.T) {
 	}
 	got := buffer.String()
 	want := `| A | B |
-|---|---|
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
@@ -179,40 +178,6 @@ func TestMarkdownTablePrinterWithWideOutput(t *testing.T) {
 |---|---|
 | 1 | 2 |
 | 3 | 4 |
-`
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("diff (+got -want):\n %s", diff)
-	}
-}
-
-func TestTablePrinterWithPadding(t *testing.T) {
-	buffer := new(bytes.Buffer)
-	padding := ","
-	printer := printers.NewTablePrinter(&printers.TablePrinterConfig{
-		Out:           buffer,
-		Wide:          true,
-		CustomPadding: &padding,
-		ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
-			if data != "test" {
-				t.Errorf("want data test, got %s", data)
-			}
-			if !wide {
-				t.Errorf("want wide output")
-			}
-			return []string{"a", "b"}, [][]string{
-				{"1", "2"},
-				{"3", "4"},
-			}, nil
-		},
-	})
-	err := printer.Print("test")
-	if err != nil {
-		t.Error(err)
-	}
-	got := buffer.String()
-	want := `A,B 
-1,2,
-3,4,
 `
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)

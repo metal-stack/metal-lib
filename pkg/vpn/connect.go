@@ -79,7 +79,7 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 	var firewallVPNIP netip.Addr
 	err = retry.Do(
 		func() error {
-			fmt.Fprintf(out, ".")
+			_, _ = fmt.Fprintf(out, ".")
 			status, err := lc.Status(ctx)
 			if err != nil {
 				return err
@@ -88,7 +88,7 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 				for _, peer := range status.Peer {
 					if strings.HasPrefix(peer.HostName, target) {
 						firewallVPNIP = peer.TailscaleIPs[0]
-						fmt.Fprintf(out, " connected to %s (ip %s) took: %s\n", target, firewallVPNIP, time.Since(start))
+						_, _ = fmt.Fprintf(out, " connected to %s (ip %s) took: %s\n", target, firewallVPNIP, time.Since(start))
 						return nil
 					}
 				}

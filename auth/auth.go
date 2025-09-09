@@ -556,7 +556,7 @@ func (u *updateKubeConfig) updateKubeConfigFunc(tokenInfo TokenInfo) error {
 	}
 
 	if u.writer != nil {
-		fmt.Fprintf(u.writer, "Successfully written token to %s\n", filename)
+		_, _ = fmt.Fprintf(u.writer, "Successfully written token to %s\n", filename)
 	}
 
 	return nil
@@ -593,7 +593,9 @@ func fetchJSON(url string, data any) error {
 	if err != nil {
 		return fmt.Errorf("error fetching url: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

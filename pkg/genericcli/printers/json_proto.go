@@ -48,7 +48,7 @@ func (p *ProtoJSONPrinter) Print(data any) error {
 		return err
 	}
 
-	fmt.Fprintf(p.out, "%s\n", string(content))
+	_, _ = fmt.Fprintf(p.out, "%s\n", string(content))
 
 	return nil
 }

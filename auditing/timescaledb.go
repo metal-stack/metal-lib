@@ -197,7 +197,7 @@ func (a *timescaleAuditing) initialize() error {
 	}
 
 	m, err := migrator.New(
-		migrator.WithLogger(migrator.LoggerFunc(func(msg string, args ...interface{}) {
+		migrator.WithLogger(migrator.LoggerFunc(func(msg string, args ...any) {
 			a.log.Info(fmt.Sprintf(msg, args...))
 		})),
 		migrator.Migrations(
@@ -249,7 +249,7 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	var (
 		where     []string
-		values    = map[string]interface{}{}
+		values    = map[string]any{}
 		addFilter = func(field string, value any, op sqlCompOp) error {
 			if reflect.ValueOf(value).IsZero() {
 				return nil
@@ -343,7 +343,12 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			a.log.Error("unable to close rows", "error", err)
+		}
+	}()
 
 	var entries []Entry
 
