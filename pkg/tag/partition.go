@@ -1,11 +1,12 @@
 package tag
 
 const (
-	// Partition tags to store the type of the cluster partition
+	// PartitionType describes a type of a partition, i.e. a partition that is located in a single zone inside a region or a partition which spreads machines across a region using the metal-stack rack spreading feature.
+	PartitionType = "partition.metal-stack.io/type"
 
-	// SingleZone describes a partition that is located in a single zone inside a region.
-	SingleZone         = "partition.metal-stack.io/type=single-zone"
-	
-	// RegionalAutospread describes a partition, which spreads machines across a region using the metal-stack rack spreading feature.
-	RegionalAutospread = "partition.metal-stack.io/type=regional-autospread"
+	// PartitionTypeSingleZone describes a partition that is located in a single zone inside a region.
+	PartitionTypeSingleZone         = "single-zone"
+
+	// PartitionTypeRegionalAutospread describes a partition, which spreads machines across a region using the metal-stack rack spreading feature.
+	PartitionTypeRegionalAutospread = "regional-autospread"
 )

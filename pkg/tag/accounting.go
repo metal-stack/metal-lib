@@ -36,5 +36,6 @@ func AccountingTags() map[string]bool {
 		AccountingVolumeQoSPolicyName:    true,
 		AccountingVolumeEncryption:       true,
 		AccountingVolumeSnapshotSource:   true,
+		PartitionType:                    true,
 	}
 }
