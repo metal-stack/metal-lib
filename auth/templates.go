@@ -84,11 +84,17 @@ var tokenTmpl = template.Must(template.New("token.html").Parse(`<html>
   <head>` + commonStyle + `
   </head>
   <body>
-      <div class="auth-container">
-          <h3>Authentication successful</h3>
-          <h4>Please close this page and return to your terminal.</h4>
-          <a href="https://oidc.test.fits.cloud/auth/realms/fits-cloudnative-fits/account" class="auth-button">Manage your session</a>
-      </div>
+	<div class="auth-container">
+		<h3>Authentication successful</h3>
+		<h4>{{ .SuccessMessage }}</h4>
+		{{ if .Debug }}
+			<p> Token: <pre><code>{{ .IDToken }}</code></pre></p>
+		<p> Claims: <pre><code>{{ .Claims }}</code></pre></p>
+			{{ if .RefreshToken }}
+		<p> Refresh Token: <pre><code>{{ .RefreshToken }}</code></pre></p>
+			{{ end }}
+		{{ end }}
+	</div>
   </body>
 </html>
 `))
