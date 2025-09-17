@@ -23,10 +23,52 @@ html {
 	-ms-text-size-adjust: 100%; /* 2 */
 	-webkit-text-size-adjust: 100%; /* 2 */
 }
+
 body {
-	margin: 50;
-	background: #F0F0F0;
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667292 0%, #495367 50%, #3a4553 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
+.auth-container {
+    background: #1a1a1a;
+    color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
+h3 {
+    color: white;
+    font-size: 20px;
+    margin: 0 0 20px 0;
+}
+
+h4 {
+    color: #cccccc;
+    font-size: 14px;
+    margin: 0 0 20px 0;
+}
+
+.auth-button {
+    background: #495367;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.auth-button:hover {
+    background: #3a4553;
+}
+
 /* make pre wrap */
 pre {
 	white-space: pre-wrap;       /* css-3 */
