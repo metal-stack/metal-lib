@@ -63,8 +63,9 @@ h4 {
     border-radius: 4px;
     text-decoration: none;
     transition: background-color 0.3s ease;
-	display: inline-block;                                                                                                                                                                                                                                                                                   │ │
-	margin: 20 0 0 0;
+	display: inline-block;
+	margin-top: 20px;                                                                                                                                                                                                                                                                              │ │
+	margin: 20px 0 0 0;
 }
 
 .auth-button:hover {
