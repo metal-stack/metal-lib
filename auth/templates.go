@@ -47,7 +47,7 @@ body {
 h3 {
     color: white;
     font-size: 20px;
-    margin: 0 0 20px 0;
+    margin: 0 0 10px 0;
 }
 
 h4 {
@@ -64,7 +64,7 @@ h4 {
     text-decoration: none;
     transition: background-color 0.3s ease;
 	display: inline-block;                                                                                                                                                                                                                                                                                   │ │
-	margin-top: 20px;
+	margin: 20 0 0 0;
 }
 
 .auth-button:hover {
