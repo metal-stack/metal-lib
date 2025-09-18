@@ -53,7 +53,7 @@ h3 {
 h4 {
     color: #cccccc;
     font-size: 14px;
-    margin: 0 0 20px 0;
+    margin: 0 0 0 0;
 }
 
 .auth-button {
@@ -63,6 +63,8 @@ h4 {
     border-radius: 4px;
     text-decoration: none;
     transition: background-color 0.3s ease;
+	display: inline-block;                                                                                                                                                                                                                                                                                   │ │
+	margin-top: 20px;
 }
 
 .auth-button:hover {
