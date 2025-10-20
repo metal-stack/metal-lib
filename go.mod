@@ -22,7 +22,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/lopezator/migrator v0.3.1
 	github.com/mattn/go-isatty v0.0.20
-	github.com/metal-stack/api v0.0.30 // TODO check if this dependency should be present
+	github.com/metal-stack/api v0.0.31 // TODO check if this dependency should be present
 	github.com/metal-stack/security v0.9.3
 	github.com/metal-stack/v v1.0.3
 	github.com/nsqio/go-nsq v1.1.0

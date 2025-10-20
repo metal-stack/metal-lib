@@ -8,7 +8,6 @@ import (
 	"path"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/metal-stack/api/go/client"
 	apiv2 "github.com/metal-stack/api/go/metalstack/api/v2"
 	"github.com/metal-stack/metal-lib/pkg/commands/helpers/completion"
@@ -91,14 +90,14 @@ func (c *Config) GetTenant() (string, error) {
 	ctx, cancel := c.NewRequestContext()
 	defer cancel()
 
-	projectResp, err := c.Client.Apiv2().Project().Get(ctx, connect.NewRequest(&apiv2.ProjectServiceGetRequest{
+	projectResp, err := c.Client.Apiv2().Project().Get(ctx, &apiv2.ProjectServiceGetRequest{
 		Project: c.GetProject(),
-	}))
+	})
 	if err != nil {
 		return "", fmt.Errorf("unable to derive tenant from project: %w", err)
 	}
 
-	return projectResp.Msg.Project.Tenant, nil
+	return projectResp.Project.Tenant, nil
 }
 
 func (c *Config) GetToken() string {
