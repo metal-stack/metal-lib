@@ -22,7 +22,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/lopezator/migrator v0.3.1
 	github.com/mattn/go-isatty v0.0.20
-	github.com/metal-stack/api v0.0.31 // TODO check if this dependency should be present
 	github.com/metal-stack/security v0.9.3
 	github.com/metal-stack/v v1.0.3
 	github.com/nsqio/go-nsq v1.1.0
@@ -42,11 +41,6 @@ require (
 	k8s.io/apimachinery v0.32.3
 	sigs.k8s.io/yaml v1.4.0
 	tailscale.com v1.72.1
-)
-
-require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.10-20250912141014-52f32327d4b0.1 // indirect
-	github.com/klauspost/connect-compress/v2 v2.0.0 // indirect
 )
 
 require (
