@@ -11,6 +11,7 @@ type CmdConfig struct {
 	RunE              func(cmd *cobra.Command, args []string) error
 	Short, Long       string
 	Aliases           []string
+	MutateFn          func(cmd *cobra.Command)
 }
 
 func ContextBaseCmd(c *CmdConfig) *cobra.Command {
@@ -84,7 +85,7 @@ func ContextListCmd(c *CmdConfig) *cobra.Command {
 }
 
 func toCommand(c *CmdConfig) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:               c.Use,
 		Aliases:           c.Aliases,
 		Short:             c.Short,
@@ -93,4 +94,10 @@ func toCommand(c *CmdConfig) *cobra.Command {
 		ValidArgsFunction: c.ValidArgsFunction,
 		RunE:              c.RunE,
 	}
+
+	if c.MutateFn != nil {
+		c.MutateFn(cmd)
+	}
+
+	return cmd
 }
