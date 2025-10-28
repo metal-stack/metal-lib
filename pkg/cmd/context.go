@@ -22,9 +22,6 @@ import (
 )
 
 const (
-	Singular = "context" // TODO is it too much to replace that word in all strings in this file?
-	Plural   = "contexts"
-
 	keyName           = "name"
 	keyApiUrl         = "api-url"
 	keyApiToken       = "api-token"
@@ -100,9 +97,9 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	]{
 		GenericCLI:      genericcli.NewGenericCLI(wrapper),
 		BinaryName:      c.BinaryName,
-		Singular:        Singular,
-		Plural:          Plural,
-		Description:     fmt.Sprintf("%[1]s defines the backend to talk to. Use \"-\" to switch to the previously used %[1]s.", Singular),
+		Singular:        "context",
+		Plural:          "contexts",
+		Description:     "Context defines the backend to talk to. Use \"-\" to switch to the previously used context.",
 		Aliases:         []string{"ctx"},
 		Args:            []string{keyName}, // TODO is this needed when using a flag? (--name)
 		Sorter:          contextSorter(),
@@ -364,7 +361,7 @@ func (c *cliWrapper) Get(name string) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(name)
 	if !ok {
-		return nil, fmt.Errorf("%s %q not found", Singular, name)
+		return nil, fmt.Errorf("context %q not found", name)
 	}
 	return ctx, nil
 }
@@ -412,7 +409,7 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s added %s \"%s\"\n", color.GreenString("✔"), Singular, color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s added context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
 
 	return ctx, nil
 }
@@ -425,7 +422,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(rq.Name)
 	if !ok {
-		return nil, fmt.Errorf("no %s with name %q found", Singular, rq.Name)
+		return nil, fmt.Errorf("no context with name %q found", rq.Name)
 	}
 
 	if viper.IsSet(keyApiUrl) {
@@ -452,7 +449,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s updated %s \"%s\"\n", color.GreenString("✔"), Singular, color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
 
 	return ctx, nil
 }
@@ -465,7 +462,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(name)
 	if !ok {
-		return nil, fmt.Errorf("%s %q not found", Singular, name)
+		return nil, fmt.Errorf("context %q not found", name)
 	}
 	// TODO Use Get ?
 
@@ -484,7 +481,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s removed %s \"%s\"\n", color.GreenString("✔"), Singular, color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s removed context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
 
 	return ctx, nil
 }
@@ -500,7 +497,7 @@ func (cs *contexts) validate() error {
 	}
 
 	if len(cs.Contexts) != len(names) {
-		return fmt.Errorf("%s names must be unique", Singular)
+		return fmt.Errorf("context names must be unique")
 	}
 
 	return nil
