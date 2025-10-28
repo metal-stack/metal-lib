@@ -470,6 +470,14 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 
 	ctxs.delete(ctx.Name)
 
+	if ctxs.CurrentContext == ctx.Name {
+		ctxs.CurrentContext = ""
+	}
+
+	if ctxs.PreviousContext == ctx.Name {
+		ctxs.PreviousContext = ""
+	}
+
 	err = c.cfg.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
