@@ -87,6 +87,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	c.ConfigName = cmp.Or(c.ConfigName, string(defaultConfigName))
 	c.Out = cmp.Or(c.Out, io.Writer(os.Stdout))
 	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
+	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
 
 	wrapper := &cliWrapper{
 		cfg: c,
