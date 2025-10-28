@@ -38,6 +38,11 @@ const (
 	defaultConfigName = "config.yaml"
 )
 
+var (
+	// errorNotImplemented for all functions that are not implemented yet
+	errorNotImplemented = fmt.Errorf("not implemented yet")
+)
+
 // Contexts contains all configuration contexts
 type contexts struct {
 	CurrentContext  string     `json:"current-context" yaml:"current-context"`
@@ -476,7 +481,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 }
 
 func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
-	return "Yay!", &Context{}, &contextUpdateRequest{}, fmt.Errorf("testConvert") // TODO implement
+	return "", &Context{}, &contextUpdateRequest{}, errorNotImplemented // editCmd is disabled, this is not needed
 }
 
 func (cs *contexts) validate() error {
