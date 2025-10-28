@@ -114,6 +114,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			genericcli.DeleteCmd,
 		),
 		RootCmdMutateFn: func(cmd *cobra.Command) {
+			cmd.Args = cobra.MaximumNArgs(1)
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				// '$ BinaryName context' (no args) should be equal to '$ BinaryName context list'
 				if len(args) == 0 {
@@ -134,6 +135,29 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				return cmd.Help()
 			}
 		},
+		DescribeCmdMutateFn: func(cmd *cobra.Command) {
+			cmd.Args = cobra.MaximumNArgs(1)
+
+			originalRunE := cmd.RunE
+
+			cmd.RunE = func(cmd *cobra.Command, args []string) error {
+				// If no args are provided, try to use the current context
+				if len(args) == 0 {
+					ctxs, err := c.getContexts()
+					if err != nil {
+						return fmt.Errorf("unable to get contexts to determine current: %w", err)
+					}
+					if ctxs.CurrentContext == "" {
+						return fmt.Errorf("no context name provided and no context is currently active")
+					}
+					args = []string{ctxs.CurrentContext}
+				}
+				return originalRunE(cmd, args)
+			}
+		},
+		ListCmdMutateFn: func(cmd *cobra.Command) {
+			cmd.Args = cobra.ExactArgs(0)
+		},
 		CreateCmdMutateFn: func(cmd *cobra.Command) {
 			cmd.Flags().String(keyName, "", "sets the name of the context")
 			cmd.Flags().String(keyAPIURL, "", "sets the api-url for this context")
@@ -145,6 +169,8 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 			genericcli.Must(cmd.MarkFlagRequired(keyName))
 			genericcli.Must(cmd.MarkFlagRequired(keyAPIToken))
+
+			cmd.Args = cobra.ExactArgs(0)
 		},
 		UpdateCmdMutateFn: func(cmd *cobra.Command) {
 			cmd.Flags().String(keyAPIURL, "", "sets the api-url for this context")
@@ -157,9 +183,13 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			genericcli.Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
 			cmd.ValidArgsFunction = c.contextListCompletion
+
+			cmd.Args = cobra.ExactArgs(1)
 		},
 		DeleteCmdMutateFn: func(cmd *cobra.Command) {
 			cmd.ValidArgsFunction = c.contextListCompletion
+
+			cmd.Args = cobra.ExactArgs(1)
 		},
 		CreateRequestFromCLI: func() (*Context, error) {
 			return &Context{}, nil // Placeholder to trigger cmdline read (not file read)
@@ -187,6 +217,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 	setProjectCmd := &cobra.Command{
 		Use:   "set-project <project-id>",
+		Args:  cobra.ExactArgs(1),
 		Short: "sets the default project to operate on for cli commands",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.setProject(args)
