@@ -104,7 +104,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Args:            []string{keyName}, // TODO is this needed when using a flag? (--name)
 		Sorter:          contextSorter(),
 		DescribePrinter: c.DescribePrinter,
-		ListPrinter:     func() printers.Printer { return getListPrinter(c) },
+		ListPrinter:     func() printers.Printer { return newPrinterFromCLI(c) },
 		In:              c.In,
 		Out:             c.Out,
 		OnlyCmds: genericcli.OnlyCmds(
@@ -519,7 +519,7 @@ func contextSorter() *multisort.Sorter[*Context] {
 	}, multisort.Keys{{ID: "name"}})
 }
 
-func getListPrinter(c *ContextConfig) printers.Printer {
+func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 	allContexts, err := c.getContexts()
 	currentContextName := ""
 	if err == nil {
@@ -534,15 +534,43 @@ func getListPrinter(c *ContextConfig) printers.Printer {
 		return contextTable(ctxList, wide, currentContextName)
 	}
 
-	return printers.NewTablePrinter(&printers.TablePrinterConfig{
-		ToHeaderAndRows:            toH,
-		Wide:                       viper.GetBool(keyWide),
-		Markdown:                   false,
-		NoHeaders:                  false,
-		Out:                        c.Out,
-		DisableDefaultErrorPrinter: false,
-		DisableAutoWrap:            false,
-	})
+	var printer printers.Printer
+
+	switch format := viper.GetString("output-format"); format {
+	case "yaml":
+		printer = printers.NewProtoYAMLPrinter().WithFallback(true).WithOut(c.Out)
+	case "json":
+		printer = printers.NewProtoJSONPrinter().WithFallback(true).WithOut(c.Out)
+	case "yamlraw":
+		printer = printers.NewYAMLPrinter().WithOut(c.Out)
+	case "jsonraw":
+		printer = printers.NewJSONPrinter().WithOut(c.Out)
+	case "template":
+		printer = printers.NewTemplatePrinter(viper.GetString("template")).WithOut(c.Out)
+	case "table", "wide", "markdown":
+		fallthrough
+	default:
+		cfg := &printers.TablePrinterConfig{
+			ToHeaderAndRows: toH,
+			Wide:            format == "wide",
+			Markdown:        format == "markdown",
+			NoHeaders:       viper.GetBool("no-headers"),
+			Out:             c.Out,
+		}
+		tablePrinter := printers.NewTablePrinter(cfg).WithOut(c.Out)
+		printer = tablePrinter
+	}
+
+	if viper.IsSet("force-color") {
+		enabled := viper.GetBool("force-color")
+		if enabled {
+			color.NoColor = false
+		} else {
+			color.NoColor = true
+		}
+	}
+
+	return printer
 }
 
 func contextTable(data []*Context, wide bool, currentContextName string) ([]string, [][]string, error) {
