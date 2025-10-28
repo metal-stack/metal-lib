@@ -131,8 +131,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				}
 
 				// Probably too many args, fallback to help
-				// TODO fail exit-code!!!
-				return cmd.Help()
+				return fmt.Errorf("too many arguments")
 			}
 		},
 		DescribeCmdMutateFn: func(cmd *cobra.Command) {
