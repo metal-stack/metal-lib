@@ -372,13 +372,7 @@ func (c *cliWrapper) List() ([]*Context, error) {
 		return nil, err
 	}
 
-	// err = ContextSorter().SortBy(ctxs.Contexts)
-	// if err != nil {
-	// 	return err
-	// }
-
 	return ctxs.Contexts, nil
-	// return nil, fmt.Errorf("you need to create a context first")
 }
 
 func (c *cliWrapper) Create(rq *Context) (*Context, error) {
@@ -464,7 +458,6 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 	if !ok {
 		return nil, fmt.Errorf("context %q not found", name)
 	}
-	// TODO Use Get ?
 
 	ctxs.delete(ctx.Name)
 
