@@ -23,14 +23,13 @@ import (
 
 const (
 	keyName           = "name"
-	keyApiUrl         = "api-url"
-	keyApiToken       = "api-token"
+	keyAPIURL         = "api-url"
+	keyAPIToken       = "api-token"
 	keyDefaultProject = "default-project"
 	keyTimeout        = "timeout"
 	keyActivate       = "activate"
 	keyProvider       = "provider"
 	keyConfig         = "config"
-	keyWide           = "wide"
 
 	defaultConfigName = "config.yaml"
 )
@@ -49,8 +48,8 @@ type contexts struct {
 
 type Context struct {
 	Name           string         `json:"name" yaml:"name"`
-	ApiURL         *string        `json:"api-url,omitempty" yaml:"api-url,omitempty"`
-	Token          string         `json:"api-token" yaml:"api-token"`
+	APIURL         *string        `json:"api-url,omitempty" yaml:"api-url,omitempty"`
+	APIToken       string         `json:"api-token" yaml:"api-token"`
 	DefaultProject string         `json:"default-project" yaml:"default-project"`
 	Timeout        *time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Provider       string         `json:"provider" yaml:"provider"`
@@ -99,9 +98,9 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		BinaryName:      c.BinaryName,
 		Singular:        "context",
 		Plural:          "contexts",
-		Description:     "Context defines the backend to talk to. Use \"-\" to switch to the previously used context.",
+		Description:     "Manage CLI contexts. A context defines the connection properties (API URL, token, etc.) for a backend. Use \"-\" to switch to the previously used context.",
 		Aliases:         []string{"ctx"},
-		Args:            []string{keyName}, // TODO is this needed when using a flag? (--name)
+		Args:            []string{keyName},
 		Sorter:          contextSorter(),
 		DescribePrinter: c.DescribePrinter,
 		ListPrinter:     func() printers.Printer { return newPrinterFromCLI(c) },
@@ -131,25 +130,26 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				}
 
 				// Probably too many args, fallback to help
+				// TODO fail exit-code!!!
 				return cmd.Help()
 			}
 		},
 		CreateCmdMutateFn: func(cmd *cobra.Command) {
 			cmd.Flags().String(keyName, "", "sets the name of the context")
-			cmd.Flags().String(keyApiUrl, "", "sets the api-url for this context")
-			cmd.Flags().String(keyApiToken, "", "sets the api-token for this context")
-			cmd.Flags().String(keyDefaultProject, "", "sets a default project to act on")
+			cmd.Flags().String(keyAPIURL, "", "sets the api-url for this context")
+			cmd.Flags().String(keyAPIToken, "", "sets the api-token for this context")
+			cmd.Flags().String(keyDefaultProject, "", "sets a default project to operate on")
 			cmd.Flags().Duration(keyTimeout, 0, "sets a default request timeout")
 			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
 			cmd.Flags().String(keyProvider, "", "sets the login provider for this context")
 
 			genericcli.Must(cmd.MarkFlagRequired(keyName))
-			genericcli.Must(cmd.MarkFlagRequired(keyApiToken))
+			genericcli.Must(cmd.MarkFlagRequired(keyAPIToken))
 		},
 		UpdateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(keyApiUrl, "", "sets the api-url for this context")
-			cmd.Flags().String(keyApiToken, "", "sets the api-token for this context")
-			cmd.Flags().String(keyDefaultProject, "", "sets a default project to act on")
+			cmd.Flags().String(keyAPIURL, "", "sets the api-url for this context")
+			cmd.Flags().String(keyAPIToken, "", "sets the api-token for this context")
+			cmd.Flags().String(keyDefaultProject, "", "sets a default project to operate on")
 			cmd.Flags().Duration(keyTimeout, 0, "sets a default request timeout")
 			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
 			cmd.Flags().String(keyProvider, "", "sets the login provider for this context")
@@ -175,8 +175,8 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 	switchCmd := &cobra.Command{
 		Use:     "switch <context-name>",
-		Short:   "switch the cli context",
-		Long:    "switch the cli context. Use \"-\" to switch to the previously used context.",
+		Short:   "switch the active CLI context",
+		Long:    "Switch the active CLI context. Use \"-\" to switch to the previously used context.",
 		Aliases: []string{"set", "sw"},
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -220,10 +220,10 @@ func (c *ContextConfig) setContext(args []string) error {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxs.PreviousContext
 	} else {
 		if _, ok := ctxs.getByName(wantCtx); !ok {
-			return fmt.Errorf("context %s not found", wantCtx)
+			return fmt.Errorf("context \"%s\" not found", wantCtx)
 		}
 		if wantCtx == ctxs.CurrentContext {
-			_, _ = fmt.Fprintf(c.Out, "%s context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+			_, _ = fmt.Fprintf(c.Out, "%s Context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
 			return nil
 		}
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtx
@@ -234,7 +234,7 @@ func (c *ContextConfig) setContext(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.Out, "%s switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+	_, _ = fmt.Fprintf(c.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
 
 	return nil
 }
@@ -262,7 +262,7 @@ func (c *ContextConfig) setProject(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.Out, "%s switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.DefaultProject))
+	_, _ = fmt.Fprintf(c.Out, "%s Switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.DefaultProject))
 
 	return nil
 }
@@ -336,13 +336,13 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 func (c *ContextConfig) getContexts() (*contexts, error) {
 	configPath, err := c.configPath()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get config path")
+		return nil, fmt.Errorf("unable to determine config path: %w", err)
 	}
 
 	raw, err := afero.ReadFile(c.Fs, configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return &contexts{}, nil // TODO check consistency
+			return &contexts{}, nil
 		}
 
 		return nil, fmt.Errorf("unable to read %s: %w", c.ConfigName, err)
@@ -361,7 +361,7 @@ func (c *cliWrapper) Get(name string) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(name)
 	if !ok {
-		return nil, fmt.Errorf("context %q not found", name)
+		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
 	return ctx, nil
 }
@@ -384,8 +384,8 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 
 	ctx := &Context{
 		Name:           name,
-		ApiURL:         pointer.PointerOrNil(viper.GetString(keyApiUrl)),
-		Token:          viper.GetString(keyApiToken),
+		APIURL:         pointer.PointerOrNil(viper.GetString(keyAPIURL)),
+		APIToken:       viper.GetString(keyAPIToken),
 		DefaultProject: viper.GetString(keyDefaultProject),
 		Timeout:        pointer.PointerOrNil(viper.GetDuration(keyTimeout)),
 		Provider:       viper.GetString(keyProvider),
@@ -403,7 +403,7 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s added context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
 
 	return ctx, nil
 }
@@ -416,14 +416,14 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(rq.Name)
 	if !ok {
-		return nil, fmt.Errorf("no context with name %q found", rq.Name)
+		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
 	}
 
-	if viper.IsSet(keyApiUrl) {
-		ctx.ApiURL = pointer.PointerOrNil(viper.GetString(keyApiUrl))
+	if viper.IsSet(keyAPIURL) {
+		ctx.APIURL = pointer.PointerOrNil(viper.GetString(keyAPIURL))
 	}
-	if viper.IsSet(keyApiToken) {
-		ctx.Token = viper.GetString(keyApiToken)
+	if viper.IsSet(keyAPIToken) {
+		ctx.APIToken = viper.GetString(keyAPIToken)
 	}
 	if viper.IsSet(keyDefaultProject) {
 		ctx.DefaultProject = viper.GetString(keyDefaultProject)
@@ -443,7 +443,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
 
 	return ctx, nil
 }
@@ -456,7 +456,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(name)
 	if !ok {
-		return nil, fmt.Errorf("context %q not found", name)
+		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
 
 	ctxs.delete(ctx.Name)
@@ -474,7 +474,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s removed context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
 
 	return ctx, nil
 }
@@ -526,7 +526,7 @@ func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 		currentContextName = allContexts.CurrentContext
 	}
 
-	toH := func(data any, wide bool) ([]string, [][]string, error) {
+	ToHeaderAndRows := func(data any, wide bool) ([]string, [][]string, error) {
 		ctxList, ok := data.([]*Context)
 		if !ok {
 			return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
@@ -551,7 +551,7 @@ func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 		fallthrough
 	default:
 		cfg := &printers.TablePrinterConfig{
-			ToHeaderAndRows: toH,
+			ToHeaderAndRows: ToHeaderAndRows,
 			Wide:            format == "wide",
 			Markdown:        format == "markdown",
 			NoHeaders:       viper.GetBool("no-headers"),
@@ -591,7 +591,7 @@ func contextTable(data []*Context, wide bool, currentContextName string) ([]stri
 
 		row := []string{active, c.Name, c.Provider, c.DefaultProject}
 		if wide {
-			url := pointer.SafeDeref(c.ApiURL)
+			url := pointer.SafeDeref(c.APIURL)
 			row = append(row, url)
 		}
 
