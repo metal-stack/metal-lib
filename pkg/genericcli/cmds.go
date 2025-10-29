@@ -196,7 +196,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 
 				p := c.evalBulkFlags()
 
-				return c.MultiArgGenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p()) // TODO check if viper has that key
+				return c.MultiArgGenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 
