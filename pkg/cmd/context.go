@@ -228,9 +228,30 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		ValidArgsFunction: c.ProjectListCompletion,
 	}
 
+	showCurrentCmd := &cobra.Command{
+		Use:   "show-current",
+		Short: "print the current context name",
+		// Aliases: []string{"show"},
+		Args: cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctxs, err := c.getContexts()
+			if err != nil {
+				return fmt.Errorf("unable to get contexts: %w", err)
+			}
+			if ctxs.CurrentContext == "" {
+				return fmt.Errorf("no context currently active")
+			}
+
+			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
+			return err
+		},
+		ValidArgsFunction: c.contextListCompletion,
+	}
+
 	cmd.AddCommand(
 		switchCmd,
 		setProjectCmd,
+		showCurrentCmd,
 	)
 
 	return cmd
