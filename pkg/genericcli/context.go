@@ -1,4 +1,4 @@
-package cmd
+package genericcli
 
 import (
 	"cmp"
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/metal-stack/metal-lib/pkg/genericcli"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/metal-stack/metal-lib/pkg/multisort"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
@@ -93,12 +92,12 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		cfg: c,
 	}
 
-	cmd := genericcli.NewCmds(&genericcli.CmdsConfig[
+	cmd := NewCmds(&CmdsConfig[
 		*Context,
 		*contextUpdateRequest,
 		*Context,
 	]{
-		GenericCLI:      genericcli.NewGenericCLI(wrapper),
+		GenericCLI:      NewGenericCLI(wrapper),
 		BinaryName:      c.BinaryName,
 		Singular:        "context",
 		Plural:          "contexts",
@@ -110,12 +109,12 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		ListPrinter:     func() printers.Printer { return newPrinterFromCLI(c) },
 		In:              c.In,
 		Out:             c.Out,
-		OnlyCmds: genericcli.OnlyCmds(
-			genericcli.DescribeCmd,
-			genericcli.ListCmd,
-			genericcli.CreateCmd,
-			genericcli.UpdateCmd,
-			genericcli.DeleteCmd,
+		OnlyCmds: OnlyCmds(
+			DescribeCmd,
+			ListCmd,
+			CreateCmd,
+			UpdateCmd,
+			DeleteCmd,
 		),
 		RootCmdMutateFn: func(cmd *cobra.Command) {
 			cmd.Args = cobra.MaximumNArgs(1)
@@ -170,8 +169,8 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
 			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
 
-			genericcli.Must(cmd.MarkFlagRequired(keyName))
-			genericcli.Must(cmd.MarkFlagRequired(keyAPIToken))
+			Must(cmd.MarkFlagRequired(keyName))
+			Must(cmd.MarkFlagRequired(keyAPIToken))
 
 			cmd.Args = cobra.ExactArgs(0)
 		},
@@ -183,7 +182,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
 			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
 
-			genericcli.Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
+			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
 			cmd.ValidArgsFunction = c.contextListCompletion
 
@@ -198,7 +197,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			return &Context{}, nil // Placeholder to trigger cmdline read (not file read)
 		},
 		UpdateRequestFromCLI: func(args []string) (*contextUpdateRequest, error) {
-			name, err := genericcli.GetExactlyOneArg(args)
+			name, err := GetExactlyOneArg(args)
 			if err != nil {
 				return nil, fmt.Errorf("no context name given")
 			}
@@ -257,7 +256,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 }
 
 func (c *ContextConfig) setContext(args []string) error {
-	wantCtx, err := genericcli.GetExactlyOneArg(args)
+	wantCtx, err := GetExactlyOneArg(args)
 	if err != nil {
 		return fmt.Errorf("no context name given")
 	}
@@ -294,7 +293,7 @@ func (c *ContextConfig) setContext(args []string) error {
 }
 
 func (c *ContextConfig) setProject(args []string) error {
-	project, err := genericcli.GetExactlyOneArg(args)
+	project, err := GetExactlyOneArg(args)
 	if err != nil {
 		return err
 	}
