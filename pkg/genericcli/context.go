@@ -21,14 +21,14 @@ import (
 )
 
 const (
-	keyName           = "name"
-	keyAPIURL         = "api-url"
-	keyAPIToken       = "api-token"
-	keyDefaultProject = "default-project"
-	keyTimeout        = "timeout"
-	keyActivate       = "activate"
-	keyProvider       = "provider"
-	keyConfig         = "config"
+	KeyName           = "name"
+	KeyAPIURL         = "api-url"
+	KeyAPIToken       = "api-token"
+	KeyDefaultProject = "default-project"
+	KeyTimeout        = "timeout"
+	KeyActivate       = "activate"
+	KeyProvider       = "provider"
+	KeyConfig         = "config"
 
 	defaultConfigName = "config.yaml"
 )
@@ -38,8 +38,8 @@ var (
 	errorNotImplemented = fmt.Errorf("not implemented yet")
 )
 
-// Contexts contains all configuration contexts
-type contexts struct {
+// Contexts contains all configuration Contexts
+type Contexts struct {
 	CurrentContext  string     `json:"current-context" yaml:"current-context"`
 	PreviousContext string     `json:"previous-context" yaml:"previous-context"`
 	Contexts        []*Context `json:"contexts" yaml:"contexts"`
@@ -103,7 +103,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Plural:          "contexts",
 		Description:     "Manage CLI contexts. A context defines the connection properties (API URL, token, etc.) for a backend. Use \"-\" to switch to the previously used context.",
 		Aliases:         []string{"ctx"},
-		Args:            []string{keyName},
+		Args:            []string{KeyName},
 		Sorter:          contextSorter(),
 		DescribePrinter: c.DescribePrinter,
 		ListPrinter:     func() printers.Printer { return newPrinterFromCLI(c) },
@@ -145,7 +145,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				// If no args are provided, try to use the current context
 				if len(args) == 0 {
-					ctxs, err := c.getContexts()
+					ctxs, err := c.GetContexts()
 					if err != nil {
 						return fmt.Errorf("unable to get contexts to determine current: %w", err)
 					}
@@ -161,35 +161,35 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Args = cobra.ExactArgs(0)
 		},
 		CreateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(keyName, "", "set the name of the context")
-			cmd.Flags().String(keyAPIURL, "", "set the api-url for this context")
-			cmd.Flags().String(keyAPIToken, "", "set the api-token for this context")
-			cmd.Flags().String(keyDefaultProject, "", "set a default project to operate on")
-			cmd.Flags().Duration(keyTimeout, 0, "set a default request timeout")
-			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
-			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
+			cmd.Flags().String(KeyName, "", "set the name of the context")
+			cmd.Flags().String(KeyAPIURL, "", "set the api-url for this context")
+			cmd.Flags().String(KeyAPIToken, "", "set the api-token for this context")
+			cmd.Flags().String(KeyDefaultProject, "", "set a default project to operate on")
+			cmd.Flags().Duration(KeyTimeout, 0, "set a default request timeout")
+			cmd.Flags().Bool(KeyActivate, false, "immediately switches to the new context")
+			cmd.Flags().String(KeyProvider, "", "set the login provider for this context")
 
-			Must(cmd.MarkFlagRequired(keyName))
-			Must(cmd.MarkFlagRequired(keyAPIToken))
+			Must(cmd.MarkFlagRequired(KeyName))
+			Must(cmd.MarkFlagRequired(KeyAPIToken))
 
 			cmd.Args = cobra.ExactArgs(0)
 		},
 		UpdateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(keyAPIURL, "", "set the api-url for this context")
-			cmd.Flags().String(keyAPIToken, "", "set the api-token for this context")
-			cmd.Flags().String(keyDefaultProject, "", "set a default project to operate on")
-			cmd.Flags().Duration(keyTimeout, 0, "set a default request timeout")
-			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
-			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
+			cmd.Flags().String(KeyAPIURL, "", "set the api-url for this context")
+			cmd.Flags().String(KeyAPIToken, "", "set the api-token for this context")
+			cmd.Flags().String(KeyDefaultProject, "", "set a default project to operate on")
+			cmd.Flags().Duration(KeyTimeout, 0, "set a default request timeout")
+			cmd.Flags().Bool(KeyActivate, false, "immediately switches to the new context")
+			cmd.Flags().String(KeyProvider, "", "set the login provider for this context")
 
-			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
+			Must(cmd.RegisterFlagCompletionFunc(KeyDefaultProject, c.ProjectListCompletion))
 
-			cmd.ValidArgsFunction = c.contextListCompletion
+			cmd.ValidArgsFunction = c.ContextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
 		DeleteCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.ValidArgsFunction = c.contextListCompletion
+			cmd.ValidArgsFunction = c.ContextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
@@ -214,7 +214,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.setContext(args)
 		},
-		ValidArgsFunction: c.contextListCompletion,
+		ValidArgsFunction: c.ContextListCompletion,
 	}
 
 	setProjectCmd := &cobra.Command{
@@ -232,7 +232,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Short: "print the active context name",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxs, err := c.getContexts()
+			ctxs, err := c.GetContexts()
 			if err != nil {
 				return fmt.Errorf("unable to get contexts: %w", err)
 			}
@@ -243,7 +243,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
 			return err
 		},
-		ValidArgsFunction: c.contextListCompletion,
+		ValidArgsFunction: c.ContextListCompletion,
 	}
 
 	cmd.AddCommand(
@@ -261,7 +261,7 @@ func (c *ContextConfig) setContext(args []string) error {
 		return fmt.Errorf("no context name given")
 	}
 
-	ctxs, err := c.getContexts()
+	ctxs, err := c.GetContexts()
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func (c *ContextConfig) setContext(args []string) error {
 		}
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxs.PreviousContext
 	} else {
-		if _, ok := ctxs.getByName(wantCtx); !ok {
+		if _, ok := ctxs.GetByName(wantCtx); !ok {
 			return fmt.Errorf("context \"%s\" not found", wantCtx)
 		}
 		if wantCtx == ctxs.CurrentContext {
@@ -282,7 +282,7 @@ func (c *ContextConfig) setContext(args []string) error {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtx
 	}
 
-	err = c.writeContexts(ctxs)
+	err = c.WriteContexts(ctxs)
 	if err != nil {
 		return err
 	}
@@ -298,19 +298,19 @@ func (c *ContextConfig) setProject(args []string) error {
 		return err
 	}
 
-	ctxs, err := c.getContexts()
+	ctxs, err := c.GetContexts()
 	if err != nil {
 		return err
 	}
 
-	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
+	ctx, ok := ctxs.GetByName(ctxs.CurrentContext)
 	if !ok {
 		return fmt.Errorf("no context currently active")
 	}
 
 	ctx.DefaultProject = project
 
-	err = c.writeContexts(ctxs)
+	err = c.WriteContexts(ctxs)
 	if err != nil {
 		return err
 	}
@@ -320,8 +320,8 @@ func (c *ContextConfig) setProject(args []string) error {
 	return nil
 }
 
-func (c *ContextConfig) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	ctxs, err := c.getContexts()
+func (c *ContextConfig) ContextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	ctxs, err := c.GetContexts()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -332,7 +332,7 @@ func (c *ContextConfig) contextListCompletion(cmd *cobra.Command, args []string,
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *ContextConfig) writeContexts(ctxs *contexts) error {
+func (c *ContextConfig) WriteContexts(ctxs *Contexts) error {
 	if err := ctxs.validate(); err != nil {
 		return err
 	}
@@ -368,8 +368,8 @@ func (c *ContextConfig) writeContexts(ctxs *contexts) error {
 }
 
 func (c *ContextConfig) configPath() (string, error) {
-	if viper.IsSet(keyConfig) {
-		return viper.GetString(keyConfig), nil
+	if viper.IsSet(KeyConfig) {
+		return viper.GetString(KeyConfig), nil
 	}
 
 	dir, err := c.defaultConfigDirectory()
@@ -390,7 +390,7 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 	return path.Join(h, "."+c.ConfigDirName), nil
 }
 
-func (c *ContextConfig) getContexts() (*contexts, error) {
+func (c *ContextConfig) GetContexts() (*Contexts, error) {
 	configPath, err := c.configPath()
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine config path: %w", err)
@@ -399,24 +399,24 @@ func (c *ContextConfig) getContexts() (*contexts, error) {
 	raw, err := afero.ReadFile(c.Fs, configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return &contexts{}, nil
+			return &Contexts{}, nil
 		}
 
 		return nil, fmt.Errorf("unable to read %s: %w", c.ConfigName, err)
 	}
 
-	var ctxs contexts
+	var ctxs Contexts
 	err = yaml.Unmarshal(raw, &ctxs)
 	return &ctxs, err
 }
 
 func (c *cliWrapper) Get(name string) (*Context, error) {
-	ctxs, err := c.cfg.getContexts()
+	ctxs, err := c.cfg.GetContexts()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, ok := ctxs.getByName(name)
+	ctx, ok := ctxs.GetByName(name)
 	if !ok {
 		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
@@ -424,7 +424,7 @@ func (c *cliWrapper) Get(name string) (*Context, error) {
 }
 
 func (c *cliWrapper) List() ([]*Context, error) {
-	ctxs, err := c.cfg.getContexts()
+	ctxs, err := c.cfg.GetContexts()
 	if err != nil {
 		return nil, err
 	}
@@ -437,29 +437,29 @@ func (c *cliWrapper) List() ([]*Context, error) {
 }
 
 func (c *cliWrapper) Create(rq *Context) (*Context, error) {
-	name := viper.GetString(keyName)
-	ctxs, err := c.cfg.getContexts()
+	name := viper.GetString(KeyName)
+	ctxs, err := c.cfg.GetContexts()
 	if err != nil {
 		return nil, err
 	}
 
 	ctx := &Context{
 		Name:           name,
-		APIURL:         pointer.PointerOrNil(viper.GetString(keyAPIURL)),
-		APIToken:       viper.GetString(keyAPIToken),
-		DefaultProject: viper.GetString(keyDefaultProject),
-		Timeout:        pointer.PointerOrNil(viper.GetDuration(keyTimeout)),
-		Provider:       viper.GetString(keyProvider),
+		APIURL:         pointer.PointerOrNil(viper.GetString(KeyAPIURL)),
+		APIToken:       viper.GetString(KeyAPIToken),
+		DefaultProject: viper.GetString(KeyDefaultProject),
+		Timeout:        pointer.PointerOrNil(viper.GetDuration(KeyTimeout)),
+		Provider:       viper.GetString(KeyProvider),
 	}
 
 	ctxs.Contexts = append(ctxs.Contexts, ctx)
 
-	if viper.GetBool(keyActivate) || ctxs.CurrentContext == "" {
+	if viper.GetBool(KeyActivate) || ctxs.CurrentContext == "" {
 		ctxs.PreviousContext = ctxs.CurrentContext
 		ctxs.CurrentContext = ctx.Name
 	}
 
-	err = c.cfg.writeContexts(ctxs)
+	err = c.cfg.WriteContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
@@ -470,36 +470,36 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 }
 
 func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
-	ctxs, err := c.cfg.getContexts()
+	ctxs, err := c.cfg.GetContexts()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, ok := ctxs.getByName(rq.Name)
+	ctx, ok := ctxs.GetByName(rq.Name)
 	if !ok {
 		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
 	}
 
-	if viper.IsSet(keyAPIURL) {
-		ctx.APIURL = pointer.PointerOrNil(viper.GetString(keyAPIURL))
+	if viper.IsSet(KeyAPIURL) {
+		ctx.APIURL = pointer.PointerOrNil(viper.GetString(KeyAPIURL))
 	}
-	if viper.IsSet(keyAPIToken) {
-		ctx.APIToken = viper.GetString(keyAPIToken)
+	if viper.IsSet(KeyAPIToken) {
+		ctx.APIToken = viper.GetString(KeyAPIToken)
 	}
-	if viper.IsSet(keyDefaultProject) {
-		ctx.DefaultProject = viper.GetString(keyDefaultProject)
+	if viper.IsSet(KeyDefaultProject) {
+		ctx.DefaultProject = viper.GetString(KeyDefaultProject)
 	}
-	if viper.IsSet(keyTimeout) {
-		ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(keyTimeout))
+	if viper.IsSet(KeyTimeout) {
+		ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(KeyTimeout))
 	}
-	if viper.IsSet(keyProvider) {
-		ctx.Provider = viper.GetString(keyProvider)
+	if viper.IsSet(KeyProvider) {
+		ctx.Provider = viper.GetString(KeyProvider)
 	}
-	if viper.GetBool(keyActivate) {
+	if viper.GetBool(KeyActivate) {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
 	}
 
-	err = c.cfg.writeContexts(ctxs)
+	err = c.cfg.WriteContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
@@ -510,12 +510,12 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 }
 
 func (c *cliWrapper) Delete(name string) (*Context, error) {
-	ctxs, err := c.cfg.getContexts()
+	ctxs, err := c.cfg.GetContexts()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, ok := ctxs.getByName(name)
+	ctx, ok := ctxs.GetByName(name)
 	if !ok {
 		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
@@ -530,7 +530,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 		ctxs.PreviousContext = ""
 	}
 
-	err = c.cfg.writeContexts(ctxs)
+	err = c.cfg.WriteContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +544,7 @@ func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateReques
 	return "", &Context{}, &contextUpdateRequest{}, errorNotImplemented // editCmd is disabled, this is not needed
 }
 
-func (cs *contexts) validate() error {
+func (cs *Contexts) validate() error {
 	names := map[string]bool{}
 	for _, context := range cs.Contexts {
 		names[context.Name] = true
@@ -557,13 +557,13 @@ func (cs *contexts) validate() error {
 	return nil
 }
 
-func (cs *contexts) delete(name string) {
+func (cs *Contexts) delete(name string) {
 	cs.Contexts = slices.DeleteFunc(cs.Contexts, func(ctx *Context) bool {
 		return ctx.Name == name
 	})
 }
 
-func (cs *contexts) getByName(name string) (*Context, bool) {
+func (cs *Contexts) GetByName(name string) (*Context, bool) {
 	for _, context := range cs.Contexts {
 		if context.Name == name {
 			return context, true
@@ -580,8 +580,27 @@ func contextSorter() *multisort.Sorter[*Context] {
 	}, multisort.Keys{{ID: "name"}})
 }
 
+func (c *ContextConfig) MustDefaultContext() Context {
+	ctxs, err := c.GetContexts()
+	if err != nil {
+		return defaultCtx()
+	}
+	ctx, ok := ctxs.GetByName(ctxs.CurrentContext)
+	if !ok {
+		return defaultCtx()
+	}
+	return *ctx
+}
+
+func defaultCtx() Context {
+	return Context{
+		APIURL:   pointer.PointerOrNil(viper.GetString(KeyAPIURL)),
+		APIToken: viper.GetString(KeyAPIToken),
+	}
+}
+
 func newPrinterFromCLI(c *ContextConfig) printers.Printer {
-	allContexts, err := c.getContexts()
+	allContexts, err := c.GetContexts()
 	currentContextName := ""
 	if err == nil {
 		currentContextName = allContexts.CurrentContext
