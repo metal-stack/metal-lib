@@ -162,13 +162,13 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Args = cobra.ExactArgs(0)
 		},
 		CreateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(keyName, "", "sets the name of the context")
-			cmd.Flags().String(keyAPIURL, "", "sets the api-url for this context")
-			cmd.Flags().String(keyAPIToken, "", "sets the api-token for this context")
-			cmd.Flags().String(keyDefaultProject, "", "sets a default project to operate on")
-			cmd.Flags().Duration(keyTimeout, 0, "sets a default request timeout")
+			cmd.Flags().String(keyName, "", "set the name of the context")
+			cmd.Flags().String(keyAPIURL, "", "set the api-url for this context")
+			cmd.Flags().String(keyAPIToken, "", "set the api-token for this context")
+			cmd.Flags().String(keyDefaultProject, "", "set a default project to operate on")
+			cmd.Flags().Duration(keyTimeout, 0, "set a default request timeout")
 			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
-			cmd.Flags().String(keyProvider, "", "sets the login provider for this context")
+			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
 
 			genericcli.Must(cmd.MarkFlagRequired(keyName))
 			genericcli.Must(cmd.MarkFlagRequired(keyAPIToken))
@@ -176,12 +176,12 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Args = cobra.ExactArgs(0)
 		},
 		UpdateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(keyAPIURL, "", "sets the api-url for this context")
-			cmd.Flags().String(keyAPIToken, "", "sets the api-token for this context")
-			cmd.Flags().String(keyDefaultProject, "", "sets a default project to operate on")
-			cmd.Flags().Duration(keyTimeout, 0, "sets a default request timeout")
+			cmd.Flags().String(keyAPIURL, "", "set the api-url for this context")
+			cmd.Flags().String(keyAPIToken, "", "set the api-token for this context")
+			cmd.Flags().String(keyDefaultProject, "", "set a default project to operate on")
+			cmd.Flags().Duration(keyTimeout, 0, "set a default request timeout")
 			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
-			cmd.Flags().String(keyProvider, "", "sets the login provider for this context")
+			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
 
 			genericcli.Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
@@ -221,7 +221,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	setProjectCmd := &cobra.Command{
 		Use:   "set-project <project-id>",
 		Args:  cobra.ExactArgs(1),
-		Short: "sets the default project to operate on for cli commands",
+		Short: "set the default project to operate on for cli commands",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.setProject(args)
 		},
@@ -230,9 +230,8 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 	showCurrentCmd := &cobra.Command{
 		Use:   "show-current",
-		Short: "print the current context name",
-		// Aliases: []string{"show"},
-		Args: cobra.ExactArgs(0),
+		Short: "print the active context name",
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxs, err := c.getContexts()
 			if err != nil {
