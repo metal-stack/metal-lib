@@ -126,7 +126,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 
 	var cmds []*cobra.Command
 
-	if _, ok := c.OnlyCmds[ListCmd]; ok {
+	if c.OnlyCmds[ListCmd] {
 		cmd := &cobra.Command{
 			Use:     "list",
 			Aliases: []string{"ls"},
@@ -152,7 +152,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmds = append(cmds, cmd)
 	}
 
-	if _, ok := c.OnlyCmds[DescribeCmd]; ok {
+	if c.OnlyCmds[DescribeCmd] {
 		use := "describe"
 		for _, arg := range c.Args {
 			use += fmt.Sprintf(" <%s>", arg)
@@ -180,7 +180,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmds = append(cmds, cmd)
 	}
 
-	if _, ok := c.OnlyCmds[CreateCmd]; ok {
+	if c.OnlyCmds[CreateCmd] {
 		cmd := &cobra.Command{
 			Use:   "create",
 			Short: fmt.Sprintf("creates the %s", c.Singular),
@@ -209,7 +209,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmds = append(cmds, cmd)
 	}
 
-	if _, ok := c.OnlyCmds[UpdateCmd]; ok {
+	if c.OnlyCmds[UpdateCmd] {
 		use := "update"
 		if c.UpdateRequestFromCLI != nil {
 			for _, arg := range c.Args {
@@ -246,7 +246,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmds = append(cmds, cmd)
 	}
 
-	if _, ok := c.OnlyCmds[DeleteCmd]; ok {
+	if c.OnlyCmds[DeleteCmd] {
 		use := "delete"
 		for _, arg := range c.Args {
 			use += fmt.Sprintf(" <%s>", arg)
@@ -282,7 +282,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmds = append(cmds, cmd)
 	}
 
-	if _, ok := c.OnlyCmds[ApplyCmd]; ok {
+	if c.OnlyCmds[ApplyCmd] {
 		cmd := &cobra.Command{
 			Use:   "apply",
 			Short: fmt.Sprintf("applies one or more %s from a given file", c.Plural),
@@ -307,7 +307,7 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 		cmds = append(cmds, cmd)
 	}
 
-	if _, ok := c.OnlyCmds[EditCmd]; ok {
+	if c.OnlyCmds[EditCmd] {
 		use := "edit"
 		for _, arg := range c.Args {
 			use += fmt.Sprintf(" <%s>", arg)
