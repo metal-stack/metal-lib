@@ -429,6 +429,10 @@ func (c *cliWrapper) List() ([]*Context, error) {
 		return nil, err
 	}
 
+	if len(ctxs.Contexts) == 0 {
+		return nil, fmt.Errorf("you need to create a context first")
+	}
+
 	return ctxs.Contexts, nil
 }
 
