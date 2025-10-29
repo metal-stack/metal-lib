@@ -56,7 +56,7 @@ func TestList(t *testing.T) {
 			})
 
 			cmd := NewContextCmd(&ContextConfig{
-				ConfigName: fmt.Sprintf("./.%s/config.yaml", os.Args[0]),
+				ConfigPath: fmt.Sprintf("./.%s/config.yaml", os.Args[0]),
 				BinaryName: os.Args[0],
 				Fs:         afero.NewMemMapFs(),
 				DescribePrinter: func() printers.Printer {

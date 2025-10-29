@@ -85,6 +85,10 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
 	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
 
+	if c.ConfigDirName == "" {
+		panic(fmt.Errorf("no config directory name provided"))
+	}
+
 	wrapper := &cliWrapper{
 		cfg: c,
 	}
@@ -325,7 +329,11 @@ func (c *ContextConfig) writeContexts(ctxs *contexts) error {
 	}
 
 	// when path is in the default path, we ensure the directory exists
-	if defaultPath, err := c.defaultConfigDirectory(); err == nil && defaultPath == path.Dir(dest) {
+	defaultPath, err := c.defaultConfigDirectory()
+	if err != nil {
+		return fmt.Errorf("failed to get default config directory: %w", err)
+	}
+	if defaultPath == path.Dir(dest) {
 		err = c.Fs.MkdirAll(defaultPath, 0700)
 		if err != nil {
 			return fmt.Errorf("unable to ensure default config directory: %w", err)
