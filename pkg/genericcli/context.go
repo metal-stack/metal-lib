@@ -21,14 +21,14 @@ import (
 )
 
 const (
-	KeyName           = "name"
-	KeyAPIURL         = "api-url"
-	KeyAPIToken       = "api-token"
-	KeyDefaultProject = "default-project"
-	KeyTimeout        = "timeout"
-	KeyActivate       = "activate"
-	KeyProvider       = "provider"
-	KeyConfig         = "config"
+	keyName           = "name"
+	keyAPIURL         = "api-url"
+	keyAPIToken       = "api-token"
+	keyDefaultProject = "default-project"
+	keyTimeout        = "timeout"
+	keyActivate       = "activate"
+	keyProvider       = "provider"
+	keyConfig         = "config"
 
 	defaultConfigName = "config.yaml"
 )
@@ -38,8 +38,8 @@ var (
 	errorNotImplemented = fmt.Errorf("not implemented yet")
 )
 
-// Contexts contains all configuration Contexts
-type Contexts struct {
+// contexts contains all configuration contexts
+type contexts struct {
 	CurrentContext  string     `json:"current-context" yaml:"current-context"`
 	PreviousContext string     `json:"previous-context" yaml:"previous-context"`
 	Contexts        []*Context `json:"contexts" yaml:"contexts"`
@@ -103,7 +103,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Plural:          "contexts",
 		Description:     "Manage CLI contexts. A context defines the connection properties (API URL, token, etc.) for a backend. Use \"-\" to switch to the previously used context.",
 		Aliases:         []string{"ctx"},
-		Args:            []string{KeyName},
+		Args:            []string{keyName},
 		Sorter:          contextSorter(),
 		DescribePrinter: c.DescribePrinter,
 		ListPrinter:     func() printers.Printer { return newPrinterFromCLI(c) },
@@ -161,28 +161,28 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Args = cobra.ExactArgs(0)
 		},
 		CreateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(KeyName, "", "set the name of the context")
-			cmd.Flags().String(KeyAPIURL, "", "set the api-url for this context")
-			cmd.Flags().String(KeyAPIToken, "", "set the api-token for this context")
-			cmd.Flags().String(KeyDefaultProject, "", "set a default project to operate on")
-			cmd.Flags().Duration(KeyTimeout, 0, "set a default request timeout")
-			cmd.Flags().Bool(KeyActivate, false, "immediately switches to the new context")
-			cmd.Flags().String(KeyProvider, "", "set the login provider for this context")
+			cmd.Flags().String(keyName, "", "set the name of the context")
+			cmd.Flags().String(keyAPIURL, "", "set the api-url for this context")
+			cmd.Flags().String(keyAPIToken, "", "set the api-token for this context")
+			cmd.Flags().String(keyDefaultProject, "", "set a default project to operate on")
+			cmd.Flags().Duration(keyTimeout, 0, "set a default request timeout")
+			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
+			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
 
-			Must(cmd.MarkFlagRequired(KeyName))
-			Must(cmd.MarkFlagRequired(KeyAPIToken))
+			Must(cmd.MarkFlagRequired(keyName))
+			Must(cmd.MarkFlagRequired(keyAPIToken))
 
 			cmd.Args = cobra.ExactArgs(0)
 		},
 		UpdateCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.Flags().String(KeyAPIURL, "", "set the api-url for this context")
-			cmd.Flags().String(KeyAPIToken, "", "set the api-token for this context")
-			cmd.Flags().String(KeyDefaultProject, "", "set a default project to operate on")
-			cmd.Flags().Duration(KeyTimeout, 0, "set a default request timeout")
-			cmd.Flags().Bool(KeyActivate, false, "immediately switches to the new context")
-			cmd.Flags().String(KeyProvider, "", "set the login provider for this context")
+			cmd.Flags().String(keyAPIURL, "", "set the api-url for this context")
+			cmd.Flags().String(keyAPIToken, "", "set the api-token for this context")
+			cmd.Flags().String(keyDefaultProject, "", "set a default project to operate on")
+			cmd.Flags().Duration(keyTimeout, 0, "set a default request timeout")
+			cmd.Flags().Bool(keyActivate, false, "immediately switches to the new context")
+			cmd.Flags().String(keyProvider, "", "set the login provider for this context")
 
-			Must(cmd.RegisterFlagCompletionFunc(KeyDefaultProject, c.ProjectListCompletion))
+			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
 			cmd.ValidArgsFunction = c.ContextListCompletion
 
@@ -332,7 +332,7 @@ func (c *ContextConfig) ContextListCompletion(cmd *cobra.Command, args []string,
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *ContextConfig) WriteContexts(ctxs *Contexts) error {
+func (c *ContextConfig) WriteContexts(ctxs *contexts) error {
 	if err := ctxs.validate(); err != nil {
 		return err
 	}
@@ -368,8 +368,8 @@ func (c *ContextConfig) WriteContexts(ctxs *Contexts) error {
 }
 
 func (c *ContextConfig) configPath() (string, error) {
-	if viper.IsSet(KeyConfig) {
-		return viper.GetString(KeyConfig), nil
+	if viper.IsSet(keyConfig) {
+		return viper.GetString(keyConfig), nil
 	}
 
 	dir, err := c.defaultConfigDirectory()
@@ -390,7 +390,7 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 	return path.Join(h, "."+c.ConfigDirName), nil
 }
 
-func (c *ContextConfig) GetContexts() (*Contexts, error) {
+func (c *ContextConfig) GetContexts() (*contexts, error) {
 	configPath, err := c.configPath()
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine config path: %w", err)
@@ -399,13 +399,13 @@ func (c *ContextConfig) GetContexts() (*Contexts, error) {
 	raw, err := afero.ReadFile(c.Fs, configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return &Contexts{}, nil
+			return &contexts{}, nil
 		}
 
 		return nil, fmt.Errorf("unable to read %s: %w", c.ConfigName, err)
 	}
 
-	var ctxs Contexts
+	var ctxs contexts
 	err = yaml.Unmarshal(raw, &ctxs)
 	return &ctxs, err
 }
@@ -437,7 +437,7 @@ func (c *cliWrapper) List() ([]*Context, error) {
 }
 
 func (c *cliWrapper) Create(rq *Context) (*Context, error) {
-	name := viper.GetString(KeyName)
+	name := viper.GetString(keyName)
 	ctxs, err := c.cfg.GetContexts()
 	if err != nil {
 		return nil, err
@@ -445,16 +445,16 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 
 	ctx := &Context{
 		Name:           name,
-		APIURL:         pointer.PointerOrNil(viper.GetString(KeyAPIURL)),
-		APIToken:       viper.GetString(KeyAPIToken),
-		DefaultProject: viper.GetString(KeyDefaultProject),
-		Timeout:        pointer.PointerOrNil(viper.GetDuration(KeyTimeout)),
-		Provider:       viper.GetString(KeyProvider),
+		APIURL:         pointer.PointerOrNil(viper.GetString(keyAPIURL)),
+		APIToken:       viper.GetString(keyAPIToken),
+		DefaultProject: viper.GetString(keyDefaultProject),
+		Timeout:        pointer.PointerOrNil(viper.GetDuration(keyTimeout)),
+		Provider:       viper.GetString(keyProvider),
 	}
 
 	ctxs.Contexts = append(ctxs.Contexts, ctx)
 
-	if viper.GetBool(KeyActivate) || ctxs.CurrentContext == "" {
+	if viper.GetBool(keyActivate) || ctxs.CurrentContext == "" {
 		ctxs.PreviousContext = ctxs.CurrentContext
 		ctxs.CurrentContext = ctx.Name
 	}
@@ -480,22 +480,22 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
 	}
 
-	if viper.IsSet(KeyAPIURL) {
-		ctx.APIURL = pointer.PointerOrNil(viper.GetString(KeyAPIURL))
+	if viper.IsSet(keyAPIURL) {
+		ctx.APIURL = pointer.PointerOrNil(viper.GetString(keyAPIURL))
 	}
-	if viper.IsSet(KeyAPIToken) {
-		ctx.APIToken = viper.GetString(KeyAPIToken)
+	if viper.IsSet(keyAPIToken) {
+		ctx.APIToken = viper.GetString(keyAPIToken)
 	}
-	if viper.IsSet(KeyDefaultProject) {
-		ctx.DefaultProject = viper.GetString(KeyDefaultProject)
+	if viper.IsSet(keyDefaultProject) {
+		ctx.DefaultProject = viper.GetString(keyDefaultProject)
 	}
-	if viper.IsSet(KeyTimeout) {
-		ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(KeyTimeout))
+	if viper.IsSet(keyTimeout) {
+		ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(keyTimeout))
 	}
-	if viper.IsSet(KeyProvider) {
-		ctx.Provider = viper.GetString(KeyProvider)
+	if viper.IsSet(keyProvider) {
+		ctx.Provider = viper.GetString(keyProvider)
 	}
-	if viper.GetBool(KeyActivate) {
+	if viper.GetBool(keyActivate) {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
 	}
 
@@ -544,7 +544,7 @@ func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateReques
 	return "", &Context{}, &contextUpdateRequest{}, errorNotImplemented // editCmd is disabled, this is not needed
 }
 
-func (cs *Contexts) validate() error {
+func (cs *contexts) validate() error {
 	names := map[string]bool{}
 	for _, context := range cs.Contexts {
 		names[context.Name] = true
@@ -557,13 +557,13 @@ func (cs *Contexts) validate() error {
 	return nil
 }
 
-func (cs *Contexts) delete(name string) {
+func (cs *contexts) delete(name string) {
 	cs.Contexts = slices.DeleteFunc(cs.Contexts, func(ctx *Context) bool {
 		return ctx.Name == name
 	})
 }
 
-func (cs *Contexts) GetByName(name string) (*Context, bool) {
+func (cs *contexts) GetByName(name string) (*Context, bool) {
 	for _, context := range cs.Contexts {
 		if context.Name == name {
 			return context, true
@@ -594,8 +594,8 @@ func (c *ContextConfig) MustDefaultContext() Context {
 
 func defaultCtx() Context {
 	return Context{
-		APIURL:   pointer.PointerOrNil(viper.GetString(KeyAPIURL)),
-		APIToken: viper.GetString(KeyAPIToken),
+		APIURL:   pointer.PointerOrNil(viper.GetString(keyAPIURL)),
+		APIToken: viper.GetString(keyAPIToken),
 	}
 }
 
