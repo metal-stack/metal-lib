@@ -25,6 +25,7 @@ const (
 	keyAPIURL         = "api-url"
 	keyAPIToken       = "api-token"
 	keyDefaultProject = "default-project"
+	keyProject        = "project"
 	keyTimeout        = "timeout"
 	keyActivate       = "activate"
 	keyProvider       = "provider"
@@ -542,6 +543,37 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 
 func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
 	return "", &Context{}, &contextUpdateRequest{}, errorNotImplemented // editCmd is disabled, this is not needed
+}
+
+func (c *Context) GetProject() string {
+	if viper.IsSet(keyProject) {
+		return viper.GetString(keyProject)
+	}
+	return c.DefaultProject
+}
+
+func (c *Context) GetAPIToken() string {
+	if viper.IsSet(keyAPIToken) {
+		return viper.GetString(keyAPIToken)
+	}
+	return c.APIToken
+}
+
+func (c *Context) GetApiURL() string {
+	if c.APIURL != nil {
+		return *c.APIURL
+	}
+
+	// fallback to the default specified by viper
+	// TODO why is it a default? Taken from metalctlv2
+	return viper.GetString(keyAPIURL)
+}
+
+func (c *Context) GetProvider() string {
+	if viper.IsSet(keyProvider) {
+		return viper.GetString(keyProvider)
+	}
+	return c.Provider
 }
 
 func (cs *contexts) validate() error {
