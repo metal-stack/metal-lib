@@ -130,7 +130,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 				// '$ BinaryName context -' or '$ BinaryName context <name>' should behave like 'switch'
 				if len(args) == 1 {
-					return c.setContext(args)
+					return c.switchContext(args)
 				}
 
 				// Probably too many args, fallback to help
@@ -199,7 +199,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		UpdateRequestFromCLI: func(args []string) (*contextUpdateRequest, error) {
 			name, err := GetExactlyOneArg(args)
 			if err != nil {
-				return nil, fmt.Errorf("no context name given")
+				return nil, err
 			}
 			return &contextUpdateRequest{Name: name}, nil
 		},
@@ -212,7 +212,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Aliases: []string{"set", "sw"},
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.setContext(args)
+			return c.switchContext(args)
 		},
 		ValidArgsFunction: c.ContextListCompletion,
 	}
@@ -255,7 +255,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	return cmd
 }
 
-func (c *ContextConfig) setContext(args []string) error {
+func (c *ContextConfig) switchContext(args []string) error {
 	wantCtx, err := GetExactlyOneArg(args)
 	if err != nil {
 		return fmt.Errorf("no context name given")
