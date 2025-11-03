@@ -565,7 +565,7 @@ func (c *Context) GetAPIToken() string {
 	return c.APIToken
 }
 
-func (c *Context) GetApiURL() string {
+func (c *Context) GetAPIURL() string {
 	if c.APIURL != nil {
 		return *c.APIURL
 	}
