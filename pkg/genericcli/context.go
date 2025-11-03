@@ -31,6 +31,12 @@ const (
 	keyProvider       = "provider"
 	keyConfig         = "config"
 
+	sortKeyName           = "name"
+	sortKeyAPIURL         = "api-url"
+	sortKeyDefaultProject = "default-project"
+	sortKeyTimeout        = "timeout"
+	sortKeyProvider       = "provider"
+
 	defaultConfigName = "config.yaml"
 )
 
@@ -618,10 +624,26 @@ func (cs *contexts) syncCurrent() {
 
 func contextSorter() *multisort.Sorter[*Context] {
 	return multisort.New(multisort.FieldMap[*Context]{
-		"name": func(a, b *Context, descending bool) multisort.CompareResult {
+		sortKeyName: func(a, b *Context, descending bool) multisort.CompareResult {
 			return multisort.Compare(a.Name, b.Name, descending)
 		},
-	}, multisort.Keys{{ID: "name"}})
+		sortKeyAPIURL: func(a, b *Context, descending bool) multisort.CompareResult {
+			urlA := pointer.SafeDeref(a.APIURL)
+			urlB := pointer.SafeDeref(b.APIURL)
+			return multisort.Compare(urlA, urlB, descending)
+		},
+		sortKeyDefaultProject: func(a, b *Context, descending bool) multisort.CompareResult {
+			return multisort.Compare(a.DefaultProject, b.DefaultProject, descending)
+		},
+		sortKeyTimeout: func(a, b *Context, descending bool) multisort.CompareResult {
+			timeoutA := pointer.SafeDeref(a.Timeout)
+			timeoutB := pointer.SafeDeref(b.Timeout)
+			return multisort.Compare(timeoutA, timeoutB, descending)
+		},
+		sortKeyProvider: func(a, b *Context, descending bool) multisort.CompareResult {
+			return multisort.Compare(a.Provider, b.Provider, descending)
+		},
+	}, multisort.Keys{{ID: sortKeyName}})
 }
 
 func (c *ContextConfig) MustDefaultContext() Context {
