@@ -31,11 +31,11 @@ const (
 	keyProvider       = "provider"
 	keyConfig         = "config"
 
-	sortKeyName           = "name"
-	sortKeyAPIURL         = "api-url"
-	sortKeyDefaultProject = "default-project"
-	sortKeyTimeout        = "timeout"
-	sortKeyProvider       = "provider"
+	sortKeyName           = keyName
+	sortKeyAPIURL         = keyAPIURL
+	sortKeyDefaultProject = keyDefaultProject
+	sortKeyTimeout        = keyTimeout
+	sortKeyProvider       = keyProvider
 
 	defaultConfigName = "config.yaml"
 )
