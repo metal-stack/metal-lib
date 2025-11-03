@@ -646,23 +646,40 @@ func defaultCtx() Context {
 	}
 
 
-func ToHeaderAndRows(data any, wide bool) ([]string, [][]string, error) {
+
+func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	ctxList, ok := data.([]*Context)
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
 	}
-	return contextTable(ctxList, wide)
+	var (
+		header = []string{"", "Name", "Provider", "Default Project"}
+		rows   [][]string
+	)
+
+	if wide {
+		header = append(header, "API URL")
+	}
+
+	for _, c := range ctxList {
+		active := ""
+		if c.IsCurrent {
+			active = color.GreenString("✔")
+		}
+
+		row := []string{active, c.Name, c.Provider, c.DefaultProject}
+		if wide {
+			url := pointer.SafeDeref(c.APIURL)
+			row = append(row, url)
+		}
+
+		rows = append(rows, row)
+	}
+
+	return header, rows, nil
 }
 
 func newPrinterFromCLI(c *ContextConfig) printers.Printer {
-	ToHeaderAndRows := func(data any, wide bool) ([]string, [][]string, error) {
-		ctxList, ok := data.([]*Context)
-		if !ok {
-			return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
-		}
-		return contextTable(ctxList, wide)
-	}
-
 	var printer printers.Printer
 
 	switch format := viper.GetString("output-format"); format {
@@ -680,7 +697,7 @@ func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 		fallthrough
 	default:
 		cfg := &printers.TablePrinterConfig{
-			ToHeaderAndRows: ToHeaderAndRows,
+			ToHeaderAndRows: ContextTable,
 			Wide:            format == "wide",
 			Markdown:        format == "markdown",
 			NoHeaders:       viper.GetBool("no-headers"),
@@ -700,32 +717,4 @@ func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 	}
 
 	return printer
-}
-
-func contextTable(data []*Context, wide bool) ([]string, [][]string, error) {
-	var (
-		header = []string{"", "Name", "Provider", "Default Project"}
-		rows   [][]string
-	)
-
-	if wide {
-		header = append(header, "API URL")
-	}
-
-	for _, c := range data {
-		active := ""
-		if c.IsCurrent {
-			active = color.GreenString("✔")
-		}
-
-		row := []string{active, c.Name, c.Provider, c.DefaultProject}
-		if wide {
-			url := pointer.SafeDeref(c.APIURL)
-			row = append(row, url)
-		}
-
-		rows = append(rows, row)
-	}
-
-	return header, rows, nil
 }
