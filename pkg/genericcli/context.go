@@ -186,12 +186,12 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
-			cmd.ValidArgsFunction = c.ContextListCompletion
+			cmd.ValidArgsFunction = c.contextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
 		DeleteCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.ValidArgsFunction = c.ContextListCompletion
+			cmd.ValidArgsFunction = c.contextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
@@ -216,7 +216,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return c.switchContext(args)
 		},
-		ValidArgsFunction: c.ContextListCompletion,
+		ValidArgsFunction: c.contextListCompletion,
 	}
 
 	setProjectCmd := &cobra.Command{
@@ -245,7 +245,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
 			return err
 		},
-		ValidArgsFunction: c.ContextListCompletion,
+		ValidArgsFunction: c.contextListCompletion,
 	}
 
 	cmd.AddCommand(
@@ -323,7 +323,7 @@ func (c *ContextConfig) setProject(args []string) error {
 	return nil
 }
 
-func (c *ContextConfig) ContextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *ContextConfig) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	ctxs, err := c.GetContexts()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
