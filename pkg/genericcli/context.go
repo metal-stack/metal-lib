@@ -53,6 +53,7 @@ type Context struct {
 	DefaultProject string         `json:"default-project" yaml:"default-project"`
 	Timeout        *time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	Provider       string         `json:"provider" yaml:"provider"`
+	IsCurrent      bool           `json:"-" yaml:"-"`
 }
 
 type ContextConfig struct {
@@ -107,7 +108,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Args:            []string{keyName},
 		Sorter:          contextSorter(),
 		DescribePrinter: c.DescribePrinter,
-		ListPrinter:     func() printers.Printer { return newPrinterFromCLI(c) },
+		ListPrinter:     c.ListPrinter,
 		In:              c.In,
 		Out:             c.Out,
 		OnlyCmds: OnlyCmds(
@@ -283,6 +284,7 @@ func (c *ContextConfig) switchContext(args []string) error {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtx
 	}
 
+	ctxs.syncCurrent()
 	err = c.WriteContexts(ctxs)
 	if err != nil {
 		return err
@@ -408,6 +410,9 @@ func (c *ContextConfig) GetContexts() (*contexts, error) {
 
 	var ctxs contexts
 	err = yaml.Unmarshal(raw, &ctxs)
+
+	ctxs.syncCurrent()
+
 	return &ctxs, err
 }
 
@@ -498,6 +503,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 	}
 	if viper.GetBool(keyActivate) {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
+		ctxs.syncCurrent()
 	}
 
 	err = c.cfg.WriteContexts(ctxs)
@@ -604,6 +610,12 @@ func (cs *contexts) GetByName(name string) (*Context, bool) {
 	return nil, false
 }
 
+func (cs *contexts) syncCurrent() {
+	for _, ctx := range cs.Contexts {
+		ctx.IsCurrent = ctx.Name == cs.CurrentContext
+	}
+}
+
 func contextSorter() *multisort.Sorter[*Context] {
 	return multisort.New(multisort.FieldMap[*Context]{
 		"name": func(a, b *Context, descending bool) multisort.CompareResult {
@@ -631,19 +643,24 @@ func defaultCtx() Context {
 	}
 }
 
-func newPrinterFromCLI(c *ContextConfig) printers.Printer {
-	allContexts, err := c.GetContexts()
-	currentContextName := ""
-	if err == nil {
-		currentContextName = allContexts.CurrentContext
 	}
 
+
+func ToHeaderAndRows(data any, wide bool) ([]string, [][]string, error) {
+	ctxList, ok := data.([]*Context)
+	if !ok {
+		return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
+	}
+	return contextTable(ctxList, wide)
+}
+
+func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 	ToHeaderAndRows := func(data any, wide bool) ([]string, [][]string, error) {
 		ctxList, ok := data.([]*Context)
 		if !ok {
 			return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
 		}
-		return contextTable(ctxList, wide, currentContextName)
+		return contextTable(ctxList, wide)
 	}
 
 	var printer printers.Printer
@@ -685,7 +702,7 @@ func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 	return printer
 }
 
-func contextTable(data []*Context, wide bool, currentContextName string) ([]string, [][]string, error) {
+func contextTable(data []*Context, wide bool) ([]string, [][]string, error) {
 	var (
 		header = []string{"", "Name", "Provider", "Default Project"}
 		rows   [][]string
@@ -697,7 +714,7 @@ func contextTable(data []*Context, wide bool, currentContextName string) ([]stri
 
 	for _, c := range data {
 		active := ""
-		if c.Name == currentContextName {
+		if c.IsCurrent {
 			active = color.GreenString("✔")
 		}
 
