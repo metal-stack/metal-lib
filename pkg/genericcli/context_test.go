@@ -7,11 +7,53 @@ import (
 	"os"
 	"testing"
 
+	"github.com/fatih/color"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
+	"github.com/spf13/viper"
 )
+
+func newPrinterFromCLI(c *ContextConfig) printers.Printer {
+	var printer printers.Printer
+
+	switch format := viper.GetString("output-format"); format {
+	case "yaml":
+		printer = printers.NewProtoYAMLPrinter().WithFallback(true).WithOut(c.Out)
+	case "json":
+		printer = printers.NewProtoJSONPrinter().WithFallback(true).WithOut(c.Out)
+	case "yamlraw":
+		printer = printers.NewYAMLPrinter().WithOut(c.Out)
+	case "jsonraw":
+		printer = printers.NewJSONPrinter().WithOut(c.Out)
+	case "template":
+		printer = printers.NewTemplatePrinter(viper.GetString("template")).WithOut(c.Out)
+	case "table", "wide", "markdown":
+		fallthrough
+	default:
+		cfg := &printers.TablePrinterConfig{
+			ToHeaderAndRows: ContextTable,
+			Wide:            format == "wide",
+			Markdown:        format == "markdown",
+			NoHeaders:       viper.GetBool("no-headers"),
+			Out:             c.Out,
+		}
+		tablePrinter := printers.NewTablePrinter(cfg).WithOut(c.Out)
+		printer = tablePrinter
+	}
+
+	if viper.IsSet("force-color") {
+		enabled := viper.GetBool("force-color")
+		if enabled {
+			color.NoColor = false
+		} else {
+			color.NoColor = true
+		}
+	}
+
+	return printer
+}
 
 func TestList(t *testing.T) {
 	tests := []struct {
