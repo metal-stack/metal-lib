@@ -665,10 +665,6 @@ func defaultCtx() Context {
 	}
 }
 
-	}
-
-
-
 func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	ctxList, ok := data.([]*Context)
 	if !ok {
