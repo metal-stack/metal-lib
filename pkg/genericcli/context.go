@@ -55,6 +55,7 @@ const (
 	errMsgCannotGetConfigPath    = "unable to determine config path: %w"
 	errMsgCannotReadConfig       = "unable to read %s: %w"
 	errMsgCannotFetchContexts    = "unable to fetch contexts: %w"
+	errMsgCannotWriteContexts    = "failed to save contexts: %w"
 	errMsgListCommandNotFound    = "internal: list command not found: %w"
 )
 
@@ -745,7 +746,10 @@ func DefaultContext(c *cliWrapper) (*Context, error) {
 		if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
 			ctxCurrent.IsCurrent = true
 		}
-		c.writeContexts(ctxs) // TODO check
+		err := c.writeContexts(ctxs)
+		if err != nil {
+			return nil, fmt.Errorf(errMsgCannotWriteContexts, err)
+		}
 
 		ctx = &defaultCtx
 	}
