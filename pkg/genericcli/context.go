@@ -49,12 +49,23 @@ const (
 	msgProjectSwitched      = "%s Switched context default project to \"%s\"\n"
 
 	// Error message formats
-	errMsgContextNotFound         = "context \"%s\" not found"
-	errMsgGettingDefaultDirFailed = "failed to get default config directory: %w"
-	errMsgCannotEnsureDefaultDir  = "unable to ensure default config directory: %w"
-	errMsgCannotGetConfigPath     = "unable to determine config path: %w"
-	errMsgCannotReadConfig        = "unable to read %s: %w"
-	errMsgCannotFetchContexts     = "unable to fetch contexts: %w"
+	errMsgContextNotFound        = "context \"%s\" not found"
+	errMsgCannotGetDefaultDir    = "failed to get default config directory: %w"
+	errMsgCannotEnsureDefaultDir = "unable to ensure default config directory: %w"
+	errMsgCannotGetConfigPath    = "unable to determine config path: %w"
+	errMsgCannotReadConfig       = "unable to read %s: %w"
+	errMsgCannotFetchContexts    = "unable to fetch contexts: %w"
+	errMsgListCommandNotFound    = "internal: list command not found: %w"
+)
+
+var (
+	errNoConfigDirName        = errors.New("no config directory name provided")
+	errNoContextGivenOrActive = errors.New("no context name provided and no context is currently active")
+	errNoActiveContext        = errors.New("no context currently active")
+	errNoPreviousContext      = errors.New("no previous context found")
+	errContextNamesAreUnique  = errors.New("context names must be unique")
+	errExpectedContextSlice   = errors.New("unsupported content: expected []*Context")
+	errCreateContextFirst     = errors.New("you need to create a context first")
 )
 
 // contexts contains all configuration contexts
@@ -129,7 +140,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
 
 	if c.ConfigDirName == "" {
-		panic(fmt.Errorf("no config directory name provided"))
+		panic(errNoConfigDirName)
 	}
 
 	wrapper := &cliWrapper{
@@ -167,7 +178,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				if len(args) == 0 {
 					listCmd, _, err := cmd.Find([]string{"list"})
 					if err != nil {
-						return fmt.Errorf("internal: list command not found: %w", err)
+						return fmt.Errorf(errMsgListCommandNotFound, err)
 					}
 					return listCmd.RunE(listCmd, []string{})
 				}
@@ -190,7 +201,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 						return fmt.Errorf(errMsgCannotFetchContexts, err)
 					}
 					if ctxs.CurrentContext == "" {
-						return fmt.Errorf("no context name provided and no context is currently active")
+						return errNoContextGivenOrActive
 					}
 					args = []string{ctxs.CurrentContext}
 				}
@@ -297,7 +308,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				return fmt.Errorf(errMsgCannotFetchContexts, err)
 			}
 			if ctxs.CurrentContext == "" {
-				return fmt.Errorf("no context currently active")
+				return errNoActiveContext
 			}
 
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
@@ -333,7 +344,7 @@ func (c *cliWrapper) switchContext(args []string) error {
 
 	if wantCtxName == "-" {
 		if ctxs.PreviousContext == "" {
-			return fmt.Errorf("no previous context found")
+			return errNoPreviousContext
 		}
 		wantCtxName = ctxs.PreviousContext
 	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
@@ -397,7 +408,7 @@ func (c *cliWrapper) writeContexts(ctxs *contexts) error {
 	// when path is in the default path, we ensure the directory exists
 	defaultPath, err := c.cfg.defaultConfigDirectory()
 	if err != nil {
-		return fmt.Errorf(errMsgGettingDefaultDirFailed, err)
+		return fmt.Errorf(errMsgCannotGetDefaultDir, err)
 	}
 	if defaultPath == path.Dir(dest) {
 		err = c.cfg.Fs.MkdirAll(defaultPath, 0700)
@@ -515,7 +526,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 
 	if rq.Name == "" { // defaults to current context if no name is provided
 		if ctxs.CurrentContext == "" {
-			return nil, fmt.Errorf("no context currently active")
+			return nil, errNoActiveContext
 		}
 		rq.Name = ctxs.CurrentContext
 	}
@@ -643,7 +654,7 @@ func (cs *contexts) validate() error {
 	}
 
 	if len(cs.Contexts) != len(names) {
-		return fmt.Errorf("context names must be unique")
+		return errContextNamesAreUnique
 	}
 
 	return nil
@@ -713,14 +724,43 @@ func defaultCtx() Context {
 	}
 }
 
+func DefaultContext(c *cliWrapper) (*Context, error) {
+	ctxs, err := c.getContexts()
+	if err != nil {
+		return nil, err
+	}
+
+	ctxName := ctxs.CurrentContext
+	if viper.IsSet(keyContextName) {
+		ctxName = viper.GetString(keyContextName)
+	}
+
+	ctx, ok := ctxs.getByName(ctxName)
+	if !ok {
+		defaultCtx := c.MustDefaultContext()
+		defaultCtx.Name = "default"
+
+		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
+		ctxs.Contexts = append(ctxs.Contexts, &defaultCtx)
+		if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
+			ctxCurrent.IsCurrent = true
+		}
+		c.writeContexts(ctxs) // TODO check
+
+		ctx = &defaultCtx
+	}
+
+	return ctx, nil
+}
+
 func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	ctxList, ok := data.([]*Context)
 	if !ok {
-		return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
+		return nil, nil, errExpectedContextSlice
 	}
 
 	if len(ctxList) == 0 {
-		return nil, nil, fmt.Errorf("you need to create a context first")
+		return nil, nil, errCreateContextFirst
 	}
 
 	var (
