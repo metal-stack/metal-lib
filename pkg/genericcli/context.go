@@ -83,6 +83,7 @@ type cliWrapper struct {
 type contextUpdateRequest struct {
 	updatedCtx *Context
 	silent     bool
+	ctxs       *contexts
 }
 
 // NewContextCmd creates the context command tree using genericcli
@@ -211,9 +212,14 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				return nil, err
 			}
 
-			ctx, err := wrapper.Get(name)
+			ctxs, err := wrapper.getContexts()
 			if err != nil {
 				return nil, err
+			}
+
+			ctx, ok := ctxs.getByName(name)
+			if !ok {
+				return nil, fmt.Errorf("context \"%s\" not found", name)
 			}
 
 			if viper.IsSet(keyAPIURL) {
@@ -235,7 +241,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				ctx.IsCurrent = true
 			}
 
-			return &contextUpdateRequest{updatedCtx: ctx, silent: false}, nil
+			return &contextUpdateRequest{updatedCtx: ctx, silent: false, ctxs: ctxs}, nil
 		},
 	})
 
@@ -509,20 +515,19 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.update(rq, ctxs)
+	rq.ctxs = ctxs
+	return c.update(rq)
 }
 
-func (c *cliWrapper) update(rq *contextUpdateRequest, ctxs *contexts) (*Context, error) {
-	outdatedCtx, ok := ctxs.getByName(rq.updatedCtx.Name)
-	if !ok {
+func (c *cliWrapper) update(rq *contextUpdateRequest) (*Context, error) {
+	outdatedCtx := rq.ctxs.delete(rq.updatedCtx.Name)
+	if outdatedCtx == nil {
 		return nil, fmt.Errorf("context \"%s\" not found", rq.updatedCtx.Name)
 	}
 
-	if rq.updatedCtx.IsCurrent && !outdatedCtx.IsCurrent {
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, rq.updatedCtx.Name
-	}
+	rq.ctxs.Contexts = append(rq.ctxs.Contexts, rq.updatedCtx)
 
-	err := c.writeContexts(ctxs)
+	err := c.writeContexts(rq.ctxs)
 	if err != nil {
 		return nil, err
 	}
