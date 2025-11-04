@@ -176,7 +176,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				// '$ BinaryName context' (no args) should be equal to '$ BinaryName context list'
 				if len(args) == 0 {
-					listCmd, _, err := cmd.Find([]string{"list"})
+					listCmd, _, err := cmd.Find(pointer.WrapInSlice(string(ListCmd)))
 					if err != nil {
 						return fmt.Errorf(errMsgListCommandNotFound, err)
 					}
