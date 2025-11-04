@@ -455,7 +455,9 @@ func (c *cliWrapper) getContexts() (*contexts, error) {
 	var ctxs contexts
 	err = yaml.Unmarshal(raw, &ctxs)
 
-	ctxs.syncCurrent()
+	if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
+		ctxCurrent.IsCurrent = true
+	}
 
 	return &ctxs, err
 }
@@ -641,12 +643,6 @@ func (cs *contexts) getByName(name string) (*Context, bool) {
 		}
 	}
 	return nil, false
-}
-
-func (cs *contexts) syncCurrent() {
-	for _, ctx := range cs.Contexts {
-		ctx.IsCurrent = ctx.Name == cs.CurrentContext
-	}
 }
 
 func contextSorter() *multisort.Sorter[*Context] {
