@@ -448,7 +448,7 @@ func (c *cliWrapper) List() ([]*Context, error) {
 
 func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 	name := viper.GetString(keyName)
-	ctxs, err := c.cfg.GetContexts()
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
 	}
@@ -465,11 +465,10 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 	ctxs.Contexts = append(ctxs.Contexts, ctx)
 
 	if viper.GetBool(keyActivate) || ctxs.CurrentContext == "" {
-		ctxs.PreviousContext = ctxs.CurrentContext
-		ctxs.CurrentContext = ctx.Name
+		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
 	}
 
-	err = c.cfg.WriteContexts(ctxs)
+	err = c.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
