@@ -138,7 +138,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 				// '$ BinaryName context -' or '$ BinaryName context <name>' should behave like 'switch'
 				if len(args) == 1 {
-					return c.switchContext(args)
+					return wrapper.switchContext(args)
 				}
 
 				// Probably too many args, fallback to help
@@ -153,7 +153,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				// If no args are provided, try to use the current context
 				if len(args) == 0 {
-					ctxs, err := c.GetContexts()
+					ctxs, err := wrapper.getContexts()
 					if err != nil {
 						return fmt.Errorf("unable to get contexts to determine current: %w", err)
 					}
@@ -192,12 +192,12 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
-			cmd.ValidArgsFunction = c.contextListCompletion
+			cmd.ValidArgsFunction = wrapper.contextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
 		DeleteCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.ValidArgsFunction = c.contextListCompletion
+			cmd.ValidArgsFunction = wrapper.contextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
@@ -220,9 +220,9 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Aliases: []string{"set", "sw"},
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.switchContext(args)
+			return wrapper.switchContext(args)
 		},
-		ValidArgsFunction: c.contextListCompletion,
+		ValidArgsFunction: wrapper.contextListCompletion,
 	}
 
 	setProjectCmd := &cobra.Command{
@@ -230,7 +230,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "set the default project to operate on for cli commands",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return c.setProject(args)
+			return wrapper.setProject(args)
 		},
 		ValidArgsFunction: c.ProjectListCompletion,
 	}
@@ -240,7 +240,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		Short: "print the active context name",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxs, err := c.GetContexts()
+			ctxs, err := wrapper.getContexts()
 			if err != nil {
 				return fmt.Errorf("unable to get contexts: %w", err)
 			}
@@ -251,7 +251,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
 			return err
 		},
-		ValidArgsFunction: c.contextListCompletion,
+		ValidArgsFunction: wrapper.contextListCompletion,
 	}
 
 	cmd.AddCommand(
@@ -263,40 +263,39 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	return cmd
 }
 
-func (c *ContextConfig) switchContext(args []string) error {
-	wantCtx, err := GetExactlyOneArg(args)
-	if err != nil {
-		return fmt.Errorf("no context name given")
-	}
-
-	ctxs, err := c.GetContexts()
+func (c *cliWrapper) switchContext(args []string) error {
+	wantCtxName, err := GetExactlyOneArg(args)
 	if err != nil {
 		return err
 	}
 
-	if wantCtx == "-" {
+	ctxs, err := c.getContexts()
+	if err != nil {
+		return err
+	}
+
+	if wantCtxName == ctxs.CurrentContext {
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+		return nil
+	}
+
+	if wantCtxName == "-" {
 		if ctxs.PreviousContext == "" {
 			return fmt.Errorf("no previous context found")
 		}
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxs.PreviousContext
-	} else {
-		if _, ok := ctxs.GetByName(wantCtx); !ok {
-			return fmt.Errorf("context \"%s\" not found", wantCtx)
-		}
-		if wantCtx == ctxs.CurrentContext {
-			_, _ = fmt.Fprintf(c.Out, "%s Context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
-			return nil
-		}
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtx
+		wantCtxName = ctxs.PreviousContext
+	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
+		return fmt.Errorf("context \"%s\" not found", wantCtxName)
 	}
 
-	ctxs.syncCurrent()
-	err = c.WriteContexts(ctxs)
+	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
+
+	err = c.writeContexts(ctxs)
 	if err != nil {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
 
 	return nil
 }
@@ -329,8 +328,8 @@ func (c *ContextConfig) setProject(args []string) error {
 	return nil
 }
 
-func (c *ContextConfig) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	ctxs, err := c.GetContexts()
+func (c *cliWrapper) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
