@@ -81,7 +81,8 @@ type cliWrapper struct {
 }
 
 type contextUpdateRequest struct {
-	Name string
+	updatedCtx *Context
+	silent     bool
 }
 
 // NewContextCmd creates the context command tree using genericcli
@@ -209,7 +210,32 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			if err != nil {
 				return nil, err
 			}
-			return &contextUpdateRequest{Name: name}, nil
+
+			ctx, err := wrapper.Get(name)
+			if err != nil {
+				return nil, err
+			}
+
+			if viper.IsSet(keyAPIURL) {
+				ctx.APIURL = pointer.PointerOrNil(viper.GetString(keyAPIURL))
+			}
+			if viper.IsSet(keyAPIToken) {
+				ctx.APIToken = viper.GetString(keyAPIToken)
+			}
+			if viper.IsSet(keyDefaultProject) {
+				ctx.DefaultProject = viper.GetString(keyDefaultProject)
+			}
+			if viper.IsSet(keyTimeout) {
+				ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(keyTimeout))
+			}
+			if viper.IsSet(keyProvider) {
+				ctx.Provider = viper.GetString(keyProvider)
+			}
+			if viper.GetBool(keyActivate) {
+				ctx.IsCurrent = true
+			}
+
+			return &contextUpdateRequest{updatedCtx: ctx, silent: false}, nil
 		},
 	})
 
@@ -479,44 +505,33 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 }
 
 func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
-	ctxs, err := c.cfg.GetContexts()
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
 	}
+	return c.update(rq, ctxs)
+}
 
-	ctx, ok := ctxs.GetByName(rq.Name)
+func (c *cliWrapper) update(rq *contextUpdateRequest, ctxs *contexts) (*Context, error) {
+	outdatedCtx, ok := ctxs.getByName(rq.updatedCtx.Name)
 	if !ok {
-		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
+		return nil, fmt.Errorf("context \"%s\" not found", rq.updatedCtx.Name)
 	}
 
-	if viper.IsSet(keyAPIURL) {
-		ctx.APIURL = pointer.PointerOrNil(viper.GetString(keyAPIURL))
-	}
-	if viper.IsSet(keyAPIToken) {
-		ctx.APIToken = viper.GetString(keyAPIToken)
-	}
-	if viper.IsSet(keyDefaultProject) {
-		ctx.DefaultProject = viper.GetString(keyDefaultProject)
-	}
-	if viper.IsSet(keyTimeout) {
-		ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(keyTimeout))
-	}
-	if viper.IsSet(keyProvider) {
-		ctx.Provider = viper.GetString(keyProvider)
-	}
-	if viper.GetBool(keyActivate) {
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
-		ctxs.syncCurrent()
+	if rq.updatedCtx.IsCurrent && !outdatedCtx.IsCurrent {
+		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, rq.updatedCtx.Name
 	}
 
-	err = c.cfg.WriteContexts(ctxs)
+	err := c.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
+	if !rq.silent {
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.updatedCtx.Name))
+	}
 
-	return ctx, nil
+	return outdatedCtx, nil
 }
 
 func (c *cliWrapper) Delete(name string) (*Context, error) {
