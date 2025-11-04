@@ -201,7 +201,18 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			cmd.Args = cobra.ExactArgs(1)
 		},
 		CreateRequestFromCLI: func() (*Context, error) {
-			return &Context{}, nil // Placeholder to trigger cmdline read (not file read)
+			name := viper.GetString(keyName)
+
+			ctx := &Context{
+				Name:           name,
+				APIURL:         pointer.PointerOrNil(viper.GetString(keyAPIURL)),
+				APIToken:       viper.GetString(keyAPIToken),
+				DefaultProject: viper.GetString(keyDefaultProject),
+				Timeout:        pointer.PointerOrNil(viper.GetDuration(keyTimeout)),
+				Provider:       viper.GetString(keyProvider),
+				IsCurrent:      viper.GetBool(keyActivate),
+			}
+			return ctx, nil
 		},
 		UpdateRequestFromCLI: func(args []string) (*contextUpdateRequest, error) {
 			name, err := GetExactlyOneArg(args)
@@ -472,35 +483,26 @@ func (c *cliWrapper) List() ([]*Context, error) {
 }
 
 func (c *cliWrapper) Create(rq *Context) (*Context, error) {
-	name := viper.GetString(keyName)
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := &Context{
-		Name:           name,
-		APIURL:         pointer.PointerOrNil(viper.GetString(keyAPIURL)),
-		APIToken:       viper.GetString(keyAPIToken),
-		DefaultProject: viper.GetString(keyDefaultProject),
-		Timeout:        pointer.PointerOrNil(viper.GetDuration(keyTimeout)),
-		Provider:       viper.GetString(keyProvider),
+	ctxs.Contexts = append(ctxs.Contexts, rq)
+
+	if rq.IsCurrent || ctxs.CurrentContext == "" {
+		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, rq.Name
 	}
 
-	ctxs.Contexts = append(ctxs.Contexts, ctx)
-
-	if viper.GetBool(keyActivate) || ctxs.CurrentContext == "" {
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
-	}
-
+	// name uniqness check is performed by writeContexts
 	err = c.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.Name))
 
-	return ctx, nil
+	return rq, nil
 }
 
 func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
