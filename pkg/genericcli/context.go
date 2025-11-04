@@ -30,6 +30,7 @@ const (
 	keyActivate       = "activate"
 	keyProvider       = "provider"
 	keyConfig         = "config"
+	keyContextName    = "context"
 
 	sortKeyName           = keyName
 	sortKeyAPIURL         = keyAPIURL
@@ -429,19 +430,19 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 	return path.Join(h, "."+c.ConfigDirName), nil
 }
 
-func (c *ContextConfig) GetContexts() (*contexts, error) {
-	configPath, err := c.configPath()
+func (c *cliWrapper) getContexts() (*contexts, error) {
+	configPath, err := c.cfg.configPath()
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine config path: %w", err)
 	}
 
-	raw, err := afero.ReadFile(c.Fs, configPath)
+	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return &contexts{}, nil
 		}
 
-		return nil, fmt.Errorf("unable to read %s: %w", c.ConfigName, err)
+		return nil, fmt.Errorf("unable to read %s: %w", c.cfg.ConfigName, err)
 	}
 
 	var ctxs contexts
@@ -540,7 +541,7 @@ func (c *cliWrapper) update(rq *contextUpdateRequest) (*Context, error) {
 }
 
 func (c *cliWrapper) Delete(name string) (*Context, error) {
-	ctxs, err := c.cfg.GetContexts()
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +631,7 @@ func (cs *contexts) delete(name string) *Context {
 	// return len(cs.Contexts) < initialLen
 }
 
-func (cs *contexts) GetByName(name string) (*Context, bool) {
+func (cs *contexts) getByName(name string) (*Context, bool) {
 	for _, context := range cs.Contexts {
 		if context.Name == name {
 			return context, true
@@ -669,12 +670,12 @@ func contextSorter() *multisort.Sorter[*Context] {
 	}, multisort.Keys{{ID: sortKeyName}})
 }
 
-func (c *ContextConfig) MustDefaultContext() Context {
-	ctxs, err := c.GetContexts()
+func (c *cliWrapper) MustDefaultContext() Context {
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return defaultCtx()
 	}
-	ctx, ok := ctxs.GetByName(ctxs.CurrentContext)
+	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
 	if !ok {
 		return defaultCtx()
 	}
