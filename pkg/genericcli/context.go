@@ -57,11 +57,6 @@ const (
 	errMsgCannotFetchContexts     = "unable to fetch contexts: %w"
 )
 
-var (
-	// errorNotImplemented for all functions that are not implemented yet
-	errorNotImplemented = fmt.Errorf("not implemented yet")
-)
-
 // contexts contains all configuration contexts
 type contexts struct {
 	CurrentContext  string     `json:"current-context" yaml:"current-context"`
@@ -597,8 +592,17 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 	return deletedCtx, nil
 }
 
+// Convert is not used as editCmd is disabled
 func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
-	return "", &Context{}, &contextUpdateRequest{}, errorNotImplemented // editCmd is disabled, this is not needed
+	return r.Name, r, &contextUpdateRequest{
+		Name:           r.Name,
+		APIURL:         r.APIURL,
+		APIToken:       &r.APIToken,
+		DefaultProject: &r.DefaultProject,
+		Timeout:        r.Timeout,
+		Provider:       &r.Provider,
+		Activate:       r.IsCurrent,
+	}, nil
 }
 
 func (c *Context) GetProject() string {
