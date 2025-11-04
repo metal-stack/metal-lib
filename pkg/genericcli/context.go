@@ -340,34 +340,33 @@ func (c *cliWrapper) contextListCompletion(cmd *cobra.Command, args []string, to
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *ContextConfig) WriteContexts(ctxs *contexts) error {
+func (c *cliWrapper) writeContexts(ctxs *contexts) error {
 	if err := ctxs.validate(); err != nil {
 		return err
 	}
-
 	raw, err := yaml.Marshal(ctxs)
 	if err != nil {
 		return err
 	}
 
-	dest, err := c.configPath()
+	dest, err := c.cfg.configPath()
 	if err != nil {
 		return err
 	}
 
 	// when path is in the default path, we ensure the directory exists
-	defaultPath, err := c.defaultConfigDirectory()
+	defaultPath, err := c.cfg.defaultConfigDirectory()
 	if err != nil {
 		return fmt.Errorf("failed to get default config directory: %w", err)
 	}
 	if defaultPath == path.Dir(dest) {
-		err = c.Fs.MkdirAll(defaultPath, 0700)
+		err = c.cfg.Fs.MkdirAll(defaultPath, 0700)
 		if err != nil {
 			return fmt.Errorf("unable to ensure default config directory: %w", err)
 		}
 	}
 
-	err = afero.WriteFile(c.Fs, dest, raw, 0600)
+	err = afero.WriteFile(c.cfg.Fs, dest, raw, 0600)
 	if err != nil {
 		return err
 	}
