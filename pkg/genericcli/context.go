@@ -140,12 +140,8 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				}
 
 				// '$ BinaryName context -' or '$ BinaryName context <name>' should behave like 'switch'
-				if len(args) == 1 {
-					return wrapper.switchContext(args)
-				}
-
-				// Probably too many args, fallback to help
-				return fmt.Errorf("too many arguments")
+				// Now we can only have one arg thanks to cobra.MaximumNArgs(1) above
+				return wrapper.switchContext(args)
 			}
 		},
 		DescribeCmdMutateFn: func(cmd *cobra.Command) {
