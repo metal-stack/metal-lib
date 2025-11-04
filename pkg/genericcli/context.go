@@ -421,12 +421,12 @@ func (c *ContextConfig) GetContexts() (*contexts, error) {
 }
 
 func (c *cliWrapper) Get(name string) (*Context, error) {
-	ctxs, err := c.cfg.GetContexts()
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, ok := ctxs.GetByName(name)
+	ctx, ok := ctxs.getByName(name)
 	if !ok {
 		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
@@ -434,7 +434,7 @@ func (c *cliWrapper) Get(name string) (*Context, error) {
 }
 
 func (c *cliWrapper) List() ([]*Context, error) {
-	ctxs, err := c.cfg.GetContexts()
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
 	}
