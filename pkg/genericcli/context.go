@@ -82,9 +82,26 @@ type cliWrapper struct {
 }
 
 type contextUpdateRequest struct {
-	updatedCtx *Context
-	silent     bool
-	ctxs       *contexts
+	// Name is the ID
+	Name string
+
+	// Fields to patch
+	APIURL         *string
+	APIToken       *string // Pointer, even though Context.APIToken is string
+	DefaultProject *string // Pointer, even though Context.DefaultProject is string
+	Timeout        *time.Duration
+	Provider       *string // Pointer, even though Context.Provider is string
+
+	// Meta-flags for the operation
+	Activate bool
+}
+
+// setFromViper is a helper function to set contextUpdateRequest fields
+func setFromViper[T any](key string, getFunc func(string) T) *T {
+	if viper.IsSet(key) {
+		return pointer.Pointer(getFunc(key))
+	}
+	return nil
 }
 
 // NewContextCmd creates the context command tree using genericcli
@@ -220,36 +237,15 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				return nil, err
 			}
 
-			ctxs, err := wrapper.getContexts()
-			if err != nil {
-				return nil, err
-			}
-
-			ctx, ok := ctxs.getByName(name)
-			if !ok {
-				return nil, fmt.Errorf("context \"%s\" not found", name)
-			}
-
-			if viper.IsSet(keyAPIURL) {
-				ctx.APIURL = pointer.PointerOrNil(viper.GetString(keyAPIURL))
-			}
-			if viper.IsSet(keyAPIToken) {
-				ctx.APIToken = viper.GetString(keyAPIToken)
-			}
-			if viper.IsSet(keyDefaultProject) {
-				ctx.DefaultProject = viper.GetString(keyDefaultProject)
-			}
-			if viper.IsSet(keyTimeout) {
-				ctx.Timeout = pointer.PointerOrNil(viper.GetDuration(keyTimeout))
-			}
-			if viper.IsSet(keyProvider) {
-				ctx.Provider = viper.GetString(keyProvider)
-			}
-			if viper.GetBool(keyActivate) {
-				ctx.IsCurrent = true
-			}
-
-			return &contextUpdateRequest{updatedCtx: ctx, silent: false, ctxs: ctxs}, nil
+			return &contextUpdateRequest{
+				Name:           name,
+				Activate:       viper.GetBool(keyActivate),
+				APIURL:         setFromViper(keyAPIURL, viper.GetString),
+				APIToken:       setFromViper(keyAPIToken, viper.GetString),
+				DefaultProject: setFromViper(keyDefaultProject, viper.GetString),
+				Timeout:        setFromViper(keyTimeout, viper.GetDuration),
+				Provider:       setFromViper(keyProvider, viper.GetString),
+			}, nil
 		},
 	})
 
@@ -346,24 +342,12 @@ func (c *cliWrapper) setProject(args []string) error {
 		return err
 	}
 
-	ctxs, err := c.getContexts()
+	_, err = c.Update(&contextUpdateRequest{DefaultProject: &project})
 	if err != nil {
 		return err
 	}
 
-	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
-	if !ok {
-		return fmt.Errorf("no context currently active")
-	}
-
-	ctx.DefaultProject = project
-
-	_, err = c.update(&contextUpdateRequest{updatedCtx: ctx, ctxs: ctxs})
-	if err != nil {
-		return err
-	}
-
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.DefaultProject))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(project))
 
 	return nil
 }
@@ -512,37 +496,54 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	rq.ctxs = ctxs
-	return c.update(rq)
-}
 
-func (c *cliWrapper) update(rq *contextUpdateRequest) (*Context, error) {
-	outdatedCtx := rq.ctxs.delete(rq.updatedCtx.Name)
-	if outdatedCtx == nil {
-		return nil, fmt.Errorf("context \"%s\" not found", rq.updatedCtx.Name)
+	if rq.Name == "" { // defaults to current context if no name is provided
+		if ctxs.CurrentContext == "" {
+			return nil, fmt.Errorf("no context currently active")
+		}
+		rq.Name = ctxs.CurrentContext
 	}
 
-	rq.ctxs.Contexts = append(rq.ctxs.Contexts, rq.updatedCtx)
+	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
+	if !ok {
+		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
+	}
+
+	if rq.APIURL != nil {
+		ctx.APIURL = rq.APIURL
+	}
+	if rq.APIToken != nil {
+		ctx.APIToken = *rq.APIToken
+	}
+	if rq.DefaultProject != nil {
+		ctx.DefaultProject = *rq.DefaultProject
+	}
+	if rq.Timeout != nil {
+		ctx.Timeout = rq.Timeout
+	}
+	if rq.Provider != nil {
+		ctx.Provider = *rq.Provider
+	}
 
 	var switched bool
-	if rq.updatedCtx.IsCurrent && rq.ctxs.CurrentContext != rq.updatedCtx.Name {
-		rq.ctxs.PreviousContext, rq.ctxs.CurrentContext = rq.ctxs.CurrentContext, rq.updatedCtx.Name
+	if rq.Activate && ctxs.CurrentContext != rq.Name {
+		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, rq.Name
 		switched = true
 	}
 
-	err := c.writeContexts(rq.ctxs)
+	err = c.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
 
-	if !rq.silent {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.updatedCtx.Name))
-		if switched {
-			_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.ctxs.CurrentContext))
-		}
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.Name))
+	if switched {
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+	} else if rq.Activate {
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
 	}
 
-	return outdatedCtx, nil
+	return ctx, nil
 }
 
 func (c *cliWrapper) Delete(name string) (*Context, error) {
