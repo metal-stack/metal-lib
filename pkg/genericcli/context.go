@@ -39,6 +39,22 @@ const (
 	sortKeyProvider       = keyProvider
 
 	defaultConfigName = "config.yaml"
+
+	// Success message formats
+	msgContextAlreadyActive = "%s Context \"%s\" is already active\n"
+	msgContextSwitched      = "%s Switched context to \"%s\"\n"
+	msgContextUpdated       = "%s Updated context \"%s\"\n"
+	msgContextAdded         = "%s Added context \"%s\"\n"
+	msgContextRemoved       = "%s Removed context \"%s\"\n"
+	msgProjectSwitched      = "%s Switched context default project to \"%s\"\n"
+
+	// Error message formats
+	errMsgContextNotFound         = "context \"%s\" not found"
+	errMsgGettingDefaultDirFailed = "failed to get default config directory: %w"
+	errMsgCannotEnsureDefaultDir  = "unable to ensure default config directory: %w"
+	errMsgCannotGetConfigPath     = "unable to determine config path: %w"
+	errMsgCannotReadConfig        = "unable to read %s: %w"
+	errMsgCannotFetchContexts     = "unable to fetch contexts: %w"
 )
 
 var (
@@ -102,6 +118,11 @@ func setFromViper[T any](key string, getFunc func(string) T) *T {
 		return pointer.Pointer(getFunc(key))
 	}
 	return nil
+}
+
+// successCheck returns a green checkmark string.
+func successCheck() string {
+	return color.GreenString("✔")
 }
 
 // NewContextCmd creates the context command tree using genericcli
@@ -171,7 +192,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 				if len(args) == 0 {
 					ctxs, err := wrapper.getContexts()
 					if err != nil {
-						return fmt.Errorf("unable to get contexts to determine current: %w", err)
+						return fmt.Errorf(errMsgCannotFetchContexts, err)
 					}
 					if ctxs.CurrentContext == "" {
 						return fmt.Errorf("no context name provided and no context is currently active")
@@ -278,7 +299,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxs, err := wrapper.getContexts()
 			if err != nil {
-				return fmt.Errorf("unable to get contexts: %w", err)
+				return fmt.Errorf(errMsgCannotFetchContexts, err)
 			}
 			if ctxs.CurrentContext == "" {
 				return fmt.Errorf("no context currently active")
@@ -311,7 +332,7 @@ func (c *cliWrapper) switchContext(args []string) error {
 	}
 
 	if wantCtxName == ctxs.CurrentContext {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, msgContextAlreadyActive, successCheck(), color.GreenString(ctxs.CurrentContext))
 		return nil
 	}
 
@@ -321,7 +342,7 @@ func (c *cliWrapper) switchContext(args []string) error {
 		}
 		wantCtxName = ctxs.PreviousContext
 	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
-		return fmt.Errorf("context \"%s\" not found", wantCtxName)
+		return fmt.Errorf(errMsgContextNotFound, wantCtxName)
 	}
 
 	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
@@ -331,7 +352,7 @@ func (c *cliWrapper) switchContext(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+	_, _ = fmt.Fprintf(c.cfg.Out, msgContextSwitched, successCheck(), color.GreenString(ctxs.CurrentContext))
 
 	return nil
 }
@@ -347,7 +368,7 @@ func (c *cliWrapper) setProject(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(project))
+	_, _ = fmt.Fprintf(c.cfg.Out, msgProjectSwitched, successCheck(), color.GreenString(project))
 
 	return nil
 }
@@ -381,12 +402,12 @@ func (c *cliWrapper) writeContexts(ctxs *contexts) error {
 	// when path is in the default path, we ensure the directory exists
 	defaultPath, err := c.cfg.defaultConfigDirectory()
 	if err != nil {
-		return fmt.Errorf("failed to get default config directory: %w", err)
+		return fmt.Errorf(errMsgGettingDefaultDirFailed, err)
 	}
 	if defaultPath == path.Dir(dest) {
 		err = c.cfg.Fs.MkdirAll(defaultPath, 0700)
 		if err != nil {
-			return fmt.Errorf("unable to ensure default config directory: %w", err)
+			return fmt.Errorf(errMsgCannotEnsureDefaultDir, err)
 		}
 	}
 
@@ -424,7 +445,7 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 func (c *cliWrapper) getContexts() (*contexts, error) {
 	configPath, err := c.cfg.configPath()
 	if err != nil {
-		return nil, fmt.Errorf("unable to determine config path: %w", err)
+		return nil, fmt.Errorf(errMsgCannotGetConfigPath, err)
 	}
 
 	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
@@ -433,7 +454,7 @@ func (c *cliWrapper) getContexts() (*contexts, error) {
 			return &contexts{}, nil
 		}
 
-		return nil, fmt.Errorf("unable to read %s: %w", c.cfg.ConfigName, err)
+		return nil, fmt.Errorf(errMsgCannotReadConfig, c.cfg.ConfigName, err)
 	}
 
 	var ctxs contexts
@@ -454,7 +475,7 @@ func (c *cliWrapper) Get(name string) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(name)
 	if !ok {
-		return nil, fmt.Errorf("context \"%s\" not found", name)
+		return nil, fmt.Errorf(errMsgContextNotFound, name)
 	}
 	return ctx, nil
 }
@@ -486,7 +507,7 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, msgContextAdded, successCheck(), color.GreenString(rq.Name))
 
 	return rq, nil
 }
@@ -506,7 +527,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
 	if !ok {
-		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
+		return nil, fmt.Errorf(errMsgContextNotFound, rq.Name)
 	}
 
 	if rq.APIURL != nil {
@@ -536,11 +557,11 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, msgContextUpdated, successCheck(), color.GreenString(rq.Name))
 	if switched {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, msgContextSwitched, successCheck(), color.GreenString(ctxs.CurrentContext))
 	} else if rq.Activate {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", color.GreenString("✔"), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, msgContextAlreadyActive, successCheck(), color.GreenString(ctxs.CurrentContext))
 	}
 
 	return ctx, nil
@@ -554,7 +575,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 
 	deletedCtx := ctxs.delete(name)
 	if deletedCtx == nil {
-		return nil, fmt.Errorf("context \"%s\" not found", name)
+		return nil, fmt.Errorf(errMsgContextNotFound, name)
 	}
 
 	if ctxs.CurrentContext == name {
@@ -571,7 +592,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", color.GreenString("✔"), color.GreenString(name))
+	_, _ = fmt.Fprintf(c.cfg.Out, msgContextRemoved, successCheck(), color.GreenString(name))
 
 	return deletedCtx, nil
 }
@@ -711,7 +732,7 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	for _, c := range ctxList {
 		active := ""
 		if c.IsCurrent {
-			active = color.GreenString("✔")
+			active = successCheck()
 		}
 
 		row := []string{active, c.Name, c.Provider, c.DefaultProject}
