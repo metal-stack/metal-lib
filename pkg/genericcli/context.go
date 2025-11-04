@@ -528,29 +528,28 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	ctx, ok := ctxs.GetByName(name)
-	if !ok {
+	deletedCtx := ctxs.delete(name)
+	if deletedCtx == nil {
 		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
 
-	ctxs.delete(ctx.Name)
-
-	if ctxs.CurrentContext == ctx.Name {
+	if ctxs.CurrentContext == name {
 		ctxs.CurrentContext = ""
 	}
 
-	if ctxs.PreviousContext == ctx.Name {
+	if ctxs.PreviousContext == name {
 		ctxs.PreviousContext = ""
 	}
 
-	err = c.cfg.WriteContexts(ctxs)
+	// TODO We don't need to call syncCurrentAndPreviousFlags here, right? The operation is over and metalctl should just exit
+	err = c.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", color.GreenString("✔"), color.GreenString(name))
 
-	return ctx, nil
+	return deletedCtx, nil
 }
 
 func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
@@ -601,10 +600,17 @@ func (cs *contexts) validate() error {
 	return nil
 }
 
-func (cs *contexts) delete(name string) {
+func (cs *contexts) delete(name string) *Context {
+	// TODO should this return bool or deleted item?
+	// initialLen := len(cs.Contexts)
+	var deletedCtx *Context
 	cs.Contexts = slices.DeleteFunc(cs.Contexts, func(ctx *Context) bool {
+		deletedCtx = ctx
 		return ctx.Name == name
 	})
+
+	return deletedCtx
+	// return len(cs.Contexts) < initialLen
 }
 
 func (cs *contexts) GetByName(name string) (*Context, bool) {
