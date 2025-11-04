@@ -524,6 +524,12 @@ func (c *cliWrapper) update(rq *contextUpdateRequest) (*Context, error) {
 
 	rq.ctxs.Contexts = append(rq.ctxs.Contexts, rq.updatedCtx)
 
+	var switched bool
+	if rq.updatedCtx.IsCurrent && rq.ctxs.CurrentContext != rq.updatedCtx.Name {
+		rq.ctxs.PreviousContext, rq.ctxs.CurrentContext = rq.ctxs.CurrentContext, rq.updatedCtx.Name
+		switched = true
+	}
+
 	err := c.writeContexts(rq.ctxs)
 	if err != nil {
 		return nil, err
@@ -531,6 +537,9 @@ func (c *cliWrapper) update(rq *contextUpdateRequest) (*Context, error) {
 
 	if !rq.silent {
 		_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.updatedCtx.Name))
+		if switched {
+			_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString("✔"), color.GreenString(rq.ctxs.CurrentContext))
+		}
 	}
 
 	return outdatedCtx, nil
