@@ -333,30 +333,30 @@ func (c *cliWrapper) switchContext(args []string) error {
 	return nil
 }
 
-func (c *ContextConfig) setProject(args []string) error {
+func (c *cliWrapper) setProject(args []string) error {
 	project, err := GetExactlyOneArg(args)
 	if err != nil {
 		return err
 	}
 
-	ctxs, err := c.GetContexts()
+	ctxs, err := c.getContexts()
 	if err != nil {
 		return err
 	}
 
-	ctx, ok := ctxs.GetByName(ctxs.CurrentContext)
-	if !ok {
+	ctx := ctxs.getActiveContext()
+	if ctx == nil {
 		return fmt.Errorf("no context currently active")
 	}
 
 	ctx.DefaultProject = project
 
-	err = c.WriteContexts(ctxs)
+	_, err = c.update(&contextUpdateRequest{updatedCtx: ctx, ctxs: ctxs})
 	if err != nil {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.Out, "%s Switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.DefaultProject))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", color.GreenString("✔"), color.GreenString(ctx.DefaultProject))
 
 	return nil
 }
@@ -638,6 +638,15 @@ func (cs *contexts) getByName(name string) (*Context, bool) {
 		}
 	}
 	return nil, false
+}
+
+func (cs *contexts) getActiveContext() *Context {
+	for _, ctx := range cs.Contexts {
+		if ctx.IsCurrent {
+			return ctx
+		}
+	}
+	return nil
 }
 
 func (cs *contexts) syncCurrent() {
