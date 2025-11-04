@@ -468,10 +468,6 @@ func (c *cliWrapper) List() ([]*Context, error) {
 		return nil, err
 	}
 
-	if len(ctxs.Contexts) == 0 {
-		return nil, fmt.Errorf("you need to create a context first")
-	}
-
 	return ctxs.Contexts, nil
 }
 
@@ -708,6 +704,11 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("unsupported content: expected []*Context")
 	}
+
+	if len(ctxList) == 0 {
+		return nil, nil, fmt.Errorf("you need to create a context first")
+	}
+
 	var (
 		header = []string{"", "Name", "Provider", "Default Project"}
 		rows   [][]string
