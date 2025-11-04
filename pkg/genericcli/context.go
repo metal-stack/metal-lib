@@ -351,8 +351,8 @@ func (c *cliWrapper) setProject(args []string) error {
 		return err
 	}
 
-	ctx := ctxs.getActiveContext()
-	if ctx == nil {
+	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
+	if !ok {
 		return fmt.Errorf("no context currently active")
 	}
 
@@ -641,15 +641,6 @@ func (cs *contexts) getByName(name string) (*Context, bool) {
 		}
 	}
 	return nil, false
-}
-
-func (cs *contexts) getActiveContext() *Context {
-	for _, ctx := range cs.Contexts {
-		if ctx.IsCurrent {
-			return ctx
-		}
-	}
-	return nil
 }
 
 func (cs *contexts) syncCurrent() {
