@@ -646,16 +646,15 @@ func (cs *contexts) validate() error {
 }
 
 func (cs *contexts) delete(name string) *Context {
-	// TODO should this return bool or deleted item?
-	// initialLen := len(cs.Contexts)
 	var deletedCtx *Context
 	cs.Contexts = slices.DeleteFunc(cs.Contexts, func(ctx *Context) bool {
-		deletedCtx = ctx
+		if ctx.Name == name {
+			deletedCtx = ctx
+		}
 		return ctx.Name == name
 	})
 
 	return deletedCtx
-	// return len(cs.Contexts) < initialLen
 }
 
 func (cs *contexts) getByName(name string) (*Context, bool) {
