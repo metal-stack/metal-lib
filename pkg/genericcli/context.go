@@ -49,14 +49,15 @@ const (
 	msgProjectSwitched      = "%s Switched context default project to \"%s\"\n"
 
 	// Error message formats
-	errMsgContextNotFound        = "context \"%s\" not found"
-	errMsgCannotGetDefaultDir    = "failed to get default config directory: %w"
-	errMsgCannotEnsureDefaultDir = "unable to ensure default config directory: %w"
-	errMsgCannotGetConfigPath    = "unable to determine config path: %w"
-	errMsgCannotReadConfig       = "unable to read %s: %w"
-	errMsgCannotFetchContexts    = "unable to fetch contexts: %w"
-	errMsgCannotWriteContexts    = "failed to save contexts: %w"
-	errMsgListCommandNotFound    = "internal: list command not found: %w"
+	errMsgContextNotFound         = "context \"%s\" not found"
+	errMsgCannotGetDefaultDir     = "failed to get default config directory: %w"
+	errMsgCannotEnsureDefaultDir  = "unable to ensure default config directory: %w"
+	errMsgCannotGetConfigPath     = "unable to determine config path: %w"
+	errMsgCannotReadConfig        = "unable to read %s: %w"
+	errMsgCannotFetchContexts     = "unable to fetch contexts: %w"
+	errMsgCannotWriteContexts     = "failed to save contexts: %w"
+	errMsgListCommandNotFound     = "internal: list command not found: %w"
+	errMsgContextConfigIncomplete = "ContextConfig has a required option \"%s\" missing"
 )
 
 var (
@@ -134,15 +135,28 @@ func successCheck() string {
 
 // NewContextCmd creates the context command tree using genericcli
 func NewContextCmd(c *ContextConfig) *cobra.Command {
-	// TODO check nils
 	c.ConfigName = cmp.Or(c.ConfigName, string(defaultConfigName))
 	c.Out = cmp.Or(c.Out, io.Writer(os.Stdout))
 	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
 	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
 
+	if c.BinaryName == "" {
+		panic(fmt.Errorf(errMsgContextConfigIncomplete, "BinaryName"))
+	}
+
 	if c.ConfigDirName == "" {
 		panic(errNoConfigDirName)
 	}
+
+	if c.ListPrinter == nil {
+		panic(fmt.Errorf(errMsgContextConfigIncomplete, "ListPrinter"))
+	}
+
+	if c.DescribePrinter == nil {
+		panic(fmt.Errorf(errMsgContextConfigIncomplete, "DescribePrinter"))
+	}
+
+	// ProjectListCompletion is not crucial so we skip the check
 
 	wrapper := &cliWrapper{
 		cfg: c,
@@ -593,7 +607,6 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 		ctxs.PreviousContext = ""
 	}
 
-	// TODO We don't need to call syncCurrentAndPreviousFlags here, right? The operation is over and metalctl should just exit
 	err = c.writeContexts(ctxs)
 	if err != nil {
 		return nil, err
@@ -625,6 +638,7 @@ func (c *Context) GetProject() string {
 }
 
 func (c *Context) GetAPIToken() string {
+	// TODO ensure consistency
 	if viper.IsSet(keyAPIToken) {
 		return viper.GetString(keyAPIToken)
 	}
@@ -637,7 +651,6 @@ func (c *Context) GetAPIURL() string {
 	}
 
 	// fallback to the default specified by viper
-	// TODO why is it a default? Taken from metalctlv2
 	return viper.GetString(keyAPIURL)
 }
 
