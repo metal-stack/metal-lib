@@ -101,11 +101,11 @@ type ContextConfig struct {
 	ProjectListCompletion cobra.CompletionFunc
 }
 
-type cliWrapper struct {
+type ContextManager struct {
 	cfg *ContextConfig
 }
 
-type contextUpdateRequest struct {
+type ContextUpdateRequest struct {
 	// Name is the ID
 	Name string
 
@@ -158,7 +158,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 	// ProjectListCompletion is not crucial so we skip the check
 
-	wrapper := &cliWrapper{
+	wrapper := &ContextManager{
 		cfg: c,
 	}
 
@@ -341,7 +341,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	return cmd
 }
 
-func (c *cliWrapper) switchContext(args []string) error {
+func (c *ContextManager) switchContext(args []string) error {
 	wantCtxName, err := GetExactlyOneArg(args)
 	if err != nil {
 		return err
@@ -378,7 +378,7 @@ func (c *cliWrapper) switchContext(args []string) error {
 	return nil
 }
 
-func (c *cliWrapper) setProject(args []string) error {
+func (c *ContextManager) setProject(args []string) error {
 	project, err := GetExactlyOneArg(args)
 	if err != nil {
 		return err
@@ -394,7 +394,7 @@ func (c *cliWrapper) setProject(args []string) error {
 	return nil
 }
 
-func (c *cliWrapper) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *ContextManager) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
@@ -406,7 +406,7 @@ func (c *cliWrapper) contextListCompletion(cmd *cobra.Command, args []string, to
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *cliWrapper) writeContexts(ctxs *contexts) error {
+func (c *ContextManager) writeContexts(ctxs *contexts) error {
 	if err := ctxs.validate(); err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 	return path.Join(h, "."+c.ConfigDirName), nil
 }
 
-func (c *cliWrapper) getContexts() (*contexts, error) {
+func (c *ContextManager) getContexts() (*contexts, error) {
 	configPath, err := c.cfg.configPath()
 	if err != nil {
 		return nil, fmt.Errorf(errMsgCannotGetConfigPath, err)
@@ -488,7 +488,7 @@ func (c *cliWrapper) getContexts() (*contexts, error) {
 	return &ctxs, err
 }
 
-func (c *cliWrapper) Get(name string) (*Context, error) {
+func (c *ContextManager) Get(name string) (*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -501,7 +501,7 @@ func (c *cliWrapper) Get(name string) (*Context, error) {
 	return ctx, nil
 }
 
-func (c *cliWrapper) List() ([]*Context, error) {
+func (c *ContextManager) List() ([]*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -510,7 +510,7 @@ func (c *cliWrapper) List() ([]*Context, error) {
 	return ctxs.Contexts, nil
 }
 
-func (c *cliWrapper) Create(rq *Context) (*Context, error) {
+func (c *ContextManager) Create(rq *Context) (*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -533,7 +533,7 @@ func (c *cliWrapper) Create(rq *Context) (*Context, error) {
 	return rq, nil
 }
 
-func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
+func (c *ContextManager) Update(rq *contextUpdateRequest) (*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -588,7 +588,7 @@ func (c *cliWrapper) Update(rq *contextUpdateRequest) (*Context, error) {
 	return ctx, nil
 }
 
-func (c *cliWrapper) Delete(name string) (*Context, error) {
+func (c *ContextManager) Delete(name string) (*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -618,7 +618,7 @@ func (c *cliWrapper) Delete(name string) (*Context, error) {
 }
 
 // Convert is not used as editCmd is disabled
-func (c *cliWrapper) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
+func (c *ContextManager) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
 	return r.Name, r, &contextUpdateRequest{
 		Name:           r.Name,
 		APIURL:         r.APIURL,
@@ -719,7 +719,7 @@ func contextSorter() *multisort.Sorter[*Context] {
 	}, multisort.Keys{{ID: sortKeyName}})
 }
 
-func (c *cliWrapper) MustDefaultContext() Context {
+func (c *ContextManager) GetContextCurrentOrDefault() *Context {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return defaultCtx()
