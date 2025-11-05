@@ -135,32 +135,7 @@ func successCheck() string {
 
 // NewContextCmd creates the context command tree using genericcli
 func NewContextCmd(c *ContextConfig) *cobra.Command {
-	c.ConfigName = cmp.Or(c.ConfigName, string(defaultConfigName))
-	c.Out = cmp.Or(c.Out, io.Writer(os.Stdout))
-	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
-	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
-
-	if c.BinaryName == "" {
-		panic(fmt.Errorf(errMsgContextConfigIncomplete, "BinaryName"))
-	}
-
-	if c.ConfigDirName == "" {
-		panic(errNoConfigDirName)
-	}
-
-	if c.ListPrinter == nil {
-		panic(fmt.Errorf(errMsgContextConfigIncomplete, "ListPrinter"))
-	}
-
-	if c.DescribePrinter == nil {
-		panic(fmt.Errorf(errMsgContextConfigIncomplete, "DescribePrinter"))
-	}
-
-	// ProjectListCompletion is not crucial so we skip the check
-
-	wrapper := &ContextManager{
-		cfg: c,
-	}
+	wrapper := NewContextManager(c)
 
 	cmd := NewCmds(&CmdsConfig[
 		*Context,
@@ -339,6 +314,33 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	)
 
 	return cmd
+}
+
+func NewContextManager(c *ContextConfig) *ContextManager {
+	c.ConfigName = cmp.Or(c.ConfigName, string(defaultConfigName))
+	c.Out = cmp.Or(c.Out, io.Writer(os.Stdout))
+	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
+	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
+
+	if c.BinaryName == "" {
+		panic(fmt.Errorf(errMsgContextConfigIncomplete, "BinaryName"))
+	}
+
+	if c.ConfigDirName == "" {
+		panic(errNoConfigDirName)
+	}
+
+	if c.ListPrinter == nil {
+		panic(fmt.Errorf(errMsgContextConfigIncomplete, "ListPrinter"))
+	}
+
+	if c.DescribePrinter == nil {
+		panic(fmt.Errorf(errMsgContextConfigIncomplete, "DescribePrinter"))
+	}
+
+	// ProjectListCompletion is not crucial so we skip the check
+
+	return &ContextManager{ cfg: c }
 }
 
 func (c *ContextManager) switchContext(args []string) error {
