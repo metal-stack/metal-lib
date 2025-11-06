@@ -38,7 +38,8 @@ const (
 	sortKeyTimeout        = keyTimeout
 	sortKeyProvider       = keyProvider
 
-	defaultConfigName = "config.yaml"
+	defaultConfigName  = "config.yaml"
+	DefaultContextName = "default"
 
 	// Success message formats
 	msgContextAlreadyActive = "%s Context \"%s\" is already active\n"
@@ -139,7 +140,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 	cmd := NewCmds(&CmdsConfig[
 		*Context,
-		*contextUpdateRequest,
+		*ContextUpdateRequest,
 		*Context,
 	]{
 		GenericCLI:      NewGenericCLI(wrapper),
@@ -248,13 +249,13 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			}
 			return ctx, nil
 		},
-		UpdateRequestFromCLI: func(args []string) (*contextUpdateRequest, error) {
+		UpdateRequestFromCLI: func(args []string) (*ContextUpdateRequest, error) {
 			name, err := GetExactlyOneArg(args)
 			if err != nil {
 				return nil, err
 			}
 
-			return &contextUpdateRequest{
+			return &ContextUpdateRequest{
 				Name:           name,
 				Activate:       viper.GetBool(keyActivate),
 				APIURL:         setFromViper(keyAPIURL, viper.GetString),
@@ -340,7 +341,7 @@ func NewContextManager(c *ContextConfig) *ContextManager {
 
 	// ProjectListCompletion is not crucial so we skip the check
 
-	return &ContextManager{ cfg: c }
+	return &ContextManager{cfg: c}
 }
 
 func (c *ContextManager) switchContext(args []string) error {
@@ -386,7 +387,7 @@ func (c *ContextManager) setProject(args []string) error {
 		return err
 	}
 
-	_, err = c.Update(&contextUpdateRequest{DefaultProject: &project})
+	_, err = c.Update(&ContextUpdateRequest{DefaultProject: &project})
 	if err != nil {
 		return err
 	}
@@ -535,7 +536,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 	return rq, nil
 }
 
-func (c *ContextManager) Update(rq *contextUpdateRequest) (*Context, error) {
+func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -548,7 +549,7 @@ func (c *ContextManager) Update(rq *contextUpdateRequest) (*Context, error) {
 		rq.Name = ctxs.CurrentContext
 	}
 
-	ctx, ok := ctxs.getByName(ctxs.CurrentContext)
+	ctx, ok := ctxs.getByName(rq.Name)
 	if !ok {
 		return nil, fmt.Errorf(errMsgContextNotFound, rq.Name)
 	}
@@ -620,8 +621,8 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 }
 
 // Convert is not used as editCmd is disabled
-func (c *ContextManager) Convert(r *Context) (string, *Context, *contextUpdateRequest, error) {
-	return r.Name, r, &contextUpdateRequest{
+func (c *ContextManager) Convert(r *Context) (string, *Context, *ContextUpdateRequest, error) {
+	return r.Name, r, &ContextUpdateRequest{
 		Name:           r.Name,
 		APIURL:         r.APIURL,
 		APIToken:       &r.APIToken,
@@ -730,17 +731,34 @@ func (c *ContextManager) GetContextCurrentOrDefault() *Context {
 	if !ok {
 		return defaultCtx()
 	}
-	return *ctx
+	// TODO deep copy?
+	// return ctx.deepCopy()
+	return ctx
 }
 
-func defaultCtx() Context {
-	return Context{
+func defaultCtx() *Context {
+	return &Context{
+		Name:     DefaultContextName,
 		APIURL:   pointer.PointerOrNil(viper.GetString(keyAPIURL)),
 		APIToken: viper.GetString(keyAPIToken),
 	}
 }
 
-func DefaultContext(c *cliWrapper) (*Context, error) {
+func (c *ContextManager) GetCurrentContext() (*Context, error) {
+	ctxList, err := c.List()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ctx := range ctxList {
+		if ctx.IsCurrent {
+			return ctx, nil
+		}
+	}
+	return nil, nil
+}
+
+func DefaultContext(c *ContextManager) (*Context, error) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, err
@@ -753,20 +771,22 @@ func DefaultContext(c *cliWrapper) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(ctxName)
 	if !ok {
-		defaultCtx := c.MustDefaultContext()
+		defaultCtx := c.GetContextCurrentOrDefault()
 		defaultCtx.Name = "default"
 
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx.Name
-		ctxs.Contexts = append(ctxs.Contexts, &defaultCtx)
 		if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
-			ctxCurrent.IsCurrent = true
+			ctxCurrent.IsCurrent = false
 		}
+		defaultCtx.IsCurrent = true
+		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, defaultCtx.Name
+		ctxs.Contexts = append(ctxs.Contexts, defaultCtx)
+
 		err := c.writeContexts(ctxs)
 		if err != nil {
 			return nil, fmt.Errorf(errMsgCannotWriteContexts, err)
 		}
 
-		ctx = &defaultCtx
+		ctx = defaultCtx
 	}
 
 	return ctx, nil
