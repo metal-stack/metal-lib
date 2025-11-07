@@ -121,8 +121,8 @@ type ContextUpdateRequest struct {
 	Activate bool
 }
 
-// setFromViper is a helper function to set contextUpdateRequest fields
-func setFromViper[T any](key string, getFunc func(string) T) *T {
+// getFromViper is a helper function to set ContextUpdateRequest fields
+func getFromViper[T any](key string, getFunc func(string) T) *T {
 	if viper.IsSet(key) {
 		return pointer.Pointer(getFunc(key))
 	}
@@ -258,11 +258,11 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			return &ContextUpdateRequest{
 				Name:           name,
 				Activate:       viper.GetBool(keyActivate),
-				APIURL:         setFromViper(keyAPIURL, viper.GetString),
-				APIToken:       setFromViper(keyAPIToken, viper.GetString),
-				DefaultProject: setFromViper(keyDefaultProject, viper.GetString),
-				Timeout:        setFromViper(keyTimeout, viper.GetDuration),
-				Provider:       setFromViper(keyProvider, viper.GetString),
+				APIURL:         getFromViper(keyAPIURL, viper.GetString),
+				APIToken:       getFromViper(keyAPIToken, viper.GetString),
+				DefaultProject: getFromViper(keyDefaultProject, viper.GetString),
+				Timeout:        getFromViper(keyTimeout, viper.GetDuration),
+				Provider:       getFromViper(keyProvider, viper.GetString),
 			}, nil
 		},
 	})
@@ -397,7 +397,7 @@ func (c *ContextManager) setProject(args []string) error {
 	return nil
 }
 
-func (c *ContextManager) contextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *ContextManager) ContextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	ctxs, err := c.getContexts()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
