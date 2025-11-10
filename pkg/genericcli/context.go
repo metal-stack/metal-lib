@@ -777,24 +777,26 @@ func DefaultContext(c *ContextManager) (*Context, error) {
 	}
 
 	ctx, ok := ctxs.getByName(ctxName)
-	if !ok {
-		defaultCtx := c.GetContextCurrentOrDefault()
-		defaultCtx.Name = "default"
-
-		if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
-			ctxCurrent.IsCurrent = false
-		}
-		defaultCtx.IsCurrent = true
-		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, defaultCtx.Name
-		ctxs.Contexts = append(ctxs.Contexts, defaultCtx)
-
-		err := c.writeContexts(ctxs)
-		if err != nil {
-			return nil, fmt.Errorf(errMsgCannotWriteContexts, err)
-		}
-
-		ctx = defaultCtx
+	if ok {
+		return ctx, nil
 	}
+
+	defaultCtx := c.GetContextCurrentOrDefault()
+	defaultCtx.Name = "default"
+
+	if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
+		ctxCurrent.IsCurrent = false
+	}
+	defaultCtx.IsCurrent = true
+	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, defaultCtx.Name
+	ctxs.Contexts = append(ctxs.Contexts, defaultCtx)
+
+	err = c.writeContexts(ctxs)
+	if err != nil {
+		return nil, fmt.Errorf(errMsgCannotWriteContexts, err)
+	}
+
+	ctx = defaultCtx
 
 	return ctx, nil
 }
