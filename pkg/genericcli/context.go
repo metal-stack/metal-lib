@@ -59,6 +59,7 @@ const (
 	errMsgCannotWriteContexts     = "failed to save contexts: %w"
 	errMsgListCommandNotFound     = "internal: list command not found: %w"
 	errMsgContextConfigIncomplete = "ContextConfig has a required option \"%s\" missing"
+	errMsgBlankContextField       = "context field \"%s\" cannot be blank"
 )
 
 var (
@@ -668,6 +669,12 @@ func (cs *contexts) validate() error {
 	names := map[string]bool{}
 	for _, context := range cs.Contexts {
 		names[context.Name] = true
+		if context.Name == "" {
+			return fmt.Errorf(errMsgBlankContextField, "Name")
+		}
+		if context.APIToken == "" {
+			return fmt.Errorf(errMsgBlankContextField, "APIToken")
+		}
 	}
 
 	if len(cs.Contexts) != len(names) {
