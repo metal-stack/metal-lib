@@ -226,12 +226,12 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 
 			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
-			cmd.ValidArgsFunction = wrapper.contextListCompletion
+			cmd.ValidArgsFunction = wrapper.ContextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
 		DeleteCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.ValidArgsFunction = wrapper.contextListCompletion
+			cmd.ValidArgsFunction = wrapper.ContextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
@@ -276,7 +276,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return wrapper.switchContext(args)
 		},
-		ValidArgsFunction: wrapper.contextListCompletion,
+		ValidArgsFunction: wrapper.ContextListCompletion,
 	}
 
 	setProjectCmd := &cobra.Command{
@@ -305,7 +305,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
 			return err
 		},
-		ValidArgsFunction: wrapper.contextListCompletion,
+		ValidArgsFunction: wrapper.ContextListCompletion,
 	}
 
 	cmd.AddCommand(
