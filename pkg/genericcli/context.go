@@ -524,6 +524,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 
 	if rq.IsCurrent || ctxs.CurrentContext == "" {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, rq.Name
+		rq.IsCurrent = true // this is needed to return the right context state
 	}
 
 	// name uniqness check is performed by writeContexts
