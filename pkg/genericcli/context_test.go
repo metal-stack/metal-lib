@@ -12,6 +12,7 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -123,6 +124,10 @@ func managerTestOne[T any](t *testing.T, tt ManagerTestCase[T]) {
 		}
 		require.NoError(t, manager.writeContexts(tt.FileContent))
 
+		if tt.Setup != nil {
+			tt.Setup(t, manager)
+		}
+
 		got, err := tt.Run(t, manager)
 
 		if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
@@ -205,6 +210,163 @@ func TestContextManager_GetCurrentContext(t *testing.T) {
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetCurrentContext()
 			},
+		},
+	}
+
+	managerTest(t, tests)
+}
+func TestContextManager_GetContextCurrentOrDefault(t *testing.T) {
+	tests := []ManagerTestCase[*Context]{
+		{
+			Name:        "current is set",
+			FileContent: contextsWithActiveCtx(),
+			wantErr:     nil,
+			want: func() *Context {
+				want := ctx1()
+				want.IsCurrent = true
+				return want
+			}(),
+			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
+				return manager.GetContextCurrentOrDefault(), nil
+			},
+		},
+		{
+			Name:        "current is not set",
+			FileContent: contextsNoActiveCtx(),
+			wantErr:     nil,
+			want:        defaultCtx(),
+			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
+				return manager.GetContextCurrentOrDefault(), nil
+			},
+		},
+	}
+
+	managerTest(t, tests)
+}
+
+func TestContextManager_DefaultContext(t *testing.T) {
+	type defaultContextResult struct {
+		ReturnedCtx  *Context  // The *Context returned by the function
+		FileContents *contexts // The state in the config file *after* the run
+	}
+
+	runFunc := func(t *testing.T, manager *ContextManager) (defaultContextResult, error) {
+		returnedCtx, err := DefaultContext(manager)
+		if err != nil {
+			return defaultContextResult{}, err
+		}
+
+		ctxs, err := manager.getContexts()
+		return defaultContextResult{
+			ReturnedCtx:  returnedCtx,
+			FileContents: ctxs,
+		}, err
+	}
+	contextsActiveWithCurrentSet := func() *contexts {
+		ctxs := contextsWithActiveCtx()
+		ctxs.Contexts[0].IsCurrent = true
+		return ctxs
+	}
+	ctx1Active := func() *Context {
+		ctx := ctx1()
+		ctx.IsCurrent = true
+		return ctx
+	}
+
+	tests := []ManagerTestCase[defaultContextResult]{
+		{
+			Name:        "viper override finds existing context (no switching)",
+			FileContent: contextsWithActiveCtx(), // "ctx1" is current
+			wantErr:     nil,
+			want: defaultContextResult{
+				ReturnedCtx:  ctx2(),
+				FileContents: contextsActiveWithCurrentSet(),
+			},
+			Setup: func(t *testing.T, manager *ContextManager) error {
+				viper.Reset()
+				t.Cleanup(viper.Reset)
+				viper.Set(keyContextName, ctx2().Name) // Override to "ctx2"
+				return nil
+			},
+			Run: runFunc,
+		},
+		{
+			Name:        "no viper override, current context is found (no switching)",
+			FileContent: contextsWithActiveCtx(), // "ctx1" is current
+			wantErr:     nil,
+			want: defaultContextResult{
+				ReturnedCtx:  ctx1Active(),
+				FileContents: contextsActiveWithCurrentSet(),
+			},
+			Setup: func(t *testing.T, manager *ContextManager) error {
+				viper.Reset() // Ensure viper.IsSet is false
+				return nil
+			},
+			Run: runFunc,
+		},
+		{
+			Name:        "viper override, context not found, creates default (with switching)",
+			FileContent: contextsWithActiveCtx(), // current="ctx1", prev="ctx2"
+			wantErr:     nil,
+			want: func() defaultContextResult {
+				want := ctx1Active()
+				want.Name = "default"
+				return defaultContextResult{
+					ReturnedCtx: want, // TODO WARNING default is current with changed name. Do we want that
+					FileContents: func() *contexts {
+						return &contexts{
+							CurrentContext:  want.Name,
+							PreviousContext: ctx1().Name,
+							Contexts:        append(ctxList(), want),
+						}
+					}(),
+				}
+			}(),
+			Setup: func(t *testing.T, manager *ContextManager) error {
+				viper.Reset()
+				t.Cleanup(viper.Reset)
+				viper.Set(keyContextName, "nonexistent")
+				return nil
+			},
+			Run: runFunc,
+		},
+		{
+			Name:        "no viper override, current context not set, fails",
+			FileContent: contextsNoActiveCtx(),
+			wantErr:     fmt.Errorf(errMsgCannotWriteContexts, fmt.Errorf(errMsgBlankContextField, "APIToken")),
+			want:        defaultContextResult{},
+			Setup: func(t *testing.T, manager *ContextManager) error {
+				viper.Reset()
+				return nil
+			},
+			Run: runFunc,
+		},
+		{
+			Name:        "no viper override, current context not set, creates default with APIToken from viper (with switching)",
+			FileContent: contextsNoActiveCtx(),
+			wantErr:     nil,
+			want: func() defaultContextResult {
+				want := defaultCtx()
+				want.APIToken = "tokenDefault"
+				want.IsCurrent = true
+				return defaultContextResult{
+					ReturnedCtx: want,
+					FileContents: func() *contexts {
+						return &contexts{
+							CurrentContext:  "default",
+							PreviousContext: "",
+							Contexts:        append(ctxList(), want),
+						}
+					}(),
+				}
+			}(),
+			Setup: func(t *testing.T, manager *ContextManager) error {
+				viper.Reset()
+				t.Cleanup(viper.Reset)
+				viper.Set(keyAPIToken, "tokenDefault")
+				return nil
+			},
+			Run: runFunc,
 		},
 	}
 
