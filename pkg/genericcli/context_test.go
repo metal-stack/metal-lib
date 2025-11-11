@@ -23,38 +23,36 @@ type ManagerTestCase[T any] struct {
 	Run         func(t *testing.T, manager *ContextManager) (T, error)
 	wantErr     error
 	want        T
-	// wantFunc    func() T
-	// Check       func(t *testing.T, manager *ContextManager, err error)
 }
 
 func ctx1() *Context {
 	return &Context{
-		Name:     "test2qq",
-		APIToken: "token2qq",
+		Name:     "ctx1",
+		APIToken: "token1",
 	}
 }
 
 func ctx2() *Context {
 	return &Context{
-		Name:     "test",
-		APIToken: "token123",
-		Provider: "oidc",
+		Name:     "ctx2",
+		APIToken: "token2",
+		Provider: "foo",
 	}
 }
 
 func ctx3() *Context {
 	return &Context{
-		Name:     "default",
-		APIURL:   pointer.Pointer("http://v2.api.172.17.0.1.nip.io:8080/"),
-		APIToken: "tokendefault",
-		Provider: "oidc",
+		Name:     "ctx3",
+		APIURL:   pointer.Pointer("http://foo.bar"),
+		APIToken: "token3",
+		Provider: "foo",
 	}
 }
 
 func ctxNew() *Context {
 	return &Context{
-		Name:     "newCtx",
-		APIToken: "tokenNewCtx",
+		Name:     "ctxNew",
+		APIToken: "tokenNew",
 	}
 }
 
@@ -83,25 +81,6 @@ func contextsWithActiveCtx() *contexts {
 		Contexts:        list,
 	}
 }
-
-func contextsWithPreviousCtx() *contexts {
-	list := ctxList()
-	return &contexts{
-		CurrentContext:  "",
-		PreviousContext: list[0].Name,
-		Contexts:        list,
-	}
-}
-
-// func equals(a, b Context) bool {
-// 	return a.Name != b.Name &&
-// 		a.APIToken == b.APIToken &&
-// 		a.APIURL == b.APIURL &&
-// 		a.DefaultProject == b.DefaultProject &&
-// 		a.IsCurrent == b.IsCurrent &&
-// 		a.Provider == b.Provider &&
-// 		a.Timeout == b.Timeout
-// }
 
 func setupFs(t *testing.T) (afero.Fs, string) {
 	fs := afero.NewMemMapFs()
