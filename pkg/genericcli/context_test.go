@@ -182,6 +182,44 @@ func TestContextManager_Get(t *testing.T) {
 	managerTest(t, tests)
 }
 
+func TestContextManager_List(t *testing.T) {
+	tests := []ManagerTestCase[[]*Context]{
+		{
+			Name:        "no active contexts",
+			FileContent: contextsNoActiveCtx(),
+			wantErr:     nil,
+			want:        contextsNoActiveCtx().Contexts,
+			Run: func(t *testing.T, manager *ContextManager) ([]*Context, error) {
+				return manager.List()
+			},
+		},
+		{
+			Name:        "active context is present",
+			FileContent: contextsWithActiveCtx(),
+			wantErr:     nil,
+			want: func() []*Context {
+				ctxs := contextsWithActiveCtx()
+				ctxs.Contexts[0].IsCurrent = true
+				return ctxs.Contexts
+			}(),
+			Run: func(t *testing.T, manager *ContextManager) ([]*Context, error) {
+				return manager.List()
+			},
+		},
+		{
+			Name:        "list from empty file",
+			FileContent: nil,
+			wantErr:     nil,
+			want:        []*Context{},
+			Run: func(t *testing.T, manager *ContextManager) ([]*Context, error) {
+				return manager.List()
+			},
+		},
+	}
+
+	managerTest(t, tests)
+}
+
 func TestContextManager_Create(t *testing.T) {
 	tests := []ManagerTestCase[*contexts]{
 		{
