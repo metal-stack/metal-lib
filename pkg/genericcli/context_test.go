@@ -182,6 +182,35 @@ func TestContextManager_Get(t *testing.T) {
 	managerTest(t, tests)
 }
 
+func TestContextManager_GetCurrentContext(t *testing.T) {
+	tests := []ManagerTestCase[*Context]{
+		{
+			Name:        "current is set",
+			FileContent: contextsWithActiveCtx(),
+			wantErr:     nil,
+			want: func() *Context {
+				want := ctx1()
+				want.IsCurrent = true
+				return want
+			}(),
+			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
+				return manager.GetCurrentContext()
+			},
+		},
+		{
+			Name:        "current is not set",
+			FileContent: contextsNoActiveCtx(),
+			wantErr:     nil,
+			want:        nil,
+			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
+				return manager.GetCurrentContext()
+			},
+		},
+	}
+
+	managerTest(t, tests)
+}
+
 func TestContextManager_List(t *testing.T) {
 	tests := []ManagerTestCase[[]*Context]{
 		{
