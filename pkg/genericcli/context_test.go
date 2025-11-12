@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
@@ -498,18 +499,26 @@ func TestContextManager_Create(t *testing.T) {
 func TestContextManager_Update(t *testing.T) {
 	tests := []ManagerTestCase[*contexts]{
 		{
-			Name:        "update existing context",
+			Name:        "update existing context (all fields)",
 			FileContent: contextsNoActiveCtx(),
 			wantErr:     nil,
 			want: func() *contexts {
 				want := contextsNoActiveCtx()
-				want.Contexts[0].DefaultProject = "new-project"
+				want.Contexts[0].APIURL = pointer.Pointer("newAPIURL")
+				want.Contexts[0].APIToken = "newAPIToken"
+				want.Contexts[0].DefaultProject = "newProject"
+				want.Contexts[0].Timeout = pointer.Pointer(time.Duration(100))
+				want.Contexts[0].Provider = "newProvider"
 				return want
 			}(),
 			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
 				_, err := manager.Update(&ContextUpdateRequest{
 					Name:           ctx1().Name,
-					DefaultProject: pointer.Pointer("new-project"),
+					APIURL:         pointer.Pointer("newAPIURL"),
+					APIToken:       pointer.Pointer("newAPIToken"),
+					DefaultProject: pointer.Pointer("newProject"),
+					Timeout:        pointer.Pointer(time.Duration(100)),
+					Provider:       pointer.Pointer("newProvider"),
 				})
 				if err != nil {
 					return nil, err
