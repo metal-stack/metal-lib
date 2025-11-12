@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // ManagerTestCase defines a test case for ContextManager operations
@@ -44,10 +45,12 @@ func ctx2() *Context {
 
 func ctx3() *Context {
 	return &Context{
-		Name:     "ctx3",
-		APIURL:   pointer.Pointer("http://foo.bar"),
-		APIToken: "token3",
-		Provider: "foo",
+		Name:           "ctx3",
+		APIURL:         pointer.Pointer("http://foo.bar"),
+		APIToken:       "token3",
+		DefaultProject: "project3",
+		Timeout:        pointer.Pointer(time.Duration(100)),
+		Provider:       "foo",
 	}
 }
 
@@ -716,4 +719,290 @@ func TestContexts_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+func TestContextManager_writeContexts(t *testing.T) {
+	tests := []struct {
+		Name          string
+		InputContexts *contexts
+		WantErr       error
+		ValidateFile  func(t *testing.T, fs afero.Fs, configPath string)
+	}{
+		{
+			Name:          "write valid contexts",
+			InputContexts: contextsWithActiveCtx(),
+			WantErr:       nil,
+			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
+				exists, err := afero.Exists(fs, configPath)
+				require.NoError(t, err)
+				require.True(t, exists, "config file should exist")
+
+				content, err := afero.ReadFile(fs, configPath)
+				require.NoError(t, err)
+
+				var ctxs contexts
+				err = yaml.Unmarshal(content, &ctxs)
+				require.NoError(t, err)
+				require.Equal(t, "ctx1", ctxs.CurrentContext)
+				require.Equal(t, "ctx2", ctxs.PreviousContext)
+				require.Len(t, ctxs.Contexts, 3)
+			},
+		},
+		{
+			Name:          "write empty contexts",
+			InputContexts: &contexts{},
+			WantErr:       nil,
+			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
+				content, err := afero.ReadFile(fs, configPath)
+				require.NoError(t, err)
+
+				var ctxs contexts
+				err = yaml.Unmarshal(content, &ctxs)
+				require.NoError(t, err)
+				require.Empty(t, ctxs.CurrentContext)
+				require.Empty(t, ctxs.Contexts)
+			},
+		},
+		{
+			Name: "fail on duplicate context names",
+			InputContexts: &contexts{
+				Contexts: []*Context{
+					{Name: "duplicate", APIToken: "token1"},
+					{Name: "duplicate", APIToken: "token2"},
+				},
+			},
+			WantErr: errContextNamesAreUnique,
+		},
+		{
+			Name: "fail on blank context name",
+			InputContexts: &contexts{
+				Contexts: []*Context{
+					{Name: "", APIToken: "token1"},
+				},
+			},
+			WantErr: fmt.Errorf(errMsgBlankContextField, "Name"),
+		},
+		{
+			Name: "fail on blank API token",
+			InputContexts: &contexts{
+				Contexts: []*Context{
+					{Name: "ctx1", APIToken: ""},
+				},
+			},
+			WantErr: fmt.Errorf(errMsgBlankContextField, "APIToken"),
+		},
+		{
+			Name:          "create config directory if in default path",
+			InputContexts: contextsNoActiveCtx(),
+			WantErr:       nil,
+			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
+				// Verify directory was created
+				dirExists, err := afero.DirExists(fs, path.Dir(configPath))
+				require.NoError(t, err)
+				require.True(t, dirExists, "config directory should be created")
+
+				// Verify file permissions (0600)
+				info, err := fs.Stat(configPath)
+				require.NoError(t, err)
+				require.Equal(t, os.FileMode(0600), info.Mode().Perm())
+			},
+		},
+		{
+			Name: "preserve context ordering",
+			InputContexts: &contexts{
+				CurrentContext: "ctx2",
+				Contexts: []*Context{
+					ctx3(),
+					ctx1(),
+					ctx2(),
+				},
+			},
+			WantErr: nil,
+			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
+				content, err := afero.ReadFile(fs, configPath)
+				require.NoError(t, err)
+
+				var ctxs contexts
+				err = yaml.Unmarshal(content, &ctxs)
+				require.NoError(t, err)
+				require.Len(t, ctxs.Contexts, 3)
+				require.Equal(t, "ctx3", ctxs.Contexts[0].Name)
+				require.Equal(t, "ctx1", ctxs.Contexts[1].Name)
+				require.Equal(t, "ctx2", ctxs.Contexts[2].Name)
+			},
+		},
+		{
+			Name: "write contexts with all fields populated",
+			InputContexts: &contexts{
+				CurrentContext: "ctx3",
+				Contexts: []*Context{
+					ctx3(), // Has APIURL, Provider, etc.
+				},
+			},
+			WantErr: nil,
+			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
+				content, err := afero.ReadFile(fs, configPath)
+				require.NoError(t, err)
+
+				var ctxs contexts
+				err = yaml.Unmarshal(content, &ctxs)
+				require.NoError(t, err)
+				require.Len(t, ctxs.Contexts, 1)
+				require.NotNil(t, ctxs.Contexts[0].APIURL)
+				require.Equal(t, "http://foo.bar", *ctxs.Contexts[0].APIURL)
+				require.Equal(t, "foo", ctxs.Contexts[0].Provider)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			manager := newTestManager(t)
+			configPath, err := manager.cfg.configPath()
+			require.NoError(t, err)
+
+			err = manager.writeContexts(tt.InputContexts)
+
+			if tt.WantErr != nil {
+				require.Error(t, err)
+				if diff := cmp.Diff(tt.WantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+					t.Errorf("error diff (+got -want):\n %s", diff)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			if tt.ValidateFile != nil {
+				tt.ValidateFile(t, manager.cfg.Fs, configPath)
+			}
+		})
+	}
+}
+
+func TestContextManager_getContexts(t *testing.T) {
+	tests := []ManagerTestCase[*contexts]{
+		{
+			Name:        "read existing contexts && IsCurrent is set",
+			FileContent: contextsWithActiveCtx(),
+			wantErr:     nil,
+			want: func() *contexts {
+				ctxs := contextsWithActiveCtx()
+				ctxs.Contexts[0].IsCurrent = true
+				return ctxs
+			}(),
+			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+				return manager.getContexts()
+			},
+		},
+		{
+			Name:        "read empty config returns empty contexts",
+			FileContent: nil,
+			wantErr:     nil,
+			want: &contexts{
+				Contexts: []*Context{},
+			},
+			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+				return manager.getContexts()
+			},
+		},
+		{
+			Name:        "read contexts without active context",
+			FileContent: contextsNoActiveCtx(),
+			wantErr:     nil,
+			want:        contextsNoActiveCtx(),
+			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+				return manager.getContexts()
+			},
+		},
+		{
+			Name: "preserve all context fields",
+			FileContent: &contexts{
+				CurrentContext: ctx3().Name,
+				Contexts: []*Context{
+					ctx3(), // Has all optional fields
+				},
+			},
+			wantErr: nil,
+			want: func() *contexts {
+				ctx := ctx3()
+				ctx.IsCurrent = true
+				return &contexts{
+					CurrentContext: ctx.Name,
+					Contexts:       []*Context{ctx},
+				}
+			}(),
+			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+				return manager.getContexts()
+			},
+		},
+		{ // TODO do we need to fail here?
+			Name: "handle current context not in list",
+			FileContent: &contexts{
+				CurrentContext: "nonexistent",
+				Contexts:       ctxList(),
+			},
+			wantErr: nil,
+			want: &contexts{
+				CurrentContext: "nonexistent",
+				Contexts:       ctxList(),
+			},
+			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+				return manager.getContexts()
+			},
+		},
+	}
+
+	managerTest(t, tests)
+}
+
+func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
+	helperFunc := func(ctxs *contexts) func(*testing.T, *ContextManager) (*contexts, error) {
+		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			err := manager.writeContexts(ctxs)
+			if err != nil {
+				return nil, err
+			}
+			return manager.getContexts()
+		}
+	}
+	tests := []ManagerTestCase[*contexts]{
+		{
+			Name:        "round trip with active context",
+			FileContent: nil,
+			wantErr:     nil,
+			want: func() *contexts {
+				ctxs := contextsWithActiveCtx()
+				ctxs.Contexts[0].IsCurrent = true
+				return ctxs
+			}(),
+			Run: helperFunc(contextsWithActiveCtx()),
+		},
+		{
+			Name:        "round trip without active context",
+			FileContent: nil,
+			wantErr:     nil,
+			want:        contextsNoActiveCtx(),
+			Run:         helperFunc(contextsNoActiveCtx()),
+		},
+		{
+			Name:        "round trip with all optional fields",
+			FileContent: nil,
+			wantErr:     nil,
+			want: func() *contexts {
+				ctx3Active := ctx3()
+				ctx3Active.IsCurrent = true
+				return &contexts{
+					CurrentContext:  ctx3().Name,
+					PreviousContext: ctx1().Name,
+					Contexts:        []*Context{ctx3Active, ctx1()},
+				}
+			}(),
+			Run: helperFunc(&contexts{
+				CurrentContext:  ctx3().Name,
+				PreviousContext: ctx1().Name,
+				Contexts:        []*Context{ctx3(), ctx1()},
+			}),
+		},
+	}
+
+	managerTest(t, tests)
 }
