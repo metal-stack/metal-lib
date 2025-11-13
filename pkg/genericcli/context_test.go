@@ -1,6 +1,7 @@
 package genericcli
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -8,11 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -129,34 +132,30 @@ func newTestManager(t *testing.T) *ContextManager {
 
 func managerTest[T any](t *testing.T, tests []ManagerTestCase[T]) {
 	for _, test := range tests {
-		managerTestOne(t, test)
+		t.Run(test.Name, func(t *testing.T) {
+			manager := newTestManager(t)
+
+			if test.FileContent == nil {
+				test.FileContent = &contexts{}
+			}
+			require.NoError(t, manager.writeContexts(test.FileContent))
+
+			if test.Setup != nil {
+				err := test.Setup(t, manager)
+				require.NoError(t, err)
+			}
+
+			got, err := test.Run(t, manager)
+
+			if diff := cmp.Diff(test.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+				return
+			}
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("Diff = %s", diff)
+			}
+		})
 	}
-}
-
-func managerTestOne[T any](t *testing.T, tt ManagerTestCase[T]) {
-	t.Run(tt.Name, func(t *testing.T) {
-		manager := newTestManager(t)
-
-		if tt.FileContent == nil {
-			tt.FileContent = &contexts{}
-		}
-		require.NoError(t, manager.writeContexts(tt.FileContent))
-
-		if tt.Setup != nil {
-			err := tt.Setup(t, manager)
-			require.NoError(t, err)
-		}
-
-		got, err := tt.Run(t, manager)
-
-		if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
-			t.Errorf("error diff (+got -want):\n %s", diff)
-			return
-		}
-		if diff := cmp.Diff(tt.want, got); diff != "" {
-			t.Errorf("Diff = %s", diff)
-		}
-	})
 }
 
 func TestContextManager_Get(t *testing.T) {
@@ -955,56 +954,52 @@ type consoleTestCase[T any] struct {
 
 func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 	for _, test := range tests {
-		consoleTestOne(t, test)
-	}
-}
+		t.Run(test.Name, func(t *testing.T) {
+			fs, configDir := setupFs(t)
+			mgr := NewContextManager(&ContextConfig{
+				BinaryName:      os.Args[0],
+				ConfigDirName:   configDir,
+				ConfigName:      "config.yaml",
+				Fs:              fs,
+				Out:             io.Discard,
+				ListPrinter:     func() printers.Printer { return printers.NewYAMLPrinter() },
+				DescribePrinter: func() printers.Printer { return printers.NewYAMLPrinter() },
+			})
 
-func consoleTestOne[T any](t *testing.T, tt consoleTestCase[T]) {
-	t.Run(tt.Name, func(t *testing.T) {
-		fs, configDir := setupFs(t)
-		mgr := NewContextManager(&ContextConfig{
-			BinaryName:      os.Args[0],
-			ConfigDirName:   configDir,
-			ConfigName:      "config.yaml",
-			Fs:              fs,
-			Out:             io.Discard,
-			ListPrinter:     func() printers.Printer { return printers.NewYAMLPrinter() },
-			DescribePrinter: func() printers.Printer { return printers.NewYAMLPrinter() },
-		})
+			if test.FileContent == nil {
+				test.FileContent = &contexts{}
+			}
+			require.NoError(t, mgr.writeContexts(test.FileContent))
 
-		if tt.FileContent == nil {
-			tt.FileContent = &contexts{}
-		}
-		require.NoError(t, mgr.writeContexts(tt.FileContent))
+			buf := &bytes.Buffer{}
+			cmd := getNewContextCmd(fs, io.Writer(buf), configDir)
 
-		buf := &bytes.Buffer{}
-		cmd := getNewContextCmd(fs, io.Writer(buf), configDir)
+			cmd.SetArgs(test.Args)
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
 
-		cmd.SetArgs(tt.Args)
-		cmd.SilenceUsage = true
-		cmd.SilenceErrors = true
+			if test.Setup != nil {
+				err := test.Setup(t, cmd)
+				require.NoError(t, err)
+			}
 
-		if tt.Setup != nil {
-			err := tt.Setup(t, cmd)
+			err := cmd.Execute()
+
+			if diff := cmp.Diff(test.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+				t.Errorf("error diff (+got -want):\n %s", diff)
+				return
+			}
+			if diff := cmp.Diff(test.wantOut, buf.String()); diff != "" {
+				t.Errorf("Diff = %s", diff)
+			}
+
+			result, err := mgr.getContexts()
 			require.NoError(t, err)
-		}
-
-		err := cmd.Execute()
-
-		if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
-			t.Errorf("error diff (+got -want):\n %s", diff)
-			return
-		}
-		if diff := cmp.Diff(tt.wantOut, buf.String()); diff != "" {
-			t.Errorf("Diff = %s", diff)
-		}
-
-		result, err := mgr.getContexts()
-		require.NoError(t, err)
-		if diff := cmp.Diff(tt.want, result); diff != "" {
-			t.Errorf("Diff = %s", diff)
-		}
-	})
+			if diff := cmp.Diff(test.want, result); diff != "" {
+				t.Errorf("Diff = %s", diff)
+			}
+		})
+	}
 }
 
 func newPrinterFromCLI(c *ContextConfig) printers.Printer {
