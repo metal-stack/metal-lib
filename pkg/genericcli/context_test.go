@@ -940,3 +940,198 @@ func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
 
 	managerTest(t, tests)
 }
+
+// Console tests below
+
+type consoleTestCase[T any] struct {
+	Name        string
+	FileContent *contexts
+	Args        []string
+	Setup       func(t *testing.T, cmd *cobra.Command) error
+	wantErr     error
+	wantOut     string
+	want        T
+}
+
+func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
+	for _, test := range tests {
+		consoleTestOne(t, test)
+	}
+}
+
+func consoleTestOne[T any](t *testing.T, tt consoleTestCase[T]) {
+	t.Run(tt.Name, func(t *testing.T) {
+		fs, configDir := setupFs(t)
+		mgr := NewContextManager(&ContextConfig{
+			BinaryName:      os.Args[0],
+			ConfigDirName:   configDir,
+			ConfigName:      "config.yaml",
+			Fs:              fs,
+			Out:             io.Discard,
+			ListPrinter:     func() printers.Printer { return printers.NewYAMLPrinter() },
+			DescribePrinter: func() printers.Printer { return printers.NewYAMLPrinter() },
+		})
+
+		if tt.FileContent == nil {
+			tt.FileContent = &contexts{}
+		}
+		require.NoError(t, mgr.writeContexts(tt.FileContent))
+
+		buf := &bytes.Buffer{}
+		cmd := getNewContextCmd(fs, io.Writer(buf), configDir)
+
+		cmd.SetArgs(tt.Args)
+		cmd.SilenceUsage = true
+		cmd.SilenceErrors = true
+
+		if tt.Setup != nil {
+			err := tt.Setup(t, cmd)
+			require.NoError(t, err)
+		}
+
+		err := cmd.Execute()
+
+		if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {
+			t.Errorf("error diff (+got -want):\n %s", diff)
+			return
+		}
+		if diff := cmp.Diff(tt.wantOut, buf.String()); diff != "" {
+			t.Errorf("Diff = %s", diff)
+		}
+
+		result, err := mgr.getContexts()
+		require.NoError(t, err)
+		if diff := cmp.Diff(tt.want, result); diff != "" {
+			t.Errorf("Diff = %s", diff)
+		}
+	})
+}
+
+func newPrinterFromCLI(c *ContextConfig) printers.Printer {
+	var printer printers.Printer
+
+	switch format := viper.GetString("output-format"); format {
+	case "yaml":
+		printer = printers.NewProtoYAMLPrinter().WithFallback(true).WithOut(c.Out)
+	case "json":
+		printer = printers.NewProtoJSONPrinter().WithFallback(true).WithOut(c.Out)
+	case "yamlraw":
+		printer = printers.NewYAMLPrinter().WithOut(c.Out)
+	case "jsonraw":
+		printer = printers.NewJSONPrinter().WithOut(c.Out)
+	case "template":
+		printer = printers.NewTemplatePrinter(viper.GetString("template")).WithOut(c.Out)
+	case "table", "wide", "markdown":
+		fallthrough
+	default:
+		cfg := &printers.TablePrinterConfig{
+			ToHeaderAndRows: ContextTable,
+			Wide:            format == "wide",
+			Markdown:        format == "markdown",
+			NoHeaders:       viper.GetBool("no-headers"),
+			Out:             c.Out,
+		}
+		tablePrinter := printers.NewTablePrinter(cfg).WithOut(c.Out)
+		printer = tablePrinter
+	}
+
+	if viper.IsSet("force-color") {
+		enabled := viper.GetBool("force-color")
+		if enabled {
+			color.NoColor = false
+		} else {
+			color.NoColor = true
+		}
+	}
+
+	return printer
+}
+
+func getNewContextCmd(fs afero.Fs, buf io.Writer, configDir string) *cobra.Command {
+	c := &ContextConfig{
+		ConfigDirName:         configDir,
+		BinaryName:            os.Args[0],
+		Fs:                    fs,
+		In:                    nil,
+		Out:                   buf,
+		ProjectListCompletion: nil,
+	}
+
+	tablePrinter := newPrinterFromCLI(c)
+	c.ListPrinter = func() printers.Printer { return tablePrinter }
+	c.DescribePrinter = func() printers.Printer { return tablePrinter }
+
+	return NewContextCmd(c)
+}
+
+func TestContextManager_SwitchContext(t *testing.T) {
+	tests := []consoleTestCase[*contexts]{
+		{
+			Name:        "switch to existing context",
+			FileContent: contextsActiveSetCurrentUnset(),
+			Args:        []string{ctx3().Name},
+			wantErr:     nil,
+			want: func() *contexts {
+				ctxs := contextsActiveSetCurrentUnset()
+				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx3().Name
+				ctxs.Contexts[2].IsCurrent = true
+				return ctxs
+			}(),
+			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctx3().Name),
+		},
+		{
+			Name:        "switch to the same context",
+			FileContent: contextsActiveSetCurrentUnset(),
+			Args:        []string{ctx1().Name},
+			wantErr:     nil,
+			want:        contextsActiveSetCurrentSet(),
+			wantOut:     fmt.Sprintf("✔ Context \"%s\" is already active\n", ctx1().Name),
+		},
+		{
+			Name:        "switch to previous context using dash",
+			FileContent: contextsActiveSetCurrentUnset(),
+			Args:        []string{"-"},
+			wantErr:     nil,
+			want: func() *contexts {
+				ctxs := contextsActiveSetCurrentUnset()
+				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxs.PreviousContext
+				ctxs.Contexts[1].IsCurrent = true
+				return ctxs
+			}(),
+			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctx2().Name),
+		},
+		{
+			Name:        "switch to previous when none exists",
+			FileContent: contextsActiveUnsetCurrentUnset(),
+			Args:        []string{"-"},
+			wantErr:     errNoPreviousContext,
+			want:        contextsActiveUnsetCurrentUnset(),
+		},
+		{
+			Name:        "switch to non-existent context",
+			FileContent: contextsActiveSetCurrentUnset(),
+			Args:        []string{"nonexistent"},
+			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
+			want:        contextsActiveSetCurrentSet(),
+		},
+		{
+			Name: "switch to previous when no context is active",
+			FileContent: func() *contexts {
+				ctxs := contextsActiveSetCurrentUnset()
+				ctxs.CurrentContext = ""
+				return ctxs
+			}(),
+			Args:    []string{"-"},
+			wantErr: nil,
+			want: func() *contexts {
+				ctxs := contextsActiveSetCurrentUnset()
+				ctxs.PreviousContext, ctxs.CurrentContext = "", ctx2().Name
+				ctxs.Contexts[1].IsCurrent = true
+				return ctxs
+			}(),
+			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctx2().Name),
+		},
+	}
+
+	consoleTest(t, tests)
+}
