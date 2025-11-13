@@ -24,7 +24,7 @@ import (
 // ManagerTestCase defines a test case for ContextManager operations
 type ManagerTestCase[T any] struct {
 	Name        string
-	FileContent *contexts
+	FileContent *contextConfig
 	Setup       func(t *testing.T, manager *ContextManager) error
 	Run         func(t *testing.T, manager *ContextManager) (T, error)
 	wantErr     error
@@ -72,27 +72,27 @@ func ctxList() []*Context {
 	}
 }
 
-func contextsActiveUnsetCurrentUnset() *contexts {
-	return &contexts{
+func contextsActiveUnsetCurrentUnset() *contextConfig {
+	return &contextConfig{
 		CurrentContext:  "",
 		PreviousContext: "",
 		Contexts:        ctxList(),
 	}
 }
 
-func contextsActiveSetCurrentUnset() *contexts {
+func contextsActiveSetCurrentUnset() *contextConfig {
 	list := ctxList()
-	return &contexts{
+	return &contextConfig{
 		CurrentContext:  list[0].Name,
 		PreviousContext: list[1].Name,
 		Contexts:        list,
 	}
 }
 
-func contextsActiveSetCurrentSet() *contexts {
+func contextsActiveSetCurrentSet() *contextConfig {
 	list := ctxList()
 	current(list[0])
-	return &contexts{
+	return &contextConfig{
 		CurrentContext:  list[0].Name,
 		PreviousContext: list[1].Name,
 		Contexts:        list,
@@ -119,7 +119,7 @@ func setupFs(t *testing.T) (afero.Fs, string) {
 
 func newTestManager(t *testing.T) *ContextManager {
 	fs, configDir := setupFs(t)
-	return NewContextManager(&ContextConfig{
+	return NewContextManager(&ContextManagerConfig{
 		BinaryName:      os.Args[0],
 		ConfigDirName:   configDir,
 		ConfigName:      "config.yaml",
@@ -136,9 +136,9 @@ func managerTest[T any](t *testing.T, tests []ManagerTestCase[T]) {
 			manager := newTestManager(t)
 
 			if test.FileContent == nil {
-				test.FileContent = &contexts{}
+				test.FileContent = &contextConfig{}
 			}
-			require.NoError(t, manager.writeContexts(test.FileContent))
+			require.NoError(t, manager.writeContextConfig(test.FileContent))
 
 			if test.Setup != nil {
 				err := test.Setup(t, manager)
@@ -261,8 +261,8 @@ func TestContextManager_GetContextCurrentOrDefault(t *testing.T) {
 
 func TestContextManager_DefaultContext(t *testing.T) {
 	type defaultContextResult struct {
-		ReturnedCtx  *Context  // The *Context returned by the function
-		FileContents *contexts // The state in the config file *after* the run
+		ReturnedCtx  *Context       // The *Context returned by the function
+		FileContents *contextConfig // The state in the config file *after* the run
 	}
 
 	runFunc := func(t *testing.T, manager *ContextManager) (defaultContextResult, error) {
@@ -318,8 +318,8 @@ func TestContextManager_DefaultContext(t *testing.T) {
 				want.Name = "default"
 				return defaultContextResult{
 					ReturnedCtx: want, // TODO WARNING default is current with changed name. Do we want this?
-					FileContents: func() *contexts {
-						return &contexts{
+					FileContents: func() *contextConfig {
+						return &contextConfig{
 							CurrentContext:  want.Name,
 							PreviousContext: ctx1().Name,
 							Contexts:        append(ctxList(), want),
@@ -356,8 +356,8 @@ func TestContextManager_DefaultContext(t *testing.T) {
 				want.IsCurrent = true
 				return defaultContextResult{
 					ReturnedCtx: want,
-					FileContents: func() *contexts {
-						return &contexts{
+					FileContents: func() *contextConfig {
+						return &contextConfig{
 							CurrentContext:  "default",
 							PreviousContext: "",
 							Contexts:        append(ctxList(), want),
@@ -413,8 +413,8 @@ func TestContextManager_List(t *testing.T) {
 }
 
 func TestContextManager_Create(t *testing.T) {
-	createHelperFunc := func(ctx *Context) func(*testing.T, *ContextManager) (*contexts, error) {
-		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
+	createHelperFunc := func(ctx *Context) func(*testing.T, *ContextManager) (*contextConfig, error) {
+		return func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 			_, err := manager.Create(ctx)
 			if err != nil {
 				return nil, err
@@ -423,12 +423,12 @@ func TestContextManager_Create(t *testing.T) {
 		}
 	}
 
-	tests := []ManagerTestCase[*contexts]{
+	tests := []ManagerTestCase[*contextConfig]{
 		{
 			Name:        "first context auto-activates",
 			FileContent: nil,
 			wantErr:     nil,
-			want: &contexts{
+			want: &contextConfig{
 				CurrentContext:  ctx1().Name,
 				PreviousContext: "",
 				Contexts:        []*Context{current(ctx1())},
@@ -439,7 +439,7 @@ func TestContextManager_Create(t *testing.T) {
 			Name:        "create context with activate flag",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				new := current(ctxNew())
 
@@ -476,8 +476,8 @@ func TestContextManager_Create(t *testing.T) {
 }
 
 func TestContextManager_Update(t *testing.T) {
-	updateHelperFunc := func(rq *ContextUpdateRequest) func(*testing.T, *ContextManager) (*contexts, error) {
-		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
+	updateHelperFunc := func(rq *ContextUpdateRequest) func(*testing.T, *ContextManager) (*contextConfig, error) {
+		return func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 			_, err := manager.Update(rq)
 			if err != nil {
 				return nil, err
@@ -486,12 +486,12 @@ func TestContextManager_Update(t *testing.T) {
 		}
 	}
 
-	tests := []ManagerTestCase[*contexts]{
+	tests := []ManagerTestCase[*contextConfig]{
 		{
 			Name:        "update existing context (all fields)",
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				want := contextsActiveUnsetCurrentUnset()
 				want.Contexts[0].APIURL = pointer.Pointer("newAPIURL")
 				want.Contexts[0].APIToken = "newAPIToken"
@@ -513,7 +513,7 @@ func TestContextManager_Update(t *testing.T) {
 			Name:        "update with activate flag",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx3().Name
 				ctxs.Contexts[2].IsCurrent = true
@@ -537,7 +537,7 @@ func TestContextManager_Update(t *testing.T) {
 			Name:        "update current context without Name",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentSet()
 				ctxs.Contexts[0].Provider = "foo"
 				return ctxs
@@ -563,8 +563,8 @@ func TestContextManager_Update(t *testing.T) {
 }
 
 func TestContextManager_Delete(t *testing.T) {
-	deleteHelperFunc := func(name string) func(*testing.T, *ContextManager) (*contexts, error) {
-		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
+	deleteHelperFunc := func(name string) func(*testing.T, *ContextManager) (*contextConfig, error) {
+		return func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 			_, err := manager.Delete(name)
 			if err != nil {
 				return nil, err
@@ -573,12 +573,12 @@ func TestContextManager_Delete(t *testing.T) {
 		}
 	}
 
-	tests := []ManagerTestCase[*contexts]{
+	tests := []ManagerTestCase[*contextConfig]{
 		{
 			Name:        "delete existing context",
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			wantErr:     nil,
-			want: &contexts{
+			want: &contextConfig{
 				Contexts: []*Context{ctx1(), ctx2()},
 			},
 			Run: deleteHelperFunc(ctx3().Name),
@@ -587,7 +587,7 @@ func TestContextManager_Delete(t *testing.T) {
 			Name:        "delete active context",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				ctxs.Contexts = ctxs.Contexts[1:]
 				ctxs.CurrentContext = ""
@@ -599,7 +599,7 @@ func TestContextManager_Delete(t *testing.T) {
 			Name:        "delete previous context",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     nil,
-			want: &contexts{
+			want: &contextConfig{
 				CurrentContext: ctx1().Name,
 				Contexts:       []*Context{current(ctx1()), ctx3()},
 			},
@@ -620,7 +620,7 @@ func TestContextManager_Delete(t *testing.T) {
 func TestContexts_Validate(t *testing.T) {
 	tests := []struct {
 		Name    string
-		ctxs    *contexts
+		ctxs    *contextConfig
 		wantErr error
 	}{
 		{
@@ -630,7 +630,7 @@ func TestContexts_Validate(t *testing.T) {
 		},
 		{
 			Name: "duplicate Names",
-			ctxs: &contexts{
+			ctxs: &contextConfig{
 				Contexts: []*Context{
 					{Name: "ctx1", APIToken: "token1"},
 					{Name: "ctx1", APIToken: "token2"},
@@ -640,7 +640,7 @@ func TestContexts_Validate(t *testing.T) {
 		},
 		{
 			Name: "blank Name",
-			ctxs: &contexts{
+			ctxs: &contextConfig{
 				Contexts: []*Context{
 					{Name: "", APIToken: "token1"},
 				},
@@ -649,7 +649,7 @@ func TestContexts_Validate(t *testing.T) {
 		},
 		{
 			Name: "blank token",
-			ctxs: &contexts{
+			ctxs: &contextConfig{
 				Contexts: []*Context{
 					{Name: "ctx1", APIToken: ""},
 				},
@@ -669,10 +669,10 @@ func TestContexts_Validate(t *testing.T) {
 		})
 	}
 }
-func TestContextManager_writeContexts(t *testing.T) {
+func TestContextManager_writeContextConfig(t *testing.T) {
 	tests := []struct {
 		Name          string
-		InputContexts *contexts
+		InputContexts *contextConfig
 		WantErr       error
 		ValidateFile  func(t *testing.T, fs afero.Fs, configPath string)
 	}{
@@ -688,7 +688,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 				content, err := afero.ReadFile(fs, configPath)
 				require.NoError(t, err)
 
-				var ctxs contexts
+				var ctxs contextConfig
 				err = yaml.Unmarshal(content, &ctxs)
 				require.NoError(t, err)
 				require.Equal(t, "ctx1", ctxs.CurrentContext)
@@ -698,13 +698,13 @@ func TestContextManager_writeContexts(t *testing.T) {
 		},
 		{
 			Name:          "write empty contexts",
-			InputContexts: &contexts{},
+			InputContexts: &contextConfig{},
 			WantErr:       nil,
 			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
 				content, err := afero.ReadFile(fs, configPath)
 				require.NoError(t, err)
 
-				var ctxs contexts
+				var ctxs contextConfig
 				err = yaml.Unmarshal(content, &ctxs)
 				require.NoError(t, err)
 				require.Empty(t, ctxs.CurrentContext)
@@ -713,7 +713,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 		},
 		{
 			Name: "fail on duplicate context names",
-			InputContexts: &contexts{
+			InputContexts: &contextConfig{
 				Contexts: []*Context{
 					{Name: "duplicate", APIToken: "token1"},
 					{Name: "duplicate", APIToken: "token2"},
@@ -723,7 +723,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 		},
 		{
 			Name: "fail on blank context name",
-			InputContexts: &contexts{
+			InputContexts: &contextConfig{
 				Contexts: []*Context{
 					{Name: "", APIToken: "token1"},
 				},
@@ -732,7 +732,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 		},
 		{
 			Name: "fail on blank API token",
-			InputContexts: &contexts{
+			InputContexts: &contextConfig{
 				Contexts: []*Context{
 					{Name: "ctx1", APIToken: ""},
 				},
@@ -757,7 +757,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 		},
 		{
 			Name: "preserve context ordering",
-			InputContexts: &contexts{
+			InputContexts: &contextConfig{
 				CurrentContext: "ctx2",
 				Contexts: []*Context{
 					ctx3(),
@@ -770,7 +770,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 				content, err := afero.ReadFile(fs, configPath)
 				require.NoError(t, err)
 
-				var ctxs contexts
+				var ctxs contextConfig
 				err = yaml.Unmarshal(content, &ctxs)
 				require.NoError(t, err)
 				require.Len(t, ctxs.Contexts, 3)
@@ -781,7 +781,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 		},
 		{
 			Name: "write contexts with all fields populated",
-			InputContexts: &contexts{
+			InputContexts: &contextConfig{
 				CurrentContext: "ctx3",
 				Contexts: []*Context{
 					ctx3(), // Has APIURL, Provider, etc.
@@ -792,7 +792,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 				content, err := afero.ReadFile(fs, configPath)
 				require.NoError(t, err)
 
-				var ctxs contexts
+				var ctxs contextConfig
 				err = yaml.Unmarshal(content, &ctxs)
 				require.NoError(t, err)
 				require.Len(t, ctxs.Contexts, 1)
@@ -809,7 +809,7 @@ func TestContextManager_writeContexts(t *testing.T) {
 			configPath, err := manager.cfg.configPath()
 			require.NoError(t, err)
 
-			err = manager.writeContexts(tt.InputContexts)
+			err = manager.writeContextConfig(tt.InputContexts)
 
 			if tt.WantErr != nil {
 				require.Error(t, err)
@@ -828,13 +828,13 @@ func TestContextManager_writeContexts(t *testing.T) {
 }
 
 func TestContextManager_getContexts(t *testing.T) {
-	tests := []ManagerTestCase[*contexts]{
+	tests := []ManagerTestCase[*contextConfig]{
 		{
 			Name:        "read existing contexts && IsCurrent is set",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     nil,
 			want:        contextsActiveSetCurrentSet(),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContexts()
 			},
 		},
@@ -842,10 +842,10 @@ func TestContextManager_getContexts(t *testing.T) {
 			Name:        "read empty config returns empty contexts",
 			FileContent: nil,
 			wantErr:     nil,
-			want: &contexts{
+			want: &contextConfig{
 				Contexts: []*Context{},
 			},
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContexts()
 			},
 		},
@@ -854,39 +854,39 @@ func TestContextManager_getContexts(t *testing.T) {
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			wantErr:     nil,
 			want:        contextsActiveUnsetCurrentUnset(),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContexts()
 			},
 		},
 		{
 			Name: "preserve all context fields",
-			FileContent: &contexts{
+			FileContent: &contextConfig{
 				CurrentContext: ctx3().Name,
 				Contexts: []*Context{
 					ctx3(), // Has all optional fields
 				},
 			},
 			wantErr: nil,
-			want: &contexts{
+			want: &contextConfig{
 				CurrentContext: ctx3().Name,
 				Contexts:       []*Context{current(ctx3())},
 			},
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContexts()
 			},
 		},
 		{ // TODO do we need to fail here?
 			Name: "handle current context not in list",
-			FileContent: &contexts{
+			FileContent: &contextConfig{
 				CurrentContext: "nonexistent",
 				Contexts:       ctxList(),
 			},
 			wantErr: nil,
-			want: &contexts{
+			want: &contextConfig{
 				CurrentContext: "nonexistent",
 				Contexts:       ctxList(),
 			},
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContexts()
 			},
 		},
@@ -896,16 +896,16 @@ func TestContextManager_getContexts(t *testing.T) {
 }
 
 func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
-	helperFunc := func(ctxs *contexts) func(*testing.T, *ContextManager) (*contexts, error) {
-		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
-			err := manager.writeContexts(ctxs)
+	helperFunc := func(ctxs *contextConfig) func(*testing.T, *ContextManager) (*contextConfig, error) {
+		return func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
+			err := manager.writeContextConfig(ctxs)
 			if err != nil {
 				return nil, err
 			}
 			return manager.getContexts()
 		}
 	}
-	tests := []ManagerTestCase[*contexts]{
+	tests := []ManagerTestCase[*contextConfig]{
 		{
 			Name:        "round trip with active context",
 			FileContent: nil,
@@ -924,12 +924,12 @@ func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
 			Name:        "round trip with all optional fields",
 			FileContent: nil,
 			wantErr:     nil,
-			want: &contexts{
+			want: &contextConfig{
 				CurrentContext:  ctx3().Name,
 				PreviousContext: ctx1().Name,
 				Contexts:        []*Context{current(ctx3()), ctx1()},
 			},
-			Run: helperFunc(&contexts{
+			Run: helperFunc(&contextConfig{
 				CurrentContext:  ctx3().Name,
 				PreviousContext: ctx1().Name,
 				Contexts:        []*Context{ctx3(), ctx1()},
@@ -944,7 +944,7 @@ func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
 
 type consoleTestCase[T any] struct {
 	Name        string
-	FileContent *contexts
+	FileContent *contextConfig
 	Args        []string
 	Setup       func(t *testing.T, cmd *cobra.Command) error
 	wantErr     error
@@ -956,7 +956,7 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			fs, configDir := setupFs(t)
-			mgr := NewContextManager(&ContextConfig{
+			mgr := NewContextManager(&ContextManagerConfig{
 				BinaryName:      os.Args[0],
 				ConfigDirName:   configDir,
 				ConfigName:      "config.yaml",
@@ -967,9 +967,9 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 			})
 
 			if test.FileContent == nil {
-				test.FileContent = &contexts{}
+				test.FileContent = &contextConfig{}
 			}
-			require.NoError(t, mgr.writeContexts(test.FileContent))
+			require.NoError(t, mgr.writeContextConfig(test.FileContent))
 
 			buf := &bytes.Buffer{}
 			cmd := getNewContextCmd(fs, io.Writer(buf), configDir)
@@ -1002,7 +1002,7 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 	}
 }
 
-func newPrinterFromCLI(c *ContextConfig) printers.Printer {
+func newPrinterFromCLI(c *ContextManagerConfig) printers.Printer {
 	var printer printers.Printer
 
 	switch format := viper.GetString("output-format"); format {
@@ -1043,7 +1043,7 @@ func newPrinterFromCLI(c *ContextConfig) printers.Printer {
 }
 
 func getNewContextCmd(fs afero.Fs, buf io.Writer, configDir string) *cobra.Command {
-	c := &ContextConfig{
+	c := &ContextManagerConfig{
 		ConfigDirName:         configDir,
 		BinaryName:            os.Args[0],
 		Fs:                    fs,
@@ -1060,13 +1060,13 @@ func getNewContextCmd(fs afero.Fs, buf io.Writer, configDir string) *cobra.Comma
 }
 
 func TestContextManager_SwitchContext(t *testing.T) {
-	tests := []consoleTestCase[*contexts]{
+	tests := []consoleTestCase[*contextConfig]{
 		{
 			Name:        "switch to existing context",
 			FileContent: contextsActiveSetCurrentUnset(),
 			Args:        []string{ctx3().Name},
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx3().Name
 				ctxs.Contexts[2].IsCurrent = true
@@ -1087,7 +1087,7 @@ func TestContextManager_SwitchContext(t *testing.T) {
 			FileContent: contextsActiveSetCurrentUnset(),
 			Args:        []string{"-"},
 			wantErr:     nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxs.PreviousContext
 				ctxs.Contexts[1].IsCurrent = true
@@ -1111,14 +1111,14 @@ func TestContextManager_SwitchContext(t *testing.T) {
 		},
 		{
 			Name: "switch to previous when no context is active",
-			FileContent: func() *contexts {
+			FileContent: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				ctxs.CurrentContext = ""
 				return ctxs
 			}(),
 			Args:    []string{"-"},
 			wantErr: nil,
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentUnset()
 				ctxs.PreviousContext, ctxs.CurrentContext = "", ctx2().Name
 				ctxs.Contexts[1].IsCurrent = true
@@ -1132,14 +1132,14 @@ func TestContextManager_SwitchContext(t *testing.T) {
 }
 
 func TestContextManager_SetProject(t *testing.T) {
-	tests := []consoleTestCase[*contexts]{
+	tests := []consoleTestCase[*contextConfig]{
 		{
 			Name:        "set project on active context",
 			FileContent: contextsActiveSetCurrentUnset(),
 			Args:        []string{"set-project", "new-project"},
 			wantErr:     nil,
 			wantOut:     fmt.Sprintf("✔ Updated context \"%s\"\n✔ Switched context default project to \"new-project\"\n", ctx1().Name),
-			want: func() *contexts {
+			want: func() *contextConfig {
 				ctxs := contextsActiveSetCurrentSet()
 				ctxs.Contexts[0].DefaultProject = "new-project"
 				return ctxs

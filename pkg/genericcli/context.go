@@ -89,7 +89,7 @@ type Context struct {
 	IsCurrent      bool           `json:"-" yaml:"-"`
 }
 
-type ContextConfig struct {
+type ContextManagerConfig struct {
 	BinaryName    string
 	ConfigName    string
 	ConfigDirName string
@@ -104,7 +104,7 @@ type ContextConfig struct {
 }
 
 type ContextManager struct {
-	cfg *ContextConfig
+	cfg *ContextManagerConfig
 }
 
 type ContextUpdateRequest struct {
@@ -136,7 +136,7 @@ func successCheck() string {
 }
 
 // NewContextCmd creates the context command tree using genericcli
-func NewContextCmd(c *ContextConfig) *cobra.Command {
+func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 	wrapper := NewContextManager(c)
 
 	cmd := NewCmds(&CmdsConfig[
@@ -318,7 +318,7 @@ func NewContextCmd(c *ContextConfig) *cobra.Command {
 	return cmd
 }
 
-func NewContextManager(c *ContextConfig) *ContextManager {
+func NewContextManager(c *ContextManagerConfig) *ContextManager {
 	c.ConfigName = cmp.Or(c.ConfigName, string(defaultConfigName))
 	c.Out = cmp.Or(c.Out, io.Writer(os.Stdout))
 	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
@@ -372,7 +372,7 @@ func (c *ContextManager) switchContext(args []string) error {
 
 	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
 
-	err = c.writeContexts(ctxs)
+	err = c.writeContextConfig(ctxs)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (c *ContextManager) ContextListCompletion(cmd *cobra.Command, args []string
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *ContextManager) writeContexts(ctxs *contexts) error {
+func (c *ContextManager) writeContextConfig(ctxs *contextConfig) error {
 	if err := ctxs.validate(); err != nil {
 		return err
 	}
@@ -444,7 +444,7 @@ func (c *ContextManager) writeContexts(ctxs *contexts) error {
 	return nil
 }
 
-func (c *ContextConfig) configPath() (string, error) {
+func (c *ContextManagerConfig) configPath() (string, error) {
 	if viper.IsSet(keyConfig) {
 		return viper.GetString(keyConfig), nil
 	}
@@ -457,7 +457,7 @@ func (c *ContextConfig) configPath() (string, error) {
 	return path.Join(dir, c.ConfigName), nil
 }
 
-func (c *ContextConfig) defaultConfigDirectory() (string, error) {
+func (c *ContextManagerConfig) defaultConfigDirectory() (string, error) {
 	// TODO implement XDG specification?
 	h, err := os.UserHomeDir()
 	if err != nil {
@@ -467,7 +467,7 @@ func (c *ContextConfig) defaultConfigDirectory() (string, error) {
 	return path.Join(h, "."+c.ConfigDirName), nil
 }
 
-func (c *ContextManager) getContexts() (*contexts, error) {
+func (c *ContextManager) getContexts() (*contextConfig, error) {
 	configPath, err := c.cfg.configPath()
 	if err != nil {
 		return nil, fmt.Errorf(errMsgCannotGetConfigPath, err)
@@ -476,13 +476,13 @@ func (c *ContextManager) getContexts() (*contexts, error) {
 	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return &contexts{}, nil
+			return &contextConfig{}, nil
 		}
 
 		return nil, fmt.Errorf(errMsgCannotReadConfig, c.cfg.ConfigName, err)
 	}
 
-	var ctxs contexts
+	var ctxs contextConfig
 	err = yaml.Unmarshal(raw, &ctxs)
 
 	if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
@@ -528,7 +528,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 	}
 
 	// name uniqness check is performed by writeContexts
-	err = c.writeContexts(ctxs)
+	err = c.writeContextConfig(ctxs)
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +578,7 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		switched = true
 	}
 
-	err = c.writeContexts(ctxs)
+	err = c.writeContextConfig(ctxs)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +612,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 		ctxs.PreviousContext = ""
 	}
 
-	err = c.writeContexts(ctxs)
+	err = c.writeContextConfig(ctxs)
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +666,7 @@ func (c *Context) GetProvider() string {
 	return c.Provider
 }
 
-func (cs *contexts) validate() error {
+func (cs *contextConfig) validate() error {
 	names := map[string]bool{}
 	for _, context := range cs.Contexts {
 		names[context.Name] = true
@@ -685,7 +685,7 @@ func (cs *contexts) validate() error {
 	return nil
 }
 
-func (cs *contexts) delete(name string) *Context {
+func (cs *contextConfig) delete(name string) *Context {
 	var deletedCtx *Context
 	cs.Contexts = slices.DeleteFunc(cs.Contexts, func(ctx *Context) bool {
 		if ctx.Name == name {
@@ -697,7 +697,7 @@ func (cs *contexts) delete(name string) *Context {
 	return deletedCtx
 }
 
-func (cs *contexts) getByName(name string) (*Context, bool) {
+func (cs *contextConfig) getByName(name string) (*Context, bool) {
 	for _, context := range cs.Contexts {
 		if context.Name == name {
 			return context, true
@@ -792,7 +792,7 @@ func DefaultContext(c *ContextManager) (*Context, error) {
 	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, defaultCtx.Name
 	ctxs.Contexts = append(ctxs.Contexts, defaultCtx)
 
-	err = c.writeContexts(ctxs)
+	err = c.writeContextConfig(ctxs)
 	if err != nil {
 		return nil, fmt.Errorf(errMsgCannotWriteContexts, err)
 	}
