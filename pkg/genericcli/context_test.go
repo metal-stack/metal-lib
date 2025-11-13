@@ -413,6 +413,16 @@ func TestContextManager_List(t *testing.T) {
 }
 
 func TestContextManager_Create(t *testing.T) {
+	createHelperFunc := func(ctx *Context) func(*testing.T, *ContextManager) (*contexts, error) {
+		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			_, err := manager.Create(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return manager.getContexts()
+		}
+	}
+
 	tests := []ManagerTestCase[*contexts]{
 		{
 			Name:        "first context auto-activates",
@@ -423,13 +433,7 @@ func TestContextManager_Create(t *testing.T) {
 				PreviousContext: "",
 				Contexts:        []*Context{current(ctx1())},
 			},
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Create(ctx1())
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: createHelperFunc(ctx1()),
 		},
 		{
 			Name:        "create context with activate flag",
@@ -444,47 +448,27 @@ func TestContextManager_Create(t *testing.T) {
 
 				return ctxs
 			}(),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				new := ctxNew()
-				new.IsCurrent = true
-				_, err := manager.Create(new)
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: createHelperFunc(current(ctxNew())),
 		},
 		{
 			Name:        "create duplicate context Name fails",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     errContextNamesAreUnique,
 			want:        nil,
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Create(&Context{
-					Name:     ctx1().Name,
-					APIToken: "token123",
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: createHelperFunc(&Context{
+				Name:     ctx1().Name,
+				APIToken: "token123",
+			}),
 		},
 		{
 			Name:        "create context without token fails",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     fmt.Errorf(errMsgBlankContextField, "APIToken"),
 			want:        nil,
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Create(&Context{
-					Name:     "notoken",
-					APIToken: "",
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: createHelperFunc(&Context{
+				Name:     "notoken",
+				APIToken: "",
+			}),
 		},
 	}
 
@@ -492,6 +476,16 @@ func TestContextManager_Create(t *testing.T) {
 }
 
 func TestContextManager_Update(t *testing.T) {
+	updateHelperFunc := func(rq *ContextUpdateRequest) func(*testing.T, *ContextManager) (*contexts, error) {
+		return func(t *testing.T, manager *ContextManager) (*contexts, error) {
+			_, err := manager.Update(rq)
+			if err != nil {
+				return nil, err
+			}
+			return manager.getContexts()
+		}
+	}
+
 	tests := []ManagerTestCase[*contexts]{
 		{
 			Name:        "update existing context (all fields)",
@@ -506,20 +500,14 @@ func TestContextManager_Update(t *testing.T) {
 				want.Contexts[0].Provider = "newProvider"
 				return want
 			}(),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Update(&ContextUpdateRequest{
-					Name:           ctx1().Name,
-					APIURL:         pointer.Pointer("newAPIURL"),
-					APIToken:       pointer.Pointer("newAPIToken"),
-					DefaultProject: pointer.Pointer("newProject"),
-					Timeout:        pointer.Pointer(time.Duration(100)),
-					Provider:       pointer.Pointer("newProvider"),
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: updateHelperFunc(&ContextUpdateRequest{
+				Name:           ctx1().Name,
+				APIURL:         pointer.Pointer("newAPIURL"),
+				APIToken:       pointer.Pointer("newAPIToken"),
+				DefaultProject: pointer.Pointer("newProject"),
+				Timeout:        pointer.Pointer(time.Duration(100)),
+				Provider:       pointer.Pointer("newProvider"),
+			}),
 		},
 		{
 			Name:        "update with activate flag",
@@ -531,31 +519,19 @@ func TestContextManager_Update(t *testing.T) {
 				ctxs.Contexts[2].IsCurrent = true
 				return ctxs
 			}(),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Update(&ContextUpdateRequest{
-					Name:     ctx3().Name,
-					Activate: true,
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: updateHelperFunc(&ContextUpdateRequest{
+				Name:     ctx3().Name,
+				Activate: true,
+			}),
 		},
 		{
 			Name:        "update non-existent context",
 			FileContent: contextsActiveSetCurrentUnset(),
 			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Update(&ContextUpdateRequest{
-					Name:           "nonexistent",
-					DefaultProject: pointer.Pointer("foo"),
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: updateHelperFunc(&ContextUpdateRequest{
+				Name:           "nonexistent",
+				DefaultProject: pointer.Pointer("foo"),
+			}),
 		},
 		{
 			Name:        "update current context without Name",
@@ -566,33 +542,20 @@ func TestContextManager_Update(t *testing.T) {
 				ctxs.Contexts[0].Provider = "foo"
 				return ctxs
 			}(),
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Update(&ContextUpdateRequest{
-					Name:     "",
-					Provider: pointer.Pointer("foo"),
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: updateHelperFunc(&ContextUpdateRequest{
+				Name:     "",
+				Provider: pointer.Pointer("foo"),
+			}),
 		},
-
 		{
 			Name:        "fail with no current and no Name",
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			wantErr:     errNoActiveContext,
 			want:        nil,
-			Run: func(t *testing.T, manager *ContextManager) (*contexts, error) {
-				_, err := manager.Update(&ContextUpdateRequest{
-					Name:     "",
-					Provider: pointer.Pointer("foo"),
-				})
-				if err != nil {
-					return nil, err
-				}
-				return manager.getContexts()
-			},
+			Run: updateHelperFunc(&ContextUpdateRequest{
+				Name:     "",
+				Provider: pointer.Pointer("foo"),
+			}),
 		},
 	}
 
@@ -950,14 +913,14 @@ func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
 			FileContent: nil,
 			wantErr:     nil,
 			want:        contextsActiveSetCurrentSet(),
-			Run: helperFunc(contextsWithActiveCtx()),
+			Run:         helperFunc(contextsActiveSetCurrentUnset()),
 		},
 		{
 			Name:        "round trip without active context",
 			FileContent: nil,
 			wantErr:     nil,
 			want:        contextsActiveUnsetCurrentUnset(),
-			Run:         helperFunc(contextsNoActiveCtx()),
+			Run:         helperFunc(contextsActiveUnsetCurrentUnset()),
 		},
 		{
 			Name:        "round trip with all optional fields",
