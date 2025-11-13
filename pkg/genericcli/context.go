@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -72,21 +72,21 @@ var (
 	errCreateContextFirst     = errors.New("you need to create a context first")
 )
 
-// contexts contains all configuration contexts
-type contexts struct {
-	CurrentContext  string     `json:"current-context" yaml:"current-context"`
-	PreviousContext string     `json:"previous-context" yaml:"previous-context"`
-	Contexts        []*Context `json:"contexts" yaml:"contexts"`
+// contextConfig contains all configuration contextConfig
+type contextConfig struct {
+	CurrentContext  string     `json:"current-context"`
+	PreviousContext string     `json:"previous-context"`
+	Contexts        []*Context `json:"contexts"`
 }
 
 type Context struct {
-	Name           string         `json:"name" yaml:"name"`
-	APIURL         *string        `json:"api-url,omitempty" yaml:"api-url,omitempty"`
-	APIToken       string         `json:"api-token" yaml:"api-token"`
-	DefaultProject string         `json:"default-project" yaml:"default-project"`
-	Timeout        *time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	Provider       string         `json:"provider" yaml:"provider"`
-	IsCurrent      bool           `json:"-" yaml:"-"`
+	Name           string         `json:"name"`
+	APIURL         *string        `json:"api-url,omitempty"`
+	APIToken       string         `json:"api-token"`
+	DefaultProject string         `json:"default-project"`
+	Timeout        *time.Duration `json:"timeout,omitempty"`
+	Provider       string         `json:"provider"`
+	IsCurrent      bool           `json:"-"`
 }
 
 type ContextManagerConfig struct {
