@@ -143,7 +143,8 @@ func managerTestOne[T any](t *testing.T, tt ManagerTestCase[T]) {
 		require.NoError(t, manager.writeContexts(tt.FileContent))
 
 		if tt.Setup != nil {
-			tt.Setup(t, manager)
+			err := tt.Setup(t, manager)
+			require.NoError(t, err)
 		}
 
 		got, err := tt.Run(t, manager)
@@ -578,11 +579,9 @@ func TestContextManager_Delete(t *testing.T) {
 			Name:        "delete existing context",
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			wantErr:     nil,
-			want: func() *contexts {
-				ctxs := contextsNoActiveCtx()
-				ctxs.Contexts = ctxs.Contexts[:2] //TODO
-				return ctxs
-			}(),
+			want: &contexts{
+				Contexts: []*Context{ctx1(), ctx2()},
+			},
 			Run: deleteHelperFunc(ctx3().Name),
 		},
 		{
