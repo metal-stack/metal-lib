@@ -1130,3 +1130,29 @@ func TestContextManager_SwitchContext(t *testing.T) {
 
 	consoleTest(t, tests)
 }
+
+func TestContextManager_SetProject(t *testing.T) {
+	tests := []consoleTestCase[*contexts]{
+		{
+			Name:        "set project on active context",
+			FileContent: contextsActiveSetCurrentUnset(),
+			Args:        []string{"set-project", "new-project"},
+			wantErr:     nil,
+			wantOut:     fmt.Sprintf("✔ Updated context \"%s\"\n✔ Switched context default project to \"new-project\"\n", ctx1().Name),
+			want: func() *contexts {
+				ctxs := contextsActiveSetCurrentSet()
+				ctxs.Contexts[0].DefaultProject = "new-project"
+				return ctxs
+			}(),
+		},
+		{
+			Name:        "set project with no active context",
+			FileContent: contextsActiveUnsetCurrentUnset(),
+			Args:        []string{"set-project", "new-project"},
+			wantErr:     errNoActiveContext,
+			want:        contextsActiveUnsetCurrentUnset(),
+		},
+	}
+
+	consoleTest(t, tests)
+}
