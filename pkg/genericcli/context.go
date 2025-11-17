@@ -703,8 +703,7 @@ func (c *ContextManager) GetContextCurrentOrDefault() *Context {
 	if !ok {
 		return defaultCtx()
 	}
-	// TODO deep copy?
-	// return ctx.deepCopy()
+	// Deepcopy is not really necessary here as the in-memory representation doesn't live long and every next command just reads the config file again
 	return ctx
 }
 
