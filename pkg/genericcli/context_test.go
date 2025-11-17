@@ -119,7 +119,7 @@ func setupFs(t *testing.T) (afero.Fs, string) {
 
 func newTestManager(t *testing.T) *ContextManager {
 	fs, configDir := setupFs(t)
-	return NewContextManager(&ContextManagerConfig{
+	return NewContextManager(&ContextCmdConfig{
 		BinaryName:      os.Args[0],
 		ConfigDirName:   configDir,
 		ConfigName:      "config.yaml",
@@ -959,7 +959,7 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			fs, configDir := setupFs(t)
-			mgr := NewContextManager(&ContextManagerConfig{
+			mgr := NewContextManager(&ContextCmdConfig{
 				BinaryName:      os.Args[0],
 				ConfigDirName:   configDir,
 				ConfigName:      "config.yaml",
@@ -1005,7 +1005,7 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 	}
 }
 
-func newPrinterFromCLI(c *ContextManagerConfig) printers.Printer {
+func newPrinterFromCLI(c *ContextCmdConfig) printers.Printer {
 	var printer printers.Printer
 
 	switch format := viper.GetString("output-format"); format {
@@ -1046,7 +1046,7 @@ func newPrinterFromCLI(c *ContextManagerConfig) printers.Printer {
 }
 
 func getNewContextCmd(fs afero.Fs, buf io.Writer, configDir string) *cobra.Command {
-	c := &ContextManagerConfig{
+	c := &ContextCmdConfig{
 		ConfigDirName:         configDir,
 		BinaryName:            os.Args[0],
 		Fs:                    fs,

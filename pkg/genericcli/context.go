@@ -71,7 +71,7 @@ type Context struct {
 	IsCurrent      bool           `json:"-"`
 }
 
-type ContextManagerConfig struct {
+type ContextCmdConfig struct {
 	BinaryName    string
 	ConfigName    string
 	ConfigDirName string
@@ -86,7 +86,7 @@ type ContextManagerConfig struct {
 }
 
 type ContextManager struct {
-	cfg *ContextManagerConfig
+	cfg *ContextCmdConfig
 }
 
 type ContextUpdateRequest struct {
@@ -105,7 +105,7 @@ type ContextUpdateRequest struct {
 }
 
 // NewContextCmd creates the context command tree using genericcli
-func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
+func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 	wrapper := NewContextManager(c)
 
 	cmd := NewCmds(&CmdsConfig[
@@ -289,7 +289,7 @@ func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 	return cmd
 }
 
-func NewContextManager(c *ContextManagerConfig) *ContextManager {
+func NewContextManager(c *ContextCmdConfig) *ContextManager {
 	c.ConfigName = cmp.Or(c.ConfigName, string(defaultConfigName))
 	c.Out = cmp.Or(c.Out, io.Writer(os.Stdout))
 	c.In = cmp.Or(c.In, io.Reader(os.Stdin))
@@ -766,7 +766,7 @@ func defaultCtx() *Context {
 	}
 }
 
-func (c *ContextManagerConfig) configPath() (string, error) {
+func (c *ContextCmdConfig) configPath() (string, error) {
 	if viper.IsSet(keyConfig) {
 		return viper.GetString(keyConfig), nil
 	}
@@ -779,7 +779,7 @@ func (c *ContextManagerConfig) configPath() (string, error) {
 	return path.Join(dir, c.ConfigName), nil
 }
 
-func (c *ContextManagerConfig) defaultConfigDirectory() (string, error) {
+func (c *ContextCmdConfig) defaultConfigDirectory() (string, error) {
 	// TODO implement XDG specification?
 	h, err := os.UserHomeDir()
 	if err != nil {
