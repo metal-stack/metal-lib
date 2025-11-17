@@ -167,17 +167,19 @@ func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
 				// If no args are provided, try to use the current context
-				if len(args) == 0 {
-					ctxs, err := wrapper.getContexts()
-					if err != nil {
-						return fmt.Errorf("unable to fetch contexts: %w", err)
-					}
-					if ctxs.CurrentContext == "" {
-						return errNoContextGivenOrActive
-					}
-					args = []string{ctxs.CurrentContext}
+				if len(args) > 0 {
+					return originalRunE(cmd, args)
 				}
-				return originalRunE(cmd, args)
+
+				ctxs, err := wrapper.getContexts()
+				if err != nil {
+					return fmt.Errorf("unable to fetch contexts: %w", err)
+				}
+				if ctxs.CurrentContext == "" {
+					return errNoContextGivenOrActive
+				}
+
+				return originalRunE(cmd, []string{ctxs.CurrentContext})
 			}
 		},
 		ListCmdMutateFn: func(cmd *cobra.Command) {
