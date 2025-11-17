@@ -50,6 +50,8 @@ var (
 	errContextNamesAreUnique  = errors.New("context names must be unique")
 	errExpectedContextSlice   = errors.New("unsupported content: expected []*Context")
 	errCreateContextFirst     = errors.New("you need to create a context first")
+
+	greenCheckMark = color.GreenString("✔") // must be resolved in runtime to make sure terminal supports colors
 )
 
 // contextConfig contains all configuration contextConfig
@@ -337,7 +339,7 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	for _, c := range ctxList {
 		active := ""
 		if c.IsCurrent {
-			active = greenCheckMark()
+			active = greenCheckMark
 		}
 
 		row := []string{active, c.Name, c.Provider, c.DefaultProject}
@@ -393,7 +395,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", greenCheckMark(), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", greenCheckMark, color.GreenString(rq.Name))
 
 	return rq, nil
 }
@@ -443,11 +445,11 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", greenCheckMark(), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", greenCheckMark, color.GreenString(rq.Name))
 	if switched {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
 	} else if rq.IsCurrent {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
 	}
 
 	return ctx, nil
@@ -477,7 +479,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", greenCheckMark(), color.GreenString(name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", greenCheckMark, color.GreenString(name))
 
 	return deletedCtx, nil
 }
@@ -519,7 +521,7 @@ func (c *ContextManager) switchContext(args []string) error {
 	}
 
 	if wantCtxName == ctxs.CurrentContext {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
 		return nil
 	}
 
@@ -539,7 +541,7 @@ func (c *ContextManager) switchContext(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
 
 	return nil
 }
@@ -555,7 +557,7 @@ func (c *ContextManager) setProject(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", greenCheckMark(), color.GreenString(project))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", greenCheckMark, color.GreenString(project))
 
 	return nil
 }
@@ -817,10 +819,4 @@ func getFromViper[T any](key string, getFunc func(string) T) *T {
 		return pointer.Pointer(getFunc(key))
 	}
 	return nil
-}
-
-// greenCheckMark returns a green checkmark string.
-func greenCheckMark() string {
-	// Cannot be a constant due to color.GreenString resolving behaviour at runtime (when color is off it prints normal string, when on it adds color codes)
-	return color.GreenString("✔")
 }
