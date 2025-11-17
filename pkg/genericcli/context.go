@@ -713,42 +713,6 @@ func (c *ContextManager) GetCurrentContext() (*Context, error) {
 	return nil, nil
 }
 
-func DefaultContext(c *ContextManager) (*Context, error) {
-	ctxs, err := c.getContexts()
-	if err != nil {
-		return nil, err
-	}
-
-	ctxName := ctxs.CurrentContext
-	if viper.IsSet(keyContextName) {
-		ctxName = viper.GetString(keyContextName)
-	}
-
-	ctx, ok := ctxs.getByName(ctxName)
-	if ok {
-		return ctx, nil
-	}
-
-	defaultCtx := c.GetContextCurrentOrDefault()
-	defaultCtx.Name = "default"
-
-	if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
-		ctxCurrent.IsCurrent = false
-	}
-	defaultCtx.IsCurrent = true
-	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, defaultCtx.Name
-	ctxs.Contexts = append(ctxs.Contexts, defaultCtx)
-
-	err = c.writeContextConfig(ctxs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save contexts: %w", err)
-	}
-
-	ctx = defaultCtx
-
-	return ctx, nil
-}
-
 func defaultCtx() *Context {
 	return &Context{
 		Name:     DefaultContextName,
