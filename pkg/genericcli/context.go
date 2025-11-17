@@ -337,7 +337,7 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	for _, c := range ctxList {
 		active := ""
 		if c.IsCurrent {
-			active = successCheck()
+			active = greenCheckMark()
 		}
 
 		row := []string{active, c.Name, c.Provider, c.DefaultProject}
@@ -350,19 +350,6 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	}
 
 	return header, rows, nil
-}
-
-// getFromViper is a helper function to set ContextUpdateRequest fields
-func getFromViper[T any](key string, getFunc func(string) T) *T {
-	if viper.IsSet(key) {
-		return pointer.Pointer(getFunc(key))
-	}
-	return nil
-}
-
-// successCheck returns a green checkmark string.
-func successCheck() string {
-	return color.GreenString("✔")
 }
 
 func (c *ContextManager) Get(name string) (*Context, error) {
@@ -406,7 +393,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", successCheck(), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", greenCheckMark(), color.GreenString(rq.Name))
 
 	return rq, nil
 }
@@ -456,11 +443,11 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", successCheck(), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", greenCheckMark(), color.GreenString(rq.Name))
 	if switched {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
 	} else if rq.IsCurrent {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
 	}
 
 	return ctx, nil
@@ -490,7 +477,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", successCheck(), color.GreenString(name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", greenCheckMark(), color.GreenString(name))
 
 	return deletedCtx, nil
 }
@@ -532,7 +519,7 @@ func (c *ContextManager) switchContext(args []string) error {
 	}
 
 	if wantCtxName == ctxs.CurrentContext {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
 		return nil
 	}
 
@@ -552,7 +539,7 @@ func (c *ContextManager) switchContext(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark(), color.GreenString(ctxs.CurrentContext))
 
 	return nil
 }
@@ -568,7 +555,7 @@ func (c *ContextManager) setProject(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", successCheck(), color.GreenString(project))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", greenCheckMark(), color.GreenString(project))
 
 	return nil
 }
@@ -822,4 +809,18 @@ func contextSorter() *multisort.Sorter[*Context] {
 			return multisort.Compare(a.Provider, b.Provider, descending)
 		},
 	}, multisort.Keys{{ID: sortKeyName}})
+}
+
+// getFromViper is a helper function to set ContextUpdateRequest fields
+func getFromViper[T any](key string, getFunc func(string) T) *T {
+	if viper.IsSet(key) {
+		return pointer.Pointer(getFunc(key))
+	}
+	return nil
+}
+
+// greenCheckMark returns a green checkmark string.
+func greenCheckMark() string {
+	// Cannot be a constant due to color.GreenString resolving behaviour at runtime (when color is off it prints normal string, when on it adds color codes)
+	return color.GreenString("✔")
 }
