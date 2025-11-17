@@ -102,19 +102,6 @@ type ContextUpdateRequest struct {
 	Activate bool
 }
 
-// getFromViper is a helper function to set ContextUpdateRequest fields
-func getFromViper[T any](key string, getFunc func(string) T) *T {
-	if viper.IsSet(key) {
-		return pointer.Pointer(getFunc(key))
-	}
-	return nil
-}
-
-// successCheck returns a green checkmark string.
-func successCheck() string {
-	return color.GreenString("✔")
-}
-
 // NewContextCmd creates the context command tree using genericcli
 func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 	wrapper := NewContextManager(c)
@@ -327,151 +314,55 @@ func NewContextManager(c *ContextManagerConfig) *ContextManager {
 	return &ContextManager{cfg: c}
 }
 
-func (c *ContextManager) switchContext(args []string) error {
-	wantCtxName, err := GetExactlyOneArg(args)
-	if err != nil {
-		return err
+// ContextTable returns the table representation of a list of contexts. Used by printers in CLI implementations
+func ContextTable(data any, wide bool) ([]string, [][]string, error) {
+	ctxList, ok := data.([]*Context)
+	if !ok {
+		return nil, nil, errExpectedContextSlice
 	}
 
-	ctxs, err := c.getContexts()
-	if err != nil {
-		return err
+	if len(ctxList) == 0 {
+		return nil, nil, errCreateContextFirst
 	}
 
-	if wantCtxName == ctxs.CurrentContext {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
-		return nil
+	var (
+		header = []string{"", "Name", "Provider", "Default Project"}
+		rows   [][]string
+	)
+
+	if wide {
+		header = append(header, "API URL")
 	}
 
-	if wantCtxName == "-" {
-		if ctxs.PreviousContext == "" {
-			return errNoPreviousContext
+	for _, c := range ctxList {
+		active := ""
+		if c.IsCurrent {
+			active = successCheck()
 		}
-		wantCtxName = ctxs.PreviousContext
-	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
-		return fmt.Errorf("context \"%s\" not found", wantCtxName)
+
+		row := []string{active, c.Name, c.Provider, c.DefaultProject}
+		if wide {
+			url := pointer.SafeDeref(c.APIURL)
+			row = append(row, url)
+		}
+
+		rows = append(rows, row)
 	}
 
-	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
+	return header, rows, nil
+}
 
-	err = c.writeContextConfig(ctxs)
-	if err != nil {
-		return err
+// getFromViper is a helper function to set ContextUpdateRequest fields
+func getFromViper[T any](key string, getFunc func(string) T) *T {
+	if viper.IsSet(key) {
+		return pointer.Pointer(getFunc(key))
 	}
-
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
-
 	return nil
 }
 
-func (c *ContextManager) setProject(args []string) error {
-	project, err := GetExactlyOneArg(args)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.Update(&ContextUpdateRequest{DefaultProject: &project})
-	if err != nil {
-		return err
-	}
-
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", successCheck(), color.GreenString(project))
-
-	return nil
-}
-
-func (c *ContextManager) ContextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	ctxs, err := c.getContexts()
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveError
-	}
-	var names []string
-	for _, ctx := range ctxs.Contexts {
-		names = append(names, ctx.Name)
-	}
-	return names, cobra.ShellCompDirectiveNoFileComp
-}
-
-func (c *ContextManager) writeContextConfig(ctxs *contextConfig) error {
-	if err := ctxs.validate(); err != nil {
-		return err
-	}
-	raw, err := yaml.Marshal(ctxs)
-	if err != nil {
-		return err
-	}
-
-	dest, err := c.cfg.configPath()
-	if err != nil {
-		return err
-	}
-
-	// when path is in the default path, we ensure the directory exists
-	defaultPath, err := c.cfg.defaultConfigDirectory()
-	if err != nil {
-		return fmt.Errorf("failed to get default config directory: %w", err)
-	}
-	if defaultPath == path.Dir(dest) {
-		err = c.cfg.Fs.MkdirAll(defaultPath, 0700)
-		if err != nil {
-			return fmt.Errorf("unable to ensure default config directory: %w", err)
-		}
-	}
-
-	err = afero.WriteFile(c.cfg.Fs, dest, raw, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *ContextManagerConfig) configPath() (string, error) {
-	if viper.IsSet(keyConfig) {
-		return viper.GetString(keyConfig), nil
-	}
-
-	dir, err := c.defaultConfigDirectory()
-	if err != nil {
-		return "", err
-	}
-
-	return path.Join(dir, c.ConfigName), nil
-}
-
-func (c *ContextManagerConfig) defaultConfigDirectory() (string, error) {
-	// TODO implement XDG specification?
-	h, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	return path.Join(h, "."+c.ConfigDirName), nil
-}
-
-func (c *ContextManager) getContexts() (*contextConfig, error) {
-	configPath, err := c.cfg.configPath()
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine config path: %w", err)
-	}
-
-	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return &contextConfig{}, nil
-		}
-
-		return nil, fmt.Errorf("unable to read %s: %w", c.cfg.ConfigName, err)
-	}
-
-	var ctxs contextConfig
-	err = yaml.Unmarshal(raw, &ctxs)
-
-	if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
-		ctxCurrent.IsCurrent = true
-	}
-
-	return &ctxs, err
+// successCheck returns a green checkmark string.
+func successCheck() string {
+	return color.GreenString("✔")
 }
 
 func (c *ContextManager) Get(name string) (*Context, error) {
@@ -617,6 +508,130 @@ func (c *ContextManager) Convert(r *Context) (string, *Context, *ContextUpdateRe
 	}, nil
 }
 
+func (c *ContextManager) ContextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	ctxs, err := c.getContexts()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+	var names []string
+	for _, ctx := range ctxs.Contexts {
+		names = append(names, ctx.Name)
+	}
+	return names, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (c *ContextManager) switchContext(args []string) error {
+	wantCtxName, err := GetExactlyOneArg(args)
+	if err != nil {
+		return err
+	}
+
+	ctxs, err := c.getContexts()
+	if err != nil {
+		return err
+	}
+
+	if wantCtxName == ctxs.CurrentContext {
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
+		return nil
+	}
+
+	if wantCtxName == "-" {
+		if ctxs.PreviousContext == "" {
+			return errNoPreviousContext
+		}
+		wantCtxName = ctxs.PreviousContext
+	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
+		return fmt.Errorf("context \"%s\" not found", wantCtxName)
+	}
+
+	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
+
+	err = c.writeContextConfig(ctxs)
+	if err != nil {
+		return err
+	}
+
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
+
+	return nil
+}
+
+func (c *ContextManager) setProject(args []string) error {
+	project, err := GetExactlyOneArg(args)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Update(&ContextUpdateRequest{DefaultProject: &project})
+	if err != nil {
+		return err
+	}
+
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", successCheck(), color.GreenString(project))
+
+	return nil
+}
+
+func (c *ContextManager) writeContextConfig(ctxs *contextConfig) error {
+	if err := ctxs.validate(); err != nil {
+		return err
+	}
+	raw, err := yaml.Marshal(ctxs)
+	if err != nil {
+		return err
+	}
+
+	dest, err := c.cfg.configPath()
+	if err != nil {
+		return err
+	}
+
+	// when path is in the default path, we ensure the directory exists
+	defaultPath, err := c.cfg.defaultConfigDirectory()
+	if err != nil {
+		return fmt.Errorf("failed to get default config directory: %w", err)
+	}
+	if defaultPath == path.Dir(dest) {
+		err = c.cfg.Fs.MkdirAll(defaultPath, 0700)
+		if err != nil {
+			return fmt.Errorf("unable to ensure default config directory: %w", err)
+		}
+	}
+
+	err = afero.WriteFile(c.cfg.Fs, dest, raw, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ContextManager) getContexts() (*contextConfig, error) {
+	configPath, err := c.cfg.configPath()
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine config path: %w", err)
+	}
+
+	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return &contextConfig{}, nil
+		}
+
+		return nil, fmt.Errorf("unable to read %s: %w", c.cfg.ConfigName, err)
+	}
+
+	var ctxs contextConfig
+	err = yaml.Unmarshal(raw, &ctxs)
+
+	if ctxCurrent, ok := ctxs.getByName(ctxs.CurrentContext); ok {
+		ctxCurrent.IsCurrent = true
+	}
+
+	return &ctxs, err
+}
+
 func (c *Context) GetProject() string {
 	if viper.IsSet(keyProject) {
 		return viper.GetString(keyProject)
@@ -688,30 +703,6 @@ func (cs *contextConfig) getByName(name string) (*Context, bool) {
 	return nil, false
 }
 
-func contextSorter() *multisort.Sorter[*Context] {
-	return multisort.New(multisort.FieldMap[*Context]{
-		sortKeyName: func(a, b *Context, descending bool) multisort.CompareResult {
-			return multisort.Compare(a.Name, b.Name, descending)
-		},
-		sortKeyAPIURL: func(a, b *Context, descending bool) multisort.CompareResult {
-			urlA := pointer.SafeDeref(a.APIURL)
-			urlB := pointer.SafeDeref(b.APIURL)
-			return multisort.Compare(urlA, urlB, descending)
-		},
-		sortKeyDefaultProject: func(a, b *Context, descending bool) multisort.CompareResult {
-			return multisort.Compare(a.DefaultProject, b.DefaultProject, descending)
-		},
-		sortKeyTimeout: func(a, b *Context, descending bool) multisort.CompareResult {
-			timeoutA := pointer.SafeDeref(a.Timeout)
-			timeoutB := pointer.SafeDeref(b.Timeout)
-			return multisort.Compare(timeoutA, timeoutB, descending)
-		},
-		sortKeyProvider: func(a, b *Context, descending bool) multisort.CompareResult {
-			return multisort.Compare(a.Provider, b.Provider, descending)
-		},
-	}, multisort.Keys{{ID: sortKeyName}})
-}
-
 func (c *ContextManager) GetContextCurrentOrDefault() *Context {
 	ctxs, err := c.getContexts()
 	if err != nil {
@@ -724,14 +715,6 @@ func (c *ContextManager) GetContextCurrentOrDefault() *Context {
 	// TODO deep copy?
 	// return ctx.deepCopy()
 	return ctx
-}
-
-func defaultCtx() *Context {
-	return &Context{
-		Name:     DefaultContextName,
-		APIURL:   pointer.PointerOrNil(viper.GetString(keyAPIURL)),
-		APIToken: viper.GetString(keyAPIToken),
-	}
 }
 
 func (c *ContextManager) GetCurrentContext() (*Context, error) {
@@ -784,39 +767,57 @@ func DefaultContext(c *ContextManager) (*Context, error) {
 	return ctx, nil
 }
 
-func ContextTable(data any, wide bool) ([]string, [][]string, error) {
-	ctxList, ok := data.([]*Context)
-	if !ok {
-		return nil, nil, errExpectedContextSlice
+func defaultCtx() *Context {
+	return &Context{
+		Name:     DefaultContextName,
+		APIURL:   pointer.PointerOrNil(viper.GetString(keyAPIURL)),
+		APIToken: viper.GetString(keyAPIToken),
+	}
+}
+
+func (c *ContextManagerConfig) configPath() (string, error) {
+	if viper.IsSet(keyConfig) {
+		return viper.GetString(keyConfig), nil
 	}
 
-	if len(ctxList) == 0 {
-		return nil, nil, errCreateContextFirst
+	dir, err := c.defaultConfigDirectory()
+	if err != nil {
+		return "", err
 	}
 
-	var (
-		header = []string{"", "Name", "Provider", "Default Project"}
-		rows   [][]string
-	)
+	return path.Join(dir, c.ConfigName), nil
+}
 
-	if wide {
-		header = append(header, "API URL")
+func (c *ContextManagerConfig) defaultConfigDirectory() (string, error) {
+	// TODO implement XDG specification?
+	h, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
 	}
 
-	for _, c := range ctxList {
-		active := ""
-		if c.IsCurrent {
-			active = successCheck()
-		}
+	return path.Join(h, "."+c.ConfigDirName), nil
+}
 
-		row := []string{active, c.Name, c.Provider, c.DefaultProject}
-		if wide {
-			url := pointer.SafeDeref(c.APIURL)
-			row = append(row, url)
-		}
-
-		rows = append(rows, row)
-	}
-
-	return header, rows, nil
+func contextSorter() *multisort.Sorter[*Context] {
+	return multisort.New(multisort.FieldMap[*Context]{
+		sortKeyName: func(a, b *Context, descending bool) multisort.CompareResult {
+			return multisort.Compare(a.Name, b.Name, descending)
+		},
+		sortKeyAPIURL: func(a, b *Context, descending bool) multisort.CompareResult {
+			urlA := pointer.SafeDeref(a.APIURL)
+			urlB := pointer.SafeDeref(b.APIURL)
+			return multisort.Compare(urlA, urlB, descending)
+		},
+		sortKeyDefaultProject: func(a, b *Context, descending bool) multisort.CompareResult {
+			return multisort.Compare(a.DefaultProject, b.DefaultProject, descending)
+		},
+		sortKeyTimeout: func(a, b *Context, descending bool) multisort.CompareResult {
+			timeoutA := pointer.SafeDeref(a.Timeout)
+			timeoutB := pointer.SafeDeref(b.Timeout)
+			return multisort.Compare(timeoutA, timeoutB, descending)
+		},
+		sortKeyProvider: func(a, b *Context, descending bool) multisort.CompareResult {
+			return multisort.Compare(a.Provider, b.Provider, descending)
+		},
+	}, multisort.Keys{{ID: sortKeyName}})
 }
