@@ -1153,7 +1153,7 @@ func TestContextManager_SetProject(t *testing.T) {
 			Name:        "set project with no active context",
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			Args:        []string{"set-project", "new-project"},
-			wantErr:     errNoActiveContext,
+			wantErr:     errors.New("no context currently active"),
 			want:        contextsActiveUnsetCurrentUnset(),
 		},
 	}
