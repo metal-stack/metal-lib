@@ -172,7 +172,7 @@ func TestContextManager_Get(t *testing.T) {
 		{
 			Name:        "get non-existent context",
 			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
+			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			want:        nil,
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.Get("nonexistent")
@@ -181,7 +181,7 @@ func TestContextManager_Get(t *testing.T) {
 		{
 			Name:        "get from empty file",
 			FileContent: nil,
-			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
+			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			want:        nil,
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.Get("nonexistent")
@@ -338,7 +338,7 @@ func TestContextManager_DefaultContext(t *testing.T) {
 		{
 			Name:        "no viper override, current context not set, fails",
 			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     fmt.Errorf(errMsgCannotWriteContexts, fmt.Errorf(errMsgBlankContextField, "APIToken")),
+			wantErr:     fmt.Errorf("failed to save contexts: %w", fmt.Errorf("context field \"%s\" cannot be blank", "APIToken")),
 			want:        defaultContextResult{},
 			Setup: func(t *testing.T, manager *ContextManager) error {
 				viper.Reset()
@@ -463,7 +463,7 @@ func TestContextManager_Create(t *testing.T) {
 		{
 			Name:        "create context without token fails",
 			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     fmt.Errorf(errMsgBlankContextField, "APIToken"),
+			wantErr:     fmt.Errorf("context field \"%s\" cannot be blank", "APIToken"),
 			want:        nil,
 			Run: createHelperFunc(&Context{
 				Name:     "notoken",
@@ -527,7 +527,7 @@ func TestContextManager_Update(t *testing.T) {
 		{
 			Name:        "update non-existent context",
 			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
+			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:           "nonexistent",
 				DefaultProject: pointer.Pointer("foo"),
@@ -608,7 +608,7 @@ func TestContextManager_Delete(t *testing.T) {
 		{
 			Name:        "delete non-existent context",
 			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
+			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			want:        nil,
 			Run:         deleteHelperFunc("nonexistent"),
 		},
@@ -645,7 +645,7 @@ func TestContexts_Validate(t *testing.T) {
 					{Name: "", APIToken: "token1"},
 				},
 			},
-			wantErr: fmt.Errorf(errMsgBlankContextField, "Name"),
+			wantErr: fmt.Errorf("context field \"%s\" cannot be blank", "Name"),
 		},
 		{
 			Name: "blank token",
@@ -654,7 +654,7 @@ func TestContexts_Validate(t *testing.T) {
 					{Name: "ctx1", APIToken: ""},
 				},
 			},
-			wantErr: fmt.Errorf(errMsgBlankContextField, "APIToken"),
+			wantErr: fmt.Errorf("context field \"%s\" cannot be blank", "APIToken"),
 		},
 	}
 
@@ -728,7 +728,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 					{Name: "", APIToken: "token1"},
 				},
 			},
-			WantErr: fmt.Errorf(errMsgBlankContextField, "Name"),
+			WantErr: fmt.Errorf("context field \"%s\" cannot be blank", "Name"),
 		},
 		{
 			Name: "fail on blank API token",
@@ -737,7 +737,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 					{Name: "ctx1", APIToken: ""},
 				},
 			},
-			WantErr: fmt.Errorf(errMsgBlankContextField, "APIToken"),
+			WantErr: fmt.Errorf("context field \"%s\" cannot be blank", "APIToken"),
 		},
 		{
 			Name:          "create config directory if in default path",
@@ -1106,7 +1106,7 @@ func TestContextManager_SwitchContext(t *testing.T) {
 			Name:        "switch to non-existent context",
 			FileContent: contextsActiveSetCurrentUnset(),
 			Args:        []string{"nonexistent"},
-			wantErr:     fmt.Errorf(errMsgContextNotFound, "nonexistent"),
+			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			want:        contextsActiveSetCurrentSet(),
 		},
 		{

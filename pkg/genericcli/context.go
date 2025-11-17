@@ -40,26 +40,6 @@ const (
 
 	defaultConfigName  = "config.yaml"
 	DefaultContextName = "default"
-
-	// Success message formats
-	msgContextAlreadyActive = "%s Context \"%s\" is already active\n"
-	msgContextSwitched      = "%s Switched context to \"%s\"\n"
-	msgContextUpdated       = "%s Updated context \"%s\"\n"
-	msgContextAdded         = "%s Added context \"%s\"\n"
-	msgContextRemoved       = "%s Removed context \"%s\"\n"
-	msgProjectSwitched      = "%s Switched context default project to \"%s\"\n"
-
-	// Error message formats
-	errMsgContextNotFound         = "context \"%s\" not found"
-	errMsgCannotGetDefaultDir     = "failed to get default config directory: %w"
-	errMsgCannotEnsureDefaultDir  = "unable to ensure default config directory: %w"
-	errMsgCannotGetConfigPath     = "unable to determine config path: %w"
-	errMsgCannotReadConfig        = "unable to read %s: %w"
-	errMsgCannotFetchContexts     = "unable to fetch contexts: %w"
-	errMsgCannotWriteContexts     = "failed to save contexts: %w"
-	errMsgListCommandNotFound     = "internal: list command not found: %w"
-	errMsgContextConfigIncomplete = "ContextConfig has a required option \"%s\" missing"
-	errMsgBlankContextField       = "context field \"%s\" cannot be blank"
 )
 
 var (
@@ -170,7 +150,7 @@ func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 				if len(args) == 0 {
 					listCmd, _, err := cmd.Find(pointer.WrapInSlice(string(ListCmd)))
 					if err != nil {
-						return fmt.Errorf(errMsgListCommandNotFound, err)
+						return fmt.Errorf("internal: list command not found: %w", err)
 					}
 					return listCmd.RunE(listCmd, []string{})
 				}
@@ -190,7 +170,7 @@ func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 				if len(args) == 0 {
 					ctxs, err := wrapper.getContexts()
 					if err != nil {
-						return fmt.Errorf(errMsgCannotFetchContexts, err)
+						return fmt.Errorf("unable to fetch contexts: %w", err)
 					}
 					if ctxs.CurrentContext == "" {
 						return errNoContextGivenOrActive
@@ -297,7 +277,7 @@ func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxs, err := wrapper.getContexts()
 			if err != nil {
-				return fmt.Errorf(errMsgCannotFetchContexts, err)
+				return fmt.Errorf("unable to fetch contexts: %w", err)
 			}
 			if ctxs.CurrentContext == "" {
 				return errNoActiveContext
@@ -325,7 +305,7 @@ func NewContextManager(c *ContextManagerConfig) *ContextManager {
 	c.Fs = cmp.Or(c.Fs, afero.NewOsFs())
 
 	if c.BinaryName == "" {
-		panic(fmt.Errorf(errMsgContextConfigIncomplete, "BinaryName"))
+		panic(fmt.Errorf("ContextConfig has a required option \"%s\" missing", "BinaryName"))
 	}
 
 	if c.ConfigDirName == "" {
@@ -333,11 +313,11 @@ func NewContextManager(c *ContextManagerConfig) *ContextManager {
 	}
 
 	if c.ListPrinter == nil {
-		panic(fmt.Errorf(errMsgContextConfigIncomplete, "ListPrinter"))
+		panic(fmt.Errorf("ContextConfig has a required option \"%s\" missing", "ListPrinter"))
 	}
 
 	if c.DescribePrinter == nil {
-		panic(fmt.Errorf(errMsgContextConfigIncomplete, "DescribePrinter"))
+		panic(fmt.Errorf("ContextConfig has a required option \"%s\" missing", "DescribePrinter"))
 	}
 
 	// ProjectListCompletion is not crucial so we skip the check
@@ -357,7 +337,7 @@ func (c *ContextManager) switchContext(args []string) error {
 	}
 
 	if wantCtxName == ctxs.CurrentContext {
-		_, _ = fmt.Fprintf(c.cfg.Out, msgContextAlreadyActive, successCheck(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
 		return nil
 	}
 
@@ -367,7 +347,7 @@ func (c *ContextManager) switchContext(args []string) error {
 		}
 		wantCtxName = ctxs.PreviousContext
 	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
-		return fmt.Errorf(errMsgContextNotFound, wantCtxName)
+		return fmt.Errorf("context \"%s\" not found", wantCtxName)
 	}
 
 	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
@@ -377,7 +357,7 @@ func (c *ContextManager) switchContext(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, msgContextSwitched, successCheck(), color.GreenString(ctxs.CurrentContext))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
 
 	return nil
 }
@@ -393,7 +373,7 @@ func (c *ContextManager) setProject(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, msgProjectSwitched, successCheck(), color.GreenString(project))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", successCheck(), color.GreenString(project))
 
 	return nil
 }
@@ -427,12 +407,12 @@ func (c *ContextManager) writeContextConfig(ctxs *contextConfig) error {
 	// when path is in the default path, we ensure the directory exists
 	defaultPath, err := c.cfg.defaultConfigDirectory()
 	if err != nil {
-		return fmt.Errorf(errMsgCannotGetDefaultDir, err)
+		return fmt.Errorf("failed to get default config directory: %w", err)
 	}
 	if defaultPath == path.Dir(dest) {
 		err = c.cfg.Fs.MkdirAll(defaultPath, 0700)
 		if err != nil {
-			return fmt.Errorf(errMsgCannotEnsureDefaultDir, err)
+			return fmt.Errorf("unable to ensure default config directory: %w", err)
 		}
 	}
 
@@ -470,7 +450,7 @@ func (c *ContextManagerConfig) defaultConfigDirectory() (string, error) {
 func (c *ContextManager) getContexts() (*contextConfig, error) {
 	configPath, err := c.cfg.configPath()
 	if err != nil {
-		return nil, fmt.Errorf(errMsgCannotGetConfigPath, err)
+		return nil, fmt.Errorf("unable to determine config path: %w", err)
 	}
 
 	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
@@ -479,7 +459,7 @@ func (c *ContextManager) getContexts() (*contextConfig, error) {
 			return &contextConfig{}, nil
 		}
 
-		return nil, fmt.Errorf(errMsgCannotReadConfig, c.cfg.ConfigName, err)
+		return nil, fmt.Errorf("unable to read %s: %w", c.cfg.ConfigName, err)
 	}
 
 	var ctxs contextConfig
@@ -500,7 +480,7 @@ func (c *ContextManager) Get(name string) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(name)
 	if !ok {
-		return nil, fmt.Errorf(errMsgContextNotFound, name)
+		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
 	return ctx, nil
 }
@@ -533,7 +513,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, msgContextAdded, successCheck(), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", successCheck(), color.GreenString(rq.Name))
 
 	return rq, nil
 }
@@ -553,7 +533,7 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 
 	ctx, ok := ctxs.getByName(rq.Name)
 	if !ok {
-		return nil, fmt.Errorf(errMsgContextNotFound, rq.Name)
+		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
 	}
 
 	if rq.APIURL != nil {
@@ -583,11 +563,11 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, msgContextUpdated, successCheck(), color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", successCheck(), color.GreenString(rq.Name))
 	if switched {
-		_, _ = fmt.Fprintf(c.cfg.Out, msgContextSwitched, successCheck(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
 	} else if rq.Activate {
-		_, _ = fmt.Fprintf(c.cfg.Out, msgContextAlreadyActive, successCheck(), color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
 	}
 
 	return ctx, nil
@@ -601,7 +581,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 
 	deletedCtx := ctxs.delete(name)
 	if deletedCtx == nil {
-		return nil, fmt.Errorf(errMsgContextNotFound, name)
+		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
 
 	if ctxs.CurrentContext == name {
@@ -617,7 +597,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, msgContextRemoved, successCheck(), color.GreenString(name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", successCheck(), color.GreenString(name))
 
 	return deletedCtx, nil
 }
@@ -671,10 +651,10 @@ func (cs *contextConfig) validate() error {
 	for _, context := range cs.Contexts {
 		names[context.Name] = true
 		if context.Name == "" {
-			return fmt.Errorf(errMsgBlankContextField, "Name")
+			return fmt.Errorf("context field \"%s\" cannot be blank", "Name")
 		}
 		if context.APIToken == "" {
-			return fmt.Errorf(errMsgBlankContextField, "APIToken")
+			return fmt.Errorf("context field \"%s\" cannot be blank", "APIToken")
 		}
 	}
 
@@ -794,7 +774,7 @@ func DefaultContext(c *ContextManager) (*Context, error) {
 
 	err = c.writeContextConfig(ctxs)
 	if err != nil {
-		return nil, fmt.Errorf(errMsgCannotWriteContexts, err)
+		return nil, fmt.Errorf("failed to save contexts: %w", err)
 	}
 
 	ctx = defaultCtx
