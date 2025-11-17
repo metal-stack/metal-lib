@@ -43,14 +43,6 @@ const (
 )
 
 var (
-	errNoConfigDirName        = errors.New("no config directory name provided")
-	errNoContextGivenOrActive = errors.New("no context name provided and no context is currently active")
-	errNoActiveContext        = errors.New("no context currently active")
-	errNoPreviousContext      = errors.New("no previous context found")
-	errContextNamesAreUnique  = errors.New("context names must be unique")
-	errExpectedContextSlice   = errors.New("unsupported content: expected []*Context")
-	errCreateContextFirst     = errors.New("you need to create a context first")
-
 	greenCheckMark = color.GreenString("✔") // must be resolved in runtime to make sure terminal supports colors
 )
 
@@ -165,7 +157,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 					return fmt.Errorf("unable to fetch contexts: %w", err)
 				}
 				if ctxs.CurrentContext == "" {
-					return errNoContextGivenOrActive
+					return errors.New("no context name provided and no context is currently active")
 				}
 
 				return originalRunE(cmd, []string{ctxs.CurrentContext})
@@ -271,7 +263,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 				return fmt.Errorf("unable to fetch contexts: %w", err)
 			}
 			if ctxs.CurrentContext == "" {
-				return errNoActiveContext
+				return errors.New("no context currently active")
 			}
 
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
@@ -300,7 +292,7 @@ func NewContextManager(c *ContextCmdConfig) *ContextManager {
 	}
 
 	if c.ConfigDirName == "" {
-		panic(errNoConfigDirName)
+		panic(errors.New("no config directory name provided"))
 	}
 
 	if c.ListPrinter == nil {
@@ -320,11 +312,11 @@ func NewContextManager(c *ContextCmdConfig) *ContextManager {
 func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	ctxList, ok := data.([]*Context)
 	if !ok {
-		return nil, nil, errExpectedContextSlice
+		return nil, nil, errors.New("unsupported content: expected []*Context")
 	}
 
 	if len(ctxList) == 0 {
-		return nil, nil, errCreateContextFirst
+		return nil, nil, errors.New("you need to create a context first")
 	}
 
 	var (
@@ -408,7 +400,7 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 
 	if rq.Name == "" { // defaults to current context if no name is provided
 		if ctxs.CurrentContext == "" {
-			return nil, errNoActiveContext
+			return nil, errors.New("no context currently active")
 		}
 		rq.Name = ctxs.CurrentContext
 	}
@@ -527,7 +519,7 @@ func (c *ContextManager) switchContext(args []string) error {
 
 	if wantCtxName == "-" {
 		if ctxs.PreviousContext == "" {
-			return errNoPreviousContext
+			return errors.New("no previous context found")
 		}
 		wantCtxName = ctxs.PreviousContext
 	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
@@ -667,7 +659,7 @@ func (cs *contextConfig) validate() error {
 	}
 
 	if len(cs.Contexts) != len(names) {
-		return errContextNamesAreUnique
+		return errors.New("context names must be unique")
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package genericcli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -455,7 +456,7 @@ func TestContextManager_Create(t *testing.T) {
 		{
 			Name:        "create duplicate context Name fails",
 			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     errContextNamesAreUnique,
+			wantErr:     errors.New("context names must be unique"),
 			want:        nil,
 			Run: createHelperFunc(&Context{
 				Name:     ctx1().Name,
@@ -552,7 +553,7 @@ func TestContextManager_Update(t *testing.T) {
 		{
 			Name:        "fail with no current and no Name",
 			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     errNoActiveContext,
+			wantErr:     errors.New("no context currently active"),
 			want:        nil,
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:     "",
@@ -638,7 +639,7 @@ func TestContexts_Validate(t *testing.T) {
 					{Name: "ctx1", APIToken: "token2"},
 				},
 			},
-			wantErr: errContextNamesAreUnique,
+			wantErr: errors.New("context names must be unique"),
 		},
 		{
 			Name: "blank Name",
@@ -722,7 +723,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 					{Name: "duplicate", APIToken: "token2"},
 				},
 			},
-			WantErr: errContextNamesAreUnique,
+			WantErr: errors.New("context names must be unique"),
 		},
 		{
 			Name: "fail on blank context name",
@@ -1102,7 +1103,7 @@ func TestContextManager_SwitchContext(t *testing.T) {
 			Name:        "switch to previous when none exists",
 			FileContent: contextsActiveUnsetCurrentUnset(),
 			Args:        []string{"-"},
-			wantErr:     errNoPreviousContext,
+			wantErr:     errors.New("no previous context found"),
 			want:        contextsActiveUnsetCurrentUnset(),
 		},
 		{
