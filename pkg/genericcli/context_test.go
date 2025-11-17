@@ -522,8 +522,8 @@ func TestContextManager_Update(t *testing.T) {
 				return ctxs
 			}(),
 			Run: updateHelperFunc(&ContextUpdateRequest{
-				Name:     ctx3().Name,
-				Activate: true,
+				Name:      ctx3().Name,
+				IsCurrent: true,
 			}),
 		},
 		{

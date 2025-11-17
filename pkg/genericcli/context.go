@@ -99,7 +99,7 @@ type ContextUpdateRequest struct {
 	Provider       *string // Pointer, even though Context.Provider is string
 
 	// Meta-flags for the operation
-	Activate bool
+	IsCurrent bool
 }
 
 // NewContextCmd creates the context command tree using genericcli
@@ -227,7 +227,7 @@ func NewContextCmd(c *ContextManagerConfig) *cobra.Command {
 
 			return &ContextUpdateRequest{
 				Name:           name,
-				Activate:       viper.GetBool(keyActivate),
+				IsCurrent:      viper.GetBool(keyActivate),
 				APIURL:         getFromViper(keyAPIURL, viper.GetString),
 				APIToken:       getFromViper(keyAPIToken, viper.GetString),
 				DefaultProject: getFromViper(keyDefaultProject, viper.GetString),
@@ -446,7 +446,7 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 	}
 
 	var switched bool
-	if rq.Activate && ctxs.CurrentContext != rq.Name {
+	if rq.IsCurrent && ctxs.CurrentContext != rq.Name {
 		ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, rq.Name
 		switched = true
 	}
@@ -459,7 +459,7 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", successCheck(), color.GreenString(rq.Name))
 	if switched {
 		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", successCheck(), color.GreenString(ctxs.CurrentContext))
-	} else if rq.Activate {
+	} else if rq.IsCurrent {
 		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", successCheck(), color.GreenString(ctxs.CurrentContext))
 	}
 
@@ -504,7 +504,7 @@ func (c *ContextManager) Convert(r *Context) (string, *Context, *ContextUpdateRe
 		DefaultProject: &r.DefaultProject,
 		Timeout:        r.Timeout,
 		Provider:       &r.Provider,
-		Activate:       r.IsCurrent,
+		IsCurrent:      r.IsCurrent,
 	}, nil
 }
 
