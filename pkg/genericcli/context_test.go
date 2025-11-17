@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 // ManagerTestCase defines a test case for ContextManager operations
@@ -136,7 +136,9 @@ func managerTest[T any](t *testing.T, tests []ManagerTestCase[T]) {
 			manager := newTestManager(t)
 
 			if test.FileContent == nil {
-				test.FileContent = &contextConfig{}
+				test.FileContent = &contextConfig{
+					Contexts: []*Context{},
+				}
 			}
 			require.NoError(t, manager.writeContextConfig(test.FileContent))
 
@@ -669,6 +671,7 @@ func TestContexts_Validate(t *testing.T) {
 		})
 	}
 }
+
 func TestContextManager_writeContextConfig(t *testing.T) {
 	tests := []struct {
 		Name          string
@@ -691,8 +694,8 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 				var ctxs contextConfig
 				err = yaml.Unmarshal(content, &ctxs)
 				require.NoError(t, err)
-				require.Equal(t, "ctx1", ctxs.CurrentContext)
-				require.Equal(t, "ctx2", ctxs.PreviousContext)
+				require.Equal(t, ctx1().Name, ctxs.CurrentContext)
+				require.Equal(t, ctx2().Name, ctxs.PreviousContext)
 				require.Len(t, ctxs.Contexts, 3)
 			},
 		},
@@ -782,7 +785,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 		{
 			Name: "write contexts with all fields populated",
 			InputContexts: &contextConfig{
-				CurrentContext: "ctx3",
+				CurrentContext: ctx3().Name,
 				Contexts: []*Context{
 					ctx3(), // Has APIURL, Provider, etc.
 				},

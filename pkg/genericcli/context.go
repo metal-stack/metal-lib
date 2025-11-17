@@ -616,7 +616,9 @@ func (c *ContextManager) getContexts() (*contextConfig, error) {
 	raw, err := afero.ReadFile(c.cfg.Fs, configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return &contextConfig{}, nil
+			return &contextConfig{
+				Contexts: []*Context{},
+			}, nil
 		}
 
 		return nil, fmt.Errorf("unable to read %s: %w", c.cfg.ConfigName, err)
