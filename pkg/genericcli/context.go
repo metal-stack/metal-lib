@@ -561,7 +561,6 @@ func (c *ContextManager) writeContextConfig(ctxs *contextConfig) error {
 		return err
 	}
 
-	// when path is in the default path, we ensure the directory exists
 	defaultPath, err := c.cfg.defaultConfigDirectory()
 	if err != nil {
 		return fmt.Errorf("failed to get default config directory: %w", err)
