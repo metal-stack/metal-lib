@@ -30,13 +30,6 @@ const (
 	keyActivate       = "activate"
 	keyProvider       = "provider"
 	keyConfig         = "config"
-	keyContextName    = "context"
-
-	sortKeyName           = keyName
-	sortKeyAPIURL         = keyAPIURL
-	sortKeyDefaultProject = keyDefaultProject
-	sortKeyTimeout        = keyTimeout
-	sortKeyProvider       = keyProvider
 
 	defaultConfigName  = "config.yaml"
 	DefaultContextName = "default"
@@ -746,26 +739,26 @@ func (c *ContextCmdConfig) defaultConfigDirectory() (string, error) {
 
 func contextSorter() *multisort.Sorter[*Context] {
 	return multisort.New(multisort.FieldMap[*Context]{
-		sortKeyName: func(a, b *Context, descending bool) multisort.CompareResult {
+		keyName: func(a, b *Context, descending bool) multisort.CompareResult {
 			return multisort.Compare(a.Name, b.Name, descending)
 		},
-		sortKeyAPIURL: func(a, b *Context, descending bool) multisort.CompareResult {
+		keyAPIURL: func(a, b *Context, descending bool) multisort.CompareResult {
 			urlA := pointer.SafeDeref(a.APIURL)
 			urlB := pointer.SafeDeref(b.APIURL)
 			return multisort.Compare(urlA, urlB, descending)
 		},
-		sortKeyDefaultProject: func(a, b *Context, descending bool) multisort.CompareResult {
+		keyDefaultProject: func(a, b *Context, descending bool) multisort.CompareResult {
 			return multisort.Compare(a.DefaultProject, b.DefaultProject, descending)
 		},
-		sortKeyTimeout: func(a, b *Context, descending bool) multisort.CompareResult {
+		keyTimeout: func(a, b *Context, descending bool) multisort.CompareResult {
 			timeoutA := pointer.SafeDeref(a.Timeout)
 			timeoutB := pointer.SafeDeref(b.Timeout)
 			return multisort.Compare(timeoutA, timeoutB, descending)
 		},
-		sortKeyProvider: func(a, b *Context, descending bool) multisort.CompareResult {
+		keyProvider: func(a, b *Context, descending bool) multisort.CompareResult {
 			return multisort.Compare(a.Provider, b.Provider, descending)
 		},
-	}, multisort.Keys{{ID: sortKeyName}})
+	}, multisort.Keys{{ID: keyName}})
 }
 
 // getFromViper is a helper function to set ContextUpdateRequest fields
