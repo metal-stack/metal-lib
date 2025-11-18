@@ -303,7 +303,7 @@ func TestContextManager_Create(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			return manager.getContexts()
+			return manager.getContextConfig()
 		}
 	}
 
@@ -366,7 +366,7 @@ func TestContextManager_Update(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			return manager.getContexts()
+			return manager.getContextConfig()
 		}
 	}
 
@@ -453,7 +453,7 @@ func TestContextManager_Delete(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			return manager.getContexts()
+			return manager.getContextConfig()
 		}
 	}
 
@@ -712,7 +712,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 	}
 }
 
-func TestContextManager_getContexts(t *testing.T) {
+func TestContextManager_getContextsConfig(t *testing.T) {
 	tests := []ManagerTestCase[*contextConfig]{
 		{
 			Name:        "read existing contexts && IsCurrent is set",
@@ -720,7 +720,7 @@ func TestContextManager_getContexts(t *testing.T) {
 			wantErr:     nil,
 			want:        contextsActiveSetCurrentSet(),
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
-				return manager.getContexts()
+				return manager.getContextConfig()
 			},
 		},
 		{
@@ -731,7 +731,7 @@ func TestContextManager_getContexts(t *testing.T) {
 				Contexts: []*Context{},
 			},
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
-				return manager.getContexts()
+				return manager.getContextConfig()
 			},
 		},
 		{
@@ -740,7 +740,7 @@ func TestContextManager_getContexts(t *testing.T) {
 			wantErr:     nil,
 			want:        contextsActiveUnsetCurrentUnset(),
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
-				return manager.getContexts()
+				return manager.getContextConfig()
 			},
 		},
 		{
@@ -757,7 +757,7 @@ func TestContextManager_getContexts(t *testing.T) {
 				Contexts:       []*Context{current(ctx3())},
 			},
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
-				return manager.getContexts()
+				return manager.getContextConfig()
 			},
 		},
 		{ // TODO do we need to fail here?
@@ -772,7 +772,7 @@ func TestContextManager_getContexts(t *testing.T) {
 				Contexts:       ctxList(),
 			},
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
-				return manager.getContexts()
+				return manager.getContextConfig()
 			},
 		},
 	}
@@ -780,14 +780,14 @@ func TestContextManager_getContexts(t *testing.T) {
 	managerTest(t, tests)
 }
 
-func TestContextManager_writeContexts_getContexts_RoundTrip(t *testing.T) {
+func TestContextManager_writeContexts_getContextsConfig_RoundTrip(t *testing.T) {
 	helperFunc := func(ctxs *contextConfig) func(*testing.T, *ContextManager) (*contextConfig, error) {
 		return func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 			err := manager.writeContextConfig(ctxs)
 			if err != nil {
 				return nil, err
 			}
-			return manager.getContexts()
+			return manager.getContextConfig()
 		}
 	}
 	tests := []ManagerTestCase[*contextConfig]{
@@ -878,7 +878,7 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 				t.Errorf("Diff = %s", diff)
 			}
 
-			result, err := mgr.getContexts()
+			result, err := mgr.getContextConfig()
 			require.NoError(t, err)
 			if diff := cmp.Diff(test.want, result); diff != "" {
 				t.Errorf("Diff = %s", diff)
