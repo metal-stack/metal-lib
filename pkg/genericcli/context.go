@@ -145,7 +145,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 					return originalRunE(cmd, args)
 				}
 
-				ctxs, err := wrapper.getContexts()
+				ctxs, err := wrapper.getContextConfig()
 				if err != nil {
 					return fmt.Errorf("unable to fetch contexts: %w", err)
 				}
@@ -251,7 +251,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 		Short: "print the active context name",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxs, err := wrapper.getContexts()
+			ctxs, err := wrapper.getContextConfig()
 			if err != nil {
 				return fmt.Errorf("unable to fetch contexts: %w", err)
 			}
@@ -340,7 +340,7 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 }
 
 func (c *ContextManager) Get(name string) (*Context, error) {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ func (c *ContextManager) Get(name string) (*Context, error) {
 }
 
 func (c *ContextManager) List() ([]*Context, error) {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +362,7 @@ func (c *ContextManager) List() ([]*Context, error) {
 }
 
 func (c *ContextManager) Create(rq *Context) (*Context, error) {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +386,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 }
 
 func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -441,7 +441,7 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 }
 
 func (c *ContextManager) Delete(name string) (*Context, error) {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -483,7 +483,7 @@ func (c *ContextManager) Convert(r *Context) (string, *Context, *ContextUpdateRe
 }
 
 func (c *ContextManager) ContextListCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -500,7 +500,7 @@ func (c *ContextManager) switchContext(args []string) error {
 		return err
 	}
 
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return err
 	}
@@ -581,7 +581,7 @@ func (c *ContextManager) writeContextConfig(ctxs *contextConfig) error {
 	return nil
 }
 
-func (c *ContextManager) getContexts() (*contextConfig, error) {
+func (c *ContextManager) getContextConfig() (*contextConfig, error) {
 	configPath, err := c.cfg.configPath()
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine config path: %w", err)
@@ -680,7 +680,7 @@ func (cs *contextConfig) getByName(name string) (*Context, bool) {
 }
 
 func (c *ContextManager) GetContextCurrentOrDefault() *Context {
-	ctxs, err := c.getContexts()
+	ctxs, err := c.getContextConfig()
 	if err != nil {
 		return defaultCtx()
 	}
