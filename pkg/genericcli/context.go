@@ -391,11 +391,17 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	if rq.Name == "" { // defaults to current context if no name is provided
+	switch rq.Name {
+	case "": // defaults to current context if no name is provided
 		if ctxs.CurrentContext == "" {
 			return nil, errors.New("no context currently active")
 		}
 		rq.Name = ctxs.CurrentContext
+	case "-":
+		if ctxs.PreviousContext == "" {
+			return nil, errors.New("no previous context found")
+		}
+		rq.Name = ctxs.PreviousContext
 	}
 
 	ctx, ok := ctxs.getByName(rq.Name)
@@ -403,20 +409,27 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		return nil, fmt.Errorf("context \"%s\" not found", rq.Name)
 	}
 
+	var updated bool
+
 	if rq.APIURL != nil {
 		ctx.APIURL = rq.APIURL
+		updated = true
 	}
 	if rq.APIToken != nil {
 		ctx.APIToken = *rq.APIToken
+		updated = true
 	}
 	if rq.DefaultProject != nil {
 		ctx.DefaultProject = *rq.DefaultProject
+		updated = true
 	}
 	if rq.Timeout != nil {
 		ctx.Timeout = rq.Timeout
+		updated = true
 	}
 	if rq.Provider != nil {
 		ctx.Provider = *rq.Provider
+		updated = true
 	}
 
 	var switched bool
@@ -430,7 +443,9 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", greenCheckMark, color.GreenString(rq.Name))
+	if updated {
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", greenCheckMark, color.GreenString(rq.Name))
+	}
 	if switched {
 		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
 	} else if rq.IsCurrent {
@@ -500,35 +515,11 @@ func (c *ContextManager) switchContext(args []string) error {
 		return err
 	}
 
-	ctxs, err := c.getContextConfig()
-	if err != nil {
-		return err
-	}
-
-	if wantCtxName == ctxs.CurrentContext {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
-		return nil
-	}
-
-	if wantCtxName == "-" {
-		if ctxs.PreviousContext == "" {
-			return errors.New("no previous context found")
-		}
-		wantCtxName = ctxs.PreviousContext
-	} else if _, ok := ctxs.getByName(wantCtxName); !ok {
-		return fmt.Errorf("context \"%s\" not found", wantCtxName)
-	}
-
-	ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, wantCtxName
-
-	err = c.writeContextConfig(ctxs)
-	if err != nil {
-		return err
-	}
-
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
-
-	return nil
+	_, err = c.Update(&ContextUpdateRequest{
+		Name:      wantCtxName,
+		IsCurrent: true,
+	})
+	return err
 }
 
 func (c *ContextManager) setProject(args []string) error {
