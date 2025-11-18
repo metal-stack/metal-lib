@@ -446,7 +446,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	deletedCtx := ctxs.delete(name)
+	deletedCtx := ctxs.remove(name)
 	if deletedCtx == nil {
 		return nil, fmt.Errorf("context \"%s\" not found", name)
 	}
@@ -658,7 +658,7 @@ func (cs *contextConfig) validate() error {
 	return nil
 }
 
-func (cs *contextConfig) delete(name string) *Context {
+func (cs *contextConfig) remove(name string) *Context {
 	var deletedCtx *Context
 	cs.Contexts = slices.DeleteFunc(cs.Contexts, func(ctx *Context) bool {
 		if ctx.Name == name {
