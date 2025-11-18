@@ -91,14 +91,14 @@ type ContextUpdateRequest struct {
 
 // NewContextCmd creates the context command tree using genericcli
 func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
-	wrapper := NewContextManager(c)
+	mgr := NewContextManager(c)
 
 	cmd := NewCmds(&CmdsConfig[
 		*Context,
 		*ContextUpdateRequest,
 		*Context,
 	]{
-		GenericCLI:      NewGenericCLI(wrapper),
+		GenericCLI:      NewGenericCLI(mgr),
 		BinaryName:      c.BinaryName,
 		Singular:        "context",
 		Plural:          "contexts",
@@ -131,7 +131,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 
 				// '$ BinaryName context -' or '$ BinaryName context <name>' should behave like 'switch'
 				// Now we can only have one arg thanks to cobra.MaximumNArgs(1) above
-				return wrapper.switchContext(args)
+				return mgr.switchContext(args)
 			}
 		},
 		DescribeCmdMutateFn: func(cmd *cobra.Command) {
@@ -145,7 +145,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 					return originalRunE(cmd, args)
 				}
 
-				ctxs, err := wrapper.getContextConfig()
+				ctxs, err := mgr.getContextConfig()
 				if err != nil {
 					return fmt.Errorf("unable to fetch contexts: %w", err)
 				}
@@ -183,12 +183,12 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 
 			Must(cmd.RegisterFlagCompletionFunc(keyDefaultProject, c.ProjectListCompletion))
 
-			cmd.ValidArgsFunction = wrapper.ContextListCompletion
+			cmd.ValidArgsFunction = mgr.ContextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
 		DeleteCmdMutateFn: func(cmd *cobra.Command) {
-			cmd.ValidArgsFunction = wrapper.ContextListCompletion
+			cmd.ValidArgsFunction = mgr.ContextListCompletion
 
 			cmd.Args = cobra.ExactArgs(1)
 		},
@@ -231,9 +231,9 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 		Aliases: []string{"set", "sw"},
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return wrapper.switchContext(args)
+			return mgr.switchContext(args)
 		},
-		ValidArgsFunction: wrapper.ContextListCompletion,
+		ValidArgsFunction: mgr.ContextListCompletion,
 	}
 
 	setProjectCmd := &cobra.Command{
@@ -241,7 +241,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "set the default project to operate on for cli commands",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return wrapper.setProject(args)
+			return mgr.setProject(args)
 		},
 		ValidArgsFunction: c.ProjectListCompletion,
 	}
@@ -251,7 +251,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 		Short: "print the active context name",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxs, err := wrapper.getContextConfig()
+			ctxs, err := mgr.getContextConfig()
 			if err != nil {
 				return fmt.Errorf("unable to fetch contexts: %w", err)
 			}
@@ -262,7 +262,7 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
 			return err
 		},
-		ValidArgsFunction: wrapper.ContextListCompletion,
+		ValidArgsFunction: mgr.ContextListCompletion,
 	}
 
 	cmd.AddCommand(
