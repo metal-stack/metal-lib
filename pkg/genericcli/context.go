@@ -33,10 +33,8 @@ const (
 
 	defaultConfigName  = "config.yaml"
 	DefaultContextName = "default"
-)
 
-var (
-	greenCheckMark = color.GreenString("✔") // must be resolved in runtime to make sure terminal supports colors
+	checkMarkChar = "✔"
 )
 
 // contextConfig contains all configuration contextConfig
@@ -324,7 +322,7 @@ func ContextTable(data any, wide bool) ([]string, [][]string, error) {
 	for _, c := range ctxList {
 		active := ""
 		if c.IsCurrent {
-			active = greenCheckMark
+			active = color.GreenString(checkMarkChar)
 		}
 
 		row := []string{active, c.Name, c.Provider, c.DefaultProject}
@@ -380,7 +378,7 @@ func (c *ContextManager) Create(rq *Context) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", greenCheckMark, color.GreenString(rq.Name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Added context \"%s\"\n", color.GreenString(checkMarkChar), color.GreenString(rq.Name))
 
 	return rq, nil
 }
@@ -444,12 +442,12 @@ func (c *ContextManager) Update(rq *ContextUpdateRequest) (*Context, error) {
 	}
 
 	if updated {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", greenCheckMark, color.GreenString(rq.Name))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Updated context \"%s\"\n", color.GreenString(checkMarkChar), color.GreenString(rq.Name))
 	}
 	if switched {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context to \"%s\"\n", color.GreenString(checkMarkChar), color.GreenString(ctxs.CurrentContext))
 	} else if rq.IsCurrent {
-		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", greenCheckMark, color.GreenString(ctxs.CurrentContext))
+		_, _ = fmt.Fprintf(c.cfg.Out, "%s Context \"%s\" is already active\n", color.GreenString(checkMarkChar), color.GreenString(ctxs.CurrentContext))
 	}
 
 	return ctx, nil
@@ -479,7 +477,7 @@ func (c *ContextManager) Delete(name string) (*Context, error) {
 		return nil, err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", greenCheckMark, color.GreenString(name))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Removed context \"%s\"\n", color.GreenString(checkMarkChar), color.GreenString(name))
 
 	return deletedCtx, nil
 }
@@ -533,7 +531,7 @@ func (c *ContextManager) setProject(args []string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", greenCheckMark, color.GreenString(project))
+	_, _ = fmt.Fprintf(c.cfg.Out, "%s Switched context default project to \"%s\"\n", color.GreenString(checkMarkChar), color.GreenString(project))
 
 	return nil
 }
