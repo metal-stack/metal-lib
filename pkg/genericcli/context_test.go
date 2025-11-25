@@ -22,24 +22,24 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// ManagerTestCase defines a test case for ContextManager operations
-type ManagerTestCase[T any] struct {
-	Name        string
-	FileContent *contextConfig
-	Setup       func(t *testing.T, manager *ContextManager) error
-	Run         func(t *testing.T, manager *ContextManager) (T, error)
-	wantErr     error
-	want        T
+// contextManagerTestCase defines a test case for ContextManager operations
+type contextManagerTestCase[T any] struct {
+	Name          string
+	ConfigContent *contextConfig
+	Setup         func(t *testing.T, manager *ContextManager) error
+	Run           func(t *testing.T, manager *ContextManager) (T, error)
+	wantErr       error
+	want          T
 }
 
-func ctx1() *Context {
+func ctxMinimal() *Context {
 	return &Context{
 		Name:     "ctx1",
 		APIToken: "token1",
 	}
 }
 
-func ctx2() *Context {
+func ctxWithProvider() *Context {
 	return &Context{
 		Name:     "ctx2",
 		APIToken: "token2",
@@ -47,7 +47,7 @@ func ctx2() *Context {
 	}
 }
 
-func ctx3() *Context {
+func ctxFull() *Context {
 	return &Context{
 		Name:           "ctx3",
 		APIURL:         pointer.Pointer("http://foo.bar"),
@@ -67,13 +67,13 @@ func ctxNew() *Context {
 
 func ctxList() []*Context {
 	return []*Context{
-		ctx1(),
-		ctx2(),
-		ctx3(),
+		ctxMinimal(),
+		ctxWithProvider(),
+		ctxFull(),
 	}
 }
 
-func contextsActiveUnsetCurrentUnset() *contextConfig {
+func contextConfigWithActiveUnsetCurrentUnset() *contextConfig {
 	return &contextConfig{
 		CurrentContext:  "",
 		PreviousContext: "",
@@ -81,7 +81,7 @@ func contextsActiveUnsetCurrentUnset() *contextConfig {
 	}
 }
 
-func contextsActiveSetCurrentUnset() *contextConfig {
+func contextConfigWithActiveSetCurrentUnset() *contextConfig {
 	list := ctxList()
 	return &contextConfig{
 		CurrentContext:  list[0].Name,
@@ -90,9 +90,9 @@ func contextsActiveSetCurrentUnset() *contextConfig {
 	}
 }
 
-func contextsActiveSetCurrentSet() *contextConfig {
+func contextConfigWithActiveSetCurrentSet() *contextConfig {
 	list := ctxList()
-	current(list[0])
+	markAsCurrent(list[0])
 	return &contextConfig{
 		CurrentContext:  list[0].Name,
 		PreviousContext: list[1].Name,
@@ -100,7 +100,7 @@ func contextsActiveSetCurrentSet() *contextConfig {
 	}
 }
 
-func current(ctx *Context) *Context {
+func markAsCurrent(ctx *Context) *Context {
 	ctx.IsCurrent = true
 	return ctx
 }
@@ -110,10 +110,6 @@ func setupFs(t *testing.T) (afero.Fs, string) {
 	homeDir := "/home/testuser"
 	configDir := path.Join(homeDir, ".test-config")
 
-	// Mock home directory
-	// os.Setenv("HOME", homeDir)
-
-	// Create config directory
 	require.NoError(t, fs.MkdirAll(configDir, 0755))
 	return fs, configDir
 }
@@ -131,17 +127,17 @@ func newTestManager(t *testing.T) *ContextManager {
 	})
 }
 
-func managerTest[T any](t *testing.T, tests []ManagerTestCase[T]) {
+func runManagerTests[T any](t *testing.T, tests []contextManagerTestCase[T]) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			manager := newTestManager(t)
 
-			if test.FileContent == nil {
-				test.FileContent = &contextConfig{
+			if test.ConfigContent == nil {
+				test.ConfigContent = &contextConfig{
 					Contexts: []*Context{},
 				}
 			}
-			require.NoError(t, manager.writeContextConfig(test.FileContent))
+			require.NoError(t, manager.writeContextConfig(test.ConfigContent))
 
 			if test.Setup != nil {
 				err := test.Setup(t, manager)
@@ -162,138 +158,138 @@ func managerTest[T any](t *testing.T, tests []ManagerTestCase[T]) {
 }
 
 func TestContextManager_Get(t *testing.T) {
-	tests := []ManagerTestCase[*Context]{
+	tests := []contextManagerTestCase[*Context]{
 		{
-			Name:        "get existing context",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
-			want:        ctx1(),
+			Name:          "get existing context",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
+			want:          ctxMinimal(),
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
-				return manager.Get(ctx1().Name)
+				return manager.Get(ctxMinimal().Name)
 			},
 		},
 		{
-			Name:        "get non-existent context",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
-			want:        nil,
+			Name:          "get non-existent context",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       fmt.Errorf("context \"%s\" not found", "nonexistent"),
+			want:          nil,
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.Get("nonexistent")
 			},
 		},
 		{
-			Name:        "get from empty file",
-			FileContent: nil,
-			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
-			want:        nil,
+			Name:          "get from empty file",
+			ConfigContent: nil,
+			wantErr:       fmt.Errorf("context \"%s\" not found", "nonexistent"),
+			want:          nil,
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.Get("nonexistent")
 			},
 		},
 		{
-			Name:        "get active context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
-			want:        current(ctx1()),
+			Name:          "get active context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
+			want:          markAsCurrent(ctxMinimal()),
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
-				return manager.Get(ctx1().Name)
+				return manager.Get(ctxMinimal().Name)
 			},
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContextManager_GetCurrentContext(t *testing.T) {
-	tests := []ManagerTestCase[*Context]{
+	tests := []contextManagerTestCase[*Context]{
 		{
-			Name:        "current is set",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
-			want:        current(ctx1()),
+			Name:          "current is set",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
+			want:          markAsCurrent(ctxMinimal()),
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetCurrentContext()
 			},
 		},
 		{
-			Name:        "current is not set",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
-			want:        nil,
+			Name:          "current is not set",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
+			want:          nil,
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetCurrentContext()
 			},
 		},
 		{
-			Name:        "empty file",
-			FileContent: nil,
-			wantErr:     nil,
-			want:        nil,
+			Name:          "empty file",
+			ConfigContent: nil,
+			wantErr:       nil,
+			want:          nil,
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetCurrentContext()
 			},
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 func TestContextManager_GetContextCurrentOrDefault(t *testing.T) {
-	tests := []ManagerTestCase[*Context]{
+	tests := []contextManagerTestCase[*Context]{
 		{
-			Name:        "current is set",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
-			want:        current(ctx1()),
+			Name:          "current is set",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
+			want:          markAsCurrent(ctxMinimal()),
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetContextCurrentOrDefault(), nil
 			},
 		},
 		{
-			Name:        "current is not set",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
-			want:        defaultCtx(),
+			Name:          "current is not set",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
+			want:          defaultCtx(),
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetContextCurrentOrDefault(), nil
 			},
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContextManager_List(t *testing.T) {
-	tests := []ManagerTestCase[[]*Context]{
+	tests := []contextManagerTestCase[[]*Context]{
 		{
-			Name:        "no active contexts",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
-			want:        contextsActiveUnsetCurrentUnset().Contexts,
+			Name:          "no active contexts",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
+			want:          contextConfigWithActiveUnsetCurrentUnset().Contexts,
 			Run: func(t *testing.T, manager *ContextManager) ([]*Context, error) {
 				return manager.List()
 			},
 		},
 		{
-			Name:        "active context is present",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
-			want:        contextsActiveSetCurrentSet().Contexts,
+			Name:          "active context is present",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
+			want:          contextConfigWithActiveSetCurrentSet().Contexts,
 			Run: func(t *testing.T, manager *ContextManager) ([]*Context, error) {
 				return manager.List()
 			},
 		},
 		{
-			Name:        "list from empty file",
-			FileContent: nil,
-			wantErr:     nil,
-			want:        []*Context{},
+			Name:          "list from empty file",
+			ConfigContent: nil,
+			wantErr:       nil,
+			want:          []*Context{},
 			Run: func(t *testing.T, manager *ContextManager) ([]*Context, error) {
 				return manager.List()
 			},
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContextManager_Create(t *testing.T) {
@@ -307,48 +303,48 @@ func TestContextManager_Create(t *testing.T) {
 		}
 	}
 
-	tests := []ManagerTestCase[*contextConfig]{
+	tests := []contextManagerTestCase[*contextConfig]{
 		{
-			Name:        "first context auto-activates",
-			FileContent: nil,
-			wantErr:     nil,
+			Name:          "first context auto-activates",
+			ConfigContent: nil,
+			wantErr:       nil,
 			want: &contextConfig{
-				CurrentContext:  ctx1().Name,
+				CurrentContext:  ctxMinimal().Name,
 				PreviousContext: "",
-				Contexts:        []*Context{current(ctx1())},
+				Contexts:        []*Context{markAsCurrent(ctxMinimal())},
 			},
-			Run: createHelperFunc(ctx1()),
+			Run: createHelperFunc(ctxMinimal()),
 		},
 		{
-			Name:        "create context with activate flag",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "create context with activate flag",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
-				new := current(ctxNew())
+				ctxs := contextConfigWithActiveSetCurrentUnset()
+				new := markAsCurrent(ctxNew())
 
 				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, new.Name
 				ctxs.Contexts = append(ctxs.Contexts, new)
 
 				return ctxs
 			}(),
-			Run: createHelperFunc(current(ctxNew())),
+			Run: createHelperFunc(markAsCurrent(ctxNew())),
 		},
 		{
-			Name:        "create duplicate context Name fails",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     errors.New("context names must be unique"),
-			want:        nil,
+			Name:          "create duplicate context Name fails",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       errors.New("context names must be unique"),
+			want:          nil,
 			Run: createHelperFunc(&Context{
-				Name:     ctx1().Name,
+				Name:     ctxMinimal().Name,
 				APIToken: "token123",
 			}),
 		},
 		{
-			Name:        "create context without token fails",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     fmt.Errorf("context field \"%s\" cannot be blank", "APIToken"),
-			want:        nil,
+			Name:          "create context without token fails",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       fmt.Errorf("context field \"%s\" cannot be blank", "APIToken"),
+			want:          nil,
 			Run: createHelperFunc(&Context{
 				Name:     "notoken",
 				APIToken: "",
@@ -356,7 +352,7 @@ func TestContextManager_Create(t *testing.T) {
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContextManager_Update(t *testing.T) {
@@ -370,13 +366,13 @@ func TestContextManager_Update(t *testing.T) {
 		}
 	}
 
-	tests := []ManagerTestCase[*contextConfig]{
+	tests := []contextManagerTestCase[*contextConfig]{
 		{
-			Name:        "update existing context (all fields)",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "update existing context (all fields)",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
 			want: func() *contextConfig {
-				want := contextsActiveUnsetCurrentUnset()
+				want := contextConfigWithActiveUnsetCurrentUnset()
 				want.Contexts[0].APIURL = pointer.Pointer("newAPIURL")
 				want.Contexts[0].APIToken = "newAPIToken"
 				want.Contexts[0].DefaultProject = "newProject"
@@ -385,7 +381,7 @@ func TestContextManager_Update(t *testing.T) {
 				return want
 			}(),
 			Run: updateHelperFunc(&ContextUpdateRequest{
-				Name:           ctx1().Name,
+				Name:           ctxMinimal().Name,
 				APIURL:         pointer.Pointer("newAPIURL"),
 				APIToken:       pointer.Pointer("newAPIToken"),
 				DefaultProject: pointer.Pointer("newProject"),
@@ -394,35 +390,35 @@ func TestContextManager_Update(t *testing.T) {
 			}),
 		},
 		{
-			Name:        "update with activate flag",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "update with activate flag",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
-				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx3().Name
+				ctxs := contextConfigWithActiveSetCurrentUnset()
+				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxFull().Name
 				ctxs.Contexts[2].IsCurrent = true
 				return ctxs
 			}(),
 			Run: updateHelperFunc(&ContextUpdateRequest{
-				Name:      ctx3().Name,
+				Name:      ctxFull().Name,
 				IsCurrent: true,
 			}),
 		},
 		{
-			Name:        "update non-existent context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
+			Name:          "update non-existent context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:           "nonexistent",
 				DefaultProject: pointer.Pointer("foo"),
 			}),
 		},
 		{
-			Name:        "update current context without Name",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "update current context without Name",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentSet()
+				ctxs := contextConfigWithActiveSetCurrentSet()
 				ctxs.Contexts[0].Provider = "foo"
 				return ctxs
 			}(),
@@ -432,10 +428,10 @@ func TestContextManager_Update(t *testing.T) {
 			}),
 		},
 		{
-			Name:        "fail with no current and no Name",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     errors.New("no context currently active"),
-			want:        nil,
+			Name:          "fail with no current and no Name",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       errors.New("no context currently active"),
+			want:          nil,
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:     "",
 				Provider: pointer.Pointer("foo"),
@@ -443,7 +439,7 @@ func TestContextManager_Update(t *testing.T) {
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContextManager_Delete(t *testing.T) {
@@ -457,48 +453,48 @@ func TestContextManager_Delete(t *testing.T) {
 		}
 	}
 
-	tests := []ManagerTestCase[*contextConfig]{
+	tests := []contextManagerTestCase[*contextConfig]{
 		{
-			Name:        "delete existing context",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "delete existing context",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
 			want: &contextConfig{
-				Contexts: []*Context{ctx1(), ctx2()},
+				Contexts: []*Context{ctxMinimal(), ctxWithProvider()},
 			},
-			Run: deleteHelperFunc(ctx3().Name),
+			Run: deleteHelperFunc(ctxFull().Name),
 		},
 		{
-			Name:        "delete active context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "delete active context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
+				ctxs := contextConfigWithActiveSetCurrentUnset()
 				ctxs.Contexts = ctxs.Contexts[1:]
 				ctxs.CurrentContext = ""
 				return ctxs
 			}(),
-			Run: deleteHelperFunc(ctx1().Name),
+			Run: deleteHelperFunc(ctxMinimal().Name),
 		},
 		{
-			Name:        "delete previous context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
+			Name:          "delete previous context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
 			want: &contextConfig{
-				CurrentContext: ctx1().Name,
-				Contexts:       []*Context{current(ctx1()), ctx3()},
+				CurrentContext: ctxMinimal().Name,
+				Contexts:       []*Context{markAsCurrent(ctxMinimal()), ctxFull()},
 			},
-			Run: deleteHelperFunc(ctx2().Name),
+			Run: deleteHelperFunc(ctxWithProvider().Name),
 		},
 		{
-			Name:        "delete non-existent context",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
-			want:        nil,
-			Run:         deleteHelperFunc("nonexistent"),
+			Name:          "delete non-existent context",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       fmt.Errorf("context \"%s\" not found", "nonexistent"),
+			want:          nil,
+			Run:           deleteHelperFunc("nonexistent"),
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContexts_Validate(t *testing.T) {
@@ -509,7 +505,7 @@ func TestContexts_Validate(t *testing.T) {
 	}{
 		{
 			Name:    "valid contexts",
-			ctxs:    contextsActiveUnsetCurrentUnset(),
+			ctxs:    contextConfigWithActiveUnsetCurrentUnset(),
 			wantErr: nil,
 		},
 		{
@@ -563,7 +559,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 	}{
 		{
 			Name:          "write valid contexts",
-			InputContexts: contextsActiveSetCurrentUnset(),
+			InputContexts: contextConfigWithActiveSetCurrentUnset(),
 			WantErr:       nil,
 			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
 				exists, err := afero.Exists(fs, configPath)
@@ -576,8 +572,8 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 				var ctxs contextConfig
 				err = yaml.Unmarshal(content, &ctxs)
 				require.NoError(t, err)
-				require.Equal(t, ctx1().Name, ctxs.CurrentContext)
-				require.Equal(t, ctx2().Name, ctxs.PreviousContext)
+				require.Equal(t, ctxMinimal().Name, ctxs.CurrentContext)
+				require.Equal(t, ctxWithProvider().Name, ctxs.PreviousContext)
 				require.Len(t, ctxs.Contexts, 3)
 			},
 		},
@@ -626,7 +622,7 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 		},
 		{
 			Name:          "create config directory if in default path",
-			InputContexts: contextsActiveUnsetCurrentUnset(),
+			InputContexts: contextConfigWithActiveUnsetCurrentUnset(),
 			WantErr:       nil,
 			ValidateFile: func(t *testing.T, fs afero.Fs, configPath string) {
 				// Verify directory was created
@@ -645,9 +641,9 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 			InputContexts: &contextConfig{
 				CurrentContext: "ctx2",
 				Contexts: []*Context{
-					ctx3(),
-					ctx1(),
-					ctx2(),
+					ctxFull(),
+					ctxMinimal(),
+					ctxWithProvider(),
 				},
 			},
 			WantErr: nil,
@@ -667,9 +663,9 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 		{
 			Name: "write contexts with all fields populated",
 			InputContexts: &contextConfig{
-				CurrentContext: ctx3().Name,
+				CurrentContext: ctxFull().Name,
 				Contexts: []*Context{
-					ctx3(), // Has APIURL, Provider, etc.
+					ctxFull(),
 				},
 			},
 			WantErr: nil,
@@ -713,20 +709,20 @@ func TestContextManager_writeContextConfig(t *testing.T) {
 }
 
 func TestContextManager_getContextsConfig(t *testing.T) {
-	tests := []ManagerTestCase[*contextConfig]{
+	tests := []contextManagerTestCase[*contextConfig]{
 		{
-			Name:        "read existing contexts && IsCurrent is set",
-			FileContent: contextsActiveSetCurrentUnset(),
-			wantErr:     nil,
-			want:        contextsActiveSetCurrentSet(),
+			Name:          "read existing contexts && IsCurrent is set",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			wantErr:       nil,
+			want:          contextConfigWithActiveSetCurrentSet(),
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContextConfig()
 			},
 		},
 		{
-			Name:        "read empty config returns empty contexts",
-			FileContent: nil,
-			wantErr:     nil,
+			Name:          "read empty config returns empty contexts",
+			ConfigContent: nil,
+			wantErr:       nil,
 			want: &contextConfig{
 				Contexts: []*Context{},
 			},
@@ -735,34 +731,34 @@ func TestContextManager_getContextsConfig(t *testing.T) {
 			},
 		},
 		{
-			Name:        "read contexts without active context",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			wantErr:     nil,
-			want:        contextsActiveUnsetCurrentUnset(),
+			Name:          "read contexts without active context",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			wantErr:       nil,
+			want:          contextConfigWithActiveUnsetCurrentUnset(),
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContextConfig()
 			},
 		},
 		{
 			Name: "preserve all context fields",
-			FileContent: &contextConfig{
-				CurrentContext: ctx3().Name,
+			ConfigContent: &contextConfig{
+				CurrentContext: ctxFull().Name,
 				Contexts: []*Context{
-					ctx3(), // Has all optional fields
+					ctxFull(),
 				},
 			},
 			wantErr: nil,
 			want: &contextConfig{
-				CurrentContext: ctx3().Name,
-				Contexts:       []*Context{current(ctx3())},
+				CurrentContext: ctxFull().Name,
+				Contexts:       []*Context{markAsCurrent(ctxFull())},
 			},
 			Run: func(t *testing.T, manager *ContextManager) (*contextConfig, error) {
 				return manager.getContextConfig()
 			},
 		},
-		{ // TODO do we need to fail here?
+		{
 			Name: "handle current context not in list",
-			FileContent: &contextConfig{
+			ConfigContent: &contextConfig{
 				CurrentContext: "nonexistent",
 				Contexts:       ctxList(),
 			},
@@ -777,7 +773,7 @@ func TestContextManager_getContextsConfig(t *testing.T) {
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 func TestContextManager_writeContexts_getContextsConfig_RoundTrip(t *testing.T) {
@@ -790,54 +786,54 @@ func TestContextManager_writeContexts_getContextsConfig_RoundTrip(t *testing.T) 
 			return manager.getContextConfig()
 		}
 	}
-	tests := []ManagerTestCase[*contextConfig]{
+	tests := []contextManagerTestCase[*contextConfig]{
 		{
-			Name:        "round trip with active context",
-			FileContent: nil,
-			wantErr:     nil,
-			want:        contextsActiveSetCurrentSet(),
-			Run:         helperFunc(contextsActiveSetCurrentUnset()),
+			Name:          "round trip with active context",
+			ConfigContent: nil,
+			wantErr:       nil,
+			want:          contextConfigWithActiveSetCurrentSet(),
+			Run:           helperFunc(contextConfigWithActiveSetCurrentUnset()),
 		},
 		{
-			Name:        "round trip without active context",
-			FileContent: nil,
-			wantErr:     nil,
-			want:        contextsActiveUnsetCurrentUnset(),
-			Run:         helperFunc(contextsActiveUnsetCurrentUnset()),
+			Name:          "round trip without active context",
+			ConfigContent: nil,
+			wantErr:       nil,
+			want:          contextConfigWithActiveUnsetCurrentUnset(),
+			Run:           helperFunc(contextConfigWithActiveUnsetCurrentUnset()),
 		},
 		{
-			Name:        "round trip with all optional fields",
-			FileContent: nil,
-			wantErr:     nil,
+			Name:          "round trip with all optional fields",
+			ConfigContent: nil,
+			wantErr:       nil,
 			want: &contextConfig{
-				CurrentContext:  ctx3().Name,
-				PreviousContext: ctx1().Name,
-				Contexts:        []*Context{current(ctx3()), ctx1()},
+				CurrentContext:  ctxFull().Name,
+				PreviousContext: ctxMinimal().Name,
+				Contexts:        []*Context{markAsCurrent(ctxFull()), ctxMinimal()},
 			},
 			Run: helperFunc(&contextConfig{
-				CurrentContext:  ctx3().Name,
-				PreviousContext: ctx1().Name,
-				Contexts:        []*Context{ctx3(), ctx1()},
+				CurrentContext:  ctxFull().Name,
+				PreviousContext: ctxMinimal().Name,
+				Contexts:        []*Context{ctxFull(), ctxMinimal()},
 			}),
 		},
 	}
 
-	managerTest(t, tests)
+	runManagerTests(t, tests)
 }
 
 // Console tests below
 
 type consoleTestCase[T any] struct {
-	Name        string
-	FileContent *contextConfig
-	Args        []string
-	Setup       func(t *testing.T, cmd *cobra.Command) error
-	wantErr     error
-	wantOut     string
-	want        T
+	Name          string
+	ConfigContent *contextConfig
+	Args          []string
+	Setup         func(t *testing.T, cmd *cobra.Command) error
+	wantErr       error
+	wantOut       string
+	want          T
 }
 
-func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
+func runConsoleTests[T any](t *testing.T, tests []consoleTestCase[T]) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			fs, configDir := setupFs(t)
@@ -851,10 +847,10 @@ func consoleTest[T any](t *testing.T, tests []consoleTestCase[T]) {
 				DescribePrinter: func() printers.Printer { return printers.NewYAMLPrinter() },
 			})
 
-			if test.FileContent == nil {
-				test.FileContent = &contextConfig{}
+			if test.ConfigContent == nil {
+				test.ConfigContent = &contextConfig{}
 			}
-			require.NoError(t, mgr.writeContextConfig(test.FileContent))
+			require.NoError(t, mgr.writeContextConfig(test.ConfigContent))
 
 			buf := &bytes.Buffer{}
 			cmd := getNewContextCmd(fs, io.Writer(buf), configDir)
@@ -947,97 +943,97 @@ func getNewContextCmd(fs afero.Fs, buf io.Writer, configDir string) *cobra.Comma
 func TestContextManager_SwitchContext(t *testing.T) {
 	tests := []consoleTestCase[*contextConfig]{
 		{
-			Name:        "switch to existing context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			Args:        []string{ctx3().Name},
-			wantErr:     nil,
+			Name:          "switch to existing context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			Args:          []string{ctxFull().Name},
+			wantErr:       nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
-				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctx3().Name
+				ctxs := contextConfigWithActiveSetCurrentUnset()
+				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxFull().Name
 				ctxs.Contexts[2].IsCurrent = true
 				return ctxs
 			}(),
-			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctx3().Name),
+			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctxFull().Name),
 		},
 		{
-			Name:        "switch to the same context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			Args:        []string{ctx1().Name},
-			wantErr:     nil,
-			want:        contextsActiveSetCurrentSet(),
-			wantOut:     fmt.Sprintf("✔ Context \"%s\" is already active\n", ctx1().Name),
+			Name:          "switch to the same context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			Args:          []string{ctxMinimal().Name},
+			wantErr:       nil,
+			want:          contextConfigWithActiveSetCurrentSet(),
+			wantOut:       fmt.Sprintf("✔ Context \"%s\" is already active\n", ctxMinimal().Name),
 		},
 		{
-			Name:        "switch to previous context using dash",
-			FileContent: contextsActiveSetCurrentUnset(),
-			Args:        []string{"-"},
-			wantErr:     nil,
+			Name:          "switch to previous context using dash",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			Args:          []string{"-"},
+			wantErr:       nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
+				ctxs := contextConfigWithActiveSetCurrentUnset()
 				ctxs.PreviousContext, ctxs.CurrentContext = ctxs.CurrentContext, ctxs.PreviousContext
 				ctxs.Contexts[1].IsCurrent = true
 				return ctxs
 			}(),
-			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctx2().Name),
+			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctxWithProvider().Name),
 		},
 		{
-			Name:        "switch to previous when none exists",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			Args:        []string{"-"},
-			wantErr:     errors.New("no previous context found"),
-			want:        contextsActiveUnsetCurrentUnset(),
+			Name:          "switch to previous when none exists",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			Args:          []string{"-"},
+			wantErr:       errors.New("no previous context found"),
+			want:          contextConfigWithActiveUnsetCurrentUnset(),
 		},
 		{
-			Name:        "switch to non-existent context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			Args:        []string{"nonexistent"},
-			wantErr:     fmt.Errorf("context \"%s\" not found", "nonexistent"),
-			want:        contextsActiveSetCurrentSet(),
+			Name:          "switch to non-existent context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			Args:          []string{"nonexistent"},
+			wantErr:       fmt.Errorf("context \"%s\" not found", "nonexistent"),
+			want:          contextConfigWithActiveSetCurrentSet(),
 		},
 		{
 			Name: "switch to previous when no context is active",
-			FileContent: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
+			ConfigContent: func() *contextConfig {
+				ctxs := contextConfigWithActiveSetCurrentUnset()
 				ctxs.CurrentContext = ""
 				return ctxs
 			}(),
 			Args:    []string{"-"},
 			wantErr: nil,
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentUnset()
-				ctxs.PreviousContext, ctxs.CurrentContext = "", ctx2().Name
+				ctxs := contextConfigWithActiveSetCurrentUnset()
+				ctxs.PreviousContext, ctxs.CurrentContext = "", ctxWithProvider().Name
 				ctxs.Contexts[1].IsCurrent = true
 				return ctxs
 			}(),
-			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctx2().Name),
+			wantOut: fmt.Sprintf("✔ Switched context to \"%s\"\n", ctxWithProvider().Name),
 		},
 	}
 
-	consoleTest(t, tests)
+	runConsoleTests(t, tests)
 }
 
 func TestContextManager_SetProject(t *testing.T) {
 	tests := []consoleTestCase[*contextConfig]{
 		{
-			Name:        "set project on active context",
-			FileContent: contextsActiveSetCurrentUnset(),
-			Args:        []string{"set-project", "new-project"},
-			wantErr:     nil,
-			wantOut:     fmt.Sprintf("✔ Updated context \"%s\"\n✔ Switched context default project to \"new-project\"\n", ctx1().Name),
+			Name:          "set project on active context",
+			ConfigContent: contextConfigWithActiveSetCurrentUnset(),
+			Args:          []string{"set-project", "new-project"},
+			wantErr:       nil,
+			wantOut:       fmt.Sprintf("✔ Updated context \"%s\"\n✔ Switched context default project to \"new-project\"\n", ctxMinimal().Name),
 			want: func() *contextConfig {
-				ctxs := contextsActiveSetCurrentSet()
+				ctxs := contextConfigWithActiveSetCurrentSet()
 				ctxs.Contexts[0].DefaultProject = "new-project"
 				return ctxs
 			}(),
 		},
 		{
-			Name:        "set project with no active context",
-			FileContent: contextsActiveUnsetCurrentUnset(),
-			Args:        []string{"set-project", "new-project"},
-			wantErr:     errors.New("no context currently active"),
-			want:        contextsActiveUnsetCurrentUnset(),
+			Name:          "set project with no active context",
+			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
+			Args:          []string{"set-project", "new-project"},
+			wantErr:       errors.New("no context currently active"),
+			want:          contextConfigWithActiveUnsetCurrentUnset(),
 		},
 	}
 
-	consoleTest(t, tests)
+	runConsoleTests(t, tests)
 }
