@@ -212,6 +212,19 @@ func TestContextManager_GetCurrentContext(t *testing.T) {
 			},
 		},
 		{
+			Name: "current is non-existent",
+			ConfigContent: func() *contextConfig {
+				c := contextConfigWithActiveUnsetCurrentUnset()
+				c.CurrentContext = "nonexistent"
+				return c
+			}(),
+			wantErr: nil,
+			want:    nil,
+			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
+				return manager.GetCurrentContext()
+			},
+		},
+		{
 			Name:          "current is not set",
 			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
 			wantErr:       nil,
@@ -249,6 +262,19 @@ func TestContextManager_GetContextCurrentOrDefault(t *testing.T) {
 			ConfigContent: contextConfigWithActiveUnsetCurrentUnset(),
 			wantErr:       nil,
 			want:          defaultCtx(),
+			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
+				return manager.GetContextCurrentOrDefault(), nil
+			},
+		},
+		{
+			Name: "current is to non-existent context",
+			ConfigContent: func() *contextConfig {
+				c := contextConfigWithActiveUnsetCurrentUnset()
+				c.CurrentContext = "nonexistent"
+				return c
+			}(),
+			wantErr: nil,
+			want:    defaultCtx(),
 			Run: func(t *testing.T, manager *ContextManager) (*Context, error) {
 				return manager.GetContextCurrentOrDefault(), nil
 			},
