@@ -249,15 +249,14 @@ func NewContextCmd(c *ContextCmdConfig) *cobra.Command {
 		Short: "print the active context name",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxs, err := mgr.getContextConfig()
+			current, err := mgr.GetCurrentContext()
 			if err != nil {
 				return fmt.Errorf("unable to fetch contexts: %w", err)
 			}
-			if ctxs.CurrentContext == "" {
-				return errors.New("no context currently active")
-			}
 
-			_, err = fmt.Fprint(c.Out, ctxs.CurrentContext)
+			if current != nil {
+				_, err = fmt.Fprint(c.Out, current)
+			}
 			return err
 		},
 		ValidArgsFunction: mgr.ContextListCompletion,
