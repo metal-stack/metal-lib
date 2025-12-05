@@ -80,7 +80,7 @@ type Entry struct {
 	Error any `json:"error"`
 }
 
-func (e *Entry) prepareForNextPhase() {
+func (e *Entry) PrepareForNextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()
 	e.Body = nil
