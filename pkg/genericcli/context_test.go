@@ -13,7 +13,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -50,10 +49,10 @@ func ctxWithProvider() *Context {
 func ctxFull() *Context {
 	return &Context{
 		Name:           "ctx3",
-		APIURL:         pointer.Pointer("http://foo.bar"),
+		APIURL:         new("http://foo.bar"),
 		APIToken:       "token3",
 		DefaultProject: "project3",
-		Timeout:        pointer.Pointer(time.Duration(100)),
+		Timeout:        new(time.Duration(100)),
 		Provider:       "foo",
 	}
 }
@@ -399,20 +398,20 @@ func TestContextManager_Update(t *testing.T) {
 			wantErr:       nil,
 			want: func() *contextConfig {
 				want := contextConfigWithActiveUnsetCurrentUnset()
-				want.Contexts[0].APIURL = pointer.Pointer("newAPIURL")
+				want.Contexts[0].APIURL = new("newAPIURL")
 				want.Contexts[0].APIToken = "newAPIToken"
 				want.Contexts[0].DefaultProject = "newProject"
-				want.Contexts[0].Timeout = pointer.Pointer(time.Duration(100))
+				want.Contexts[0].Timeout = new(time.Duration(100))
 				want.Contexts[0].Provider = "newProvider"
 				return want
 			}(),
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:           ctxMinimal().Name,
-				APIURL:         pointer.Pointer("newAPIURL"),
-				APIToken:       pointer.Pointer("newAPIToken"),
-				DefaultProject: pointer.Pointer("newProject"),
-				Timeout:        pointer.Pointer(time.Duration(100)),
-				Provider:       pointer.Pointer("newProvider"),
+				APIURL:         new("newAPIURL"),
+				APIToken:       new("newAPIToken"),
+				DefaultProject: new("newProject"),
+				Timeout:        new(time.Duration(100)),
+				Provider:       new("newProvider"),
 			}),
 		},
 		{
@@ -436,7 +435,7 @@ func TestContextManager_Update(t *testing.T) {
 			wantErr:       fmt.Errorf("context \"%s\" not found", "nonexistent"),
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:           "nonexistent",
-				DefaultProject: pointer.Pointer("foo"),
+				DefaultProject: new("foo"),
 			}),
 		},
 		{
@@ -450,7 +449,7 @@ func TestContextManager_Update(t *testing.T) {
 			}(),
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:     "",
-				Provider: pointer.Pointer("foo"),
+				Provider: new("foo"),
 			}),
 		},
 		{
@@ -460,7 +459,7 @@ func TestContextManager_Update(t *testing.T) {
 			want:          nil,
 			Run: updateHelperFunc(&ContextUpdateRequest{
 				Name:     "",
-				Provider: pointer.Pointer("foo"),
+				Provider: new("foo"),
 			}),
 		},
 	}

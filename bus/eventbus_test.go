@@ -21,8 +21,8 @@ func TestTimeoutWrapper_FailTimeout(t *testing.T) {
 
 	twTimeout := timeoutWrapper{
 		timeout: 100 * time.Millisecond,
-		msgType: reflect.TypeOf(e),
-		recv: func(i interface{}) error {
+		msgType: reflect.TypeFor[*nsq.Message](),
+		recv: func(i any) error {
 			time.Sleep(150 * time.Millisecond)
 			return nil
 		},
@@ -56,8 +56,8 @@ func TestTimeoutWrapper_FailTimeoutWithTimeoutFunc(t *testing.T) {
 
 			return nil
 		},
-		msgType: reflect.TypeOf(messageFromQueue),
-		recv: func(i interface{}) error {
+		msgType: reflect.TypeFor[*nsq.Message](),
+		recv: func(i any) error {
 			time.Sleep(150 * time.Millisecond)
 			return nil
 		},
@@ -80,8 +80,8 @@ func TestTimeoutWrapper_OK_NoTimeout(t *testing.T) {
 
 	twTimeout := timeoutWrapper{
 		timeout: 0,
-		msgType: reflect.TypeOf(e),
-		recv: func(i interface{}) error {
+		msgType: reflect.TypeFor[*nsq.Message](),
+		recv: func(i any) error {
 			time.Sleep(500 * time.Millisecond)
 			return nil
 		},
@@ -101,8 +101,8 @@ func TestTimeoutWrapper_OK(t *testing.T) {
 
 	twTimeout := timeoutWrapper{
 		timeout: 50 * time.Millisecond,
-		msgType: reflect.TypeOf(e),
-		recv: func(i interface{}) error {
+		msgType: reflect.TypeFor[*nsq.Message](),
+		recv: func(i any) error {
 			time.Sleep(30 * time.Millisecond)
 			return nil
 		},
@@ -126,8 +126,8 @@ func TestTimeoutWrapper_TTL_OK(t *testing.T) {
 
 	twTimeout := timeoutWrapper{
 		ttl:     1 * time.Second,
-		msgType: reflect.TypeOf(e),
-		recv: func(i interface{}) error {
+		msgType: reflect.TypeFor[*nsq.Message](),
+		recv: func(i any) error {
 			result = "ok"
 			return nil
 		},
@@ -149,8 +149,8 @@ func TestTimeoutWrapper_TTL_DropMessage(t *testing.T) {
 
 	twTimeout := timeoutWrapper{
 		ttl:     100 * time.Millisecond,
-		msgType: reflect.TypeOf(e),
-		recv: func(i interface{}) error {
+		msgType: reflect.TypeFor[*nsq.Message](),
+		recv: func(i any) error {
 
 			// message must be dropped
 			t.Fatal("message must be dropped but was received!")
@@ -196,7 +196,7 @@ func TestNewPublisher(t *testing.T) {
 
 	ch := make(chan int)
 
-	err = consumer.MustRegister("topic42", "node42").Consume(Msg{}, func(m interface{}) error {
+	err = consumer.MustRegister("topic42", "node42").Consume(Msg{}, func(m any) error {
 		fmt.Printf("received %v\n", m)
 		ch <- 1
 		return nil
@@ -220,7 +220,7 @@ func TestNewConsumer(t *testing.T) {
 		t.Error(err)
 	}
 	err = c.MustRegister("topic", "channel").
-		Consume(Msg{}, func(i interface{}) error {
+		Consume(Msg{}, func(i any) error {
 			return nil
 		}, 1)
 
@@ -236,7 +236,7 @@ func TestNewConsumerLogLevel(t *testing.T) {
 	}
 	err = c.With(LogLevel(Debug)).
 		MustRegister("topic", "channel").
-		Consume(Msg{}, func(i interface{}) error {
+		Consume(Msg{}, func(i any) error {
 			return nil
 		}, 1)
 
@@ -252,7 +252,7 @@ func TestNewConsumerWithTimeout(t *testing.T) {
 	}
 	err = c.With(LogLevel(Debug)).
 		MustRegister("topic", "channel").
-		Consume(Msg{}, func(i interface{}) error {
+		Consume(Msg{}, func(i any) error {
 			// receiver, event handler
 			return nil
 		}, 1,
@@ -274,7 +274,7 @@ func TestNewConsumer_MultipleConsumeError(t *testing.T) {
 	cr := c.With(LogLevel(Debug)).
 		MustRegister("topic", "channel")
 
-	err = cr.Consume(Msg{}, func(i interface{}) error {
+	err = cr.Consume(Msg{}, func(i any) error {
 		// receiver, event handler
 		return nil
 	}, 1,
@@ -289,7 +289,7 @@ func TestNewConsumer_MultipleConsumeError(t *testing.T) {
 
 	// second
 
-	err = cr.Consume(Msg{}, func(i interface{}) error {
+	err = cr.Consume(Msg{}, func(i any) error {
 		// receiver, event handler
 		return nil
 	}, 1,

@@ -15,7 +15,6 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/httperrors"
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/metal-stack/metal-lib/rest"
 	"github.com/metal-stack/security"
 	"google.golang.org/grpc"
@@ -34,7 +33,7 @@ func UnaryServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(fu
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create unary server interceptor")
 	}
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		if !shouldAudit(info.FullMethod) {
 			return handler(ctx, req)
 		}
@@ -99,7 +98,7 @@ func StreamServerInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(f
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create stream server interceptor")
 	}
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if !shouldAudit(info.FullMethod) {
 			return handler(srv, ss)
 		}
@@ -375,7 +374,7 @@ func NewConnectInterceptor(a Auditing, logger *slog.Logger, shouldAudit func(ful
 }
 
 type (
-	httpFilterOpt interface{}
+	httpFilterOpt any
 
 	httpFilterErrorCallback struct {
 		callback func(err error, response *restful.Response)
@@ -502,7 +501,7 @@ func HttpFilter(a Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful
 		chain.ProcessFilter(request, response)
 
 		auditReqContext.Phase = EntryPhaseResponse
-		auditReqContext.StatusCode = pointer.Pointer(response.StatusCode())
+		auditReqContext.StatusCode = new(response.StatusCode())
 		strBody := bufferedResponseWriter.Content()
 		body := []byte(strBody)
 		err = json.Unmarshal(body, &auditReqContext.Body)
@@ -556,17 +555,16 @@ func (s grpcServerStreamWithContext) Context() context.Context {
 }
 
 func statusCodeFromGrpcOrConnect(err error) *int {
-	var connectErr *connect.Error
-	if errors.As(err, &connectErr) {
-		return pointer.Pointer(int(connectErr.Code()))
+	if connectErr, ok := errors.AsType[*connect.Error](err); ok {
+		return new(int(connectErr.Code()))
 	}
 
 	s, ok := status.FromError(err)
 	if !ok {
-		return pointer.Pointer(int(codes.Unknown))
+		return new(int(codes.Unknown))
 	}
 
-	return pointer.Pointer(int(s.Code()))
+	return new(int(s.Code()))
 }
 
 type ConnectError struct {

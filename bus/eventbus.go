@@ -32,7 +32,7 @@ type PublisherConfig struct {
 }
 
 // A Receiver is a callback when you receive messages from the bus.
-type Receiver func(interface{}) error
+type Receiver func(any) error
 
 // A Consumer wraps the base configuration for the nsq connection
 type Consumer struct {
@@ -159,14 +159,14 @@ func (cr *ConsumerRegistration) Output(num int, msg string) error {
 }
 
 type TimeoutError struct {
-	event interface{}
+	event any
 }
 
 func (t TimeoutError) Error() string {
 	return "Timeout processing event"
 }
 
-func (t TimeoutError) Event() interface{} {
+func (t TimeoutError) Event() any {
 	return t.event
 }
 
@@ -255,7 +255,7 @@ func TTL(ttl time.Duration) crOption {
 }
 
 // Consume a message
-func (cr *ConsumerRegistration) Consume(paramProto interface{}, recv Receiver, concurrent int, opts ...crOption) error {
+func (cr *ConsumerRegistration) Consume(paramProto any, recv Receiver, concurrent int, opts ...crOption) error {
 	if cr.connected {
 		return fmt.Errorf("already connected")
 	}
@@ -309,7 +309,7 @@ func (cr *ConsumerRegistration) Close() error {
 // A Publisher is used for event publishing to topics. The fields
 // Publish and CreateTopics can be overwritten to mock this publisher.
 type Publisher interface {
-	Publish(topic string, data interface{}) error
+	Publish(topic string, data any) error
 	CreateTopic(topic string) error
 	Stop()
 }
@@ -345,7 +345,7 @@ func NewPublisher(zlog *slog.Logger, publisherCfg *PublisherConfig) (Publisher, 
 }
 
 // Publish posts the given data as a json string into the topic.
-func (p *nsqPublisher) Publish(topic string, data interface{}) error {
+func (p *nsqPublisher) Publish(topic string, data any) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("cannot marshal data to json: %w", err)

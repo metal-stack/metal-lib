@@ -56,7 +56,6 @@ var invalidGroupTests = []ExpectedErrorTest{
 
 func TestParsegroupInvalid(t *testing.T) {
 	for _, test := range invalidGroupTests {
-		test := test
 		t.Run(test.groupString, func(t *testing.T) {
 
 			_, err := grpr.ParseGroupName(test.groupString)
@@ -133,7 +132,6 @@ var validGroupTests = []ExpectedGroupTest{
 
 func TestParseGroupValid(t *testing.T) {
 	for _, test := range validGroupTests {
-		test := test
 		t.Run(test.groupString, func(t *testing.T) {
 			result, err := grpr.ParseGroupName(test.groupString)
 
@@ -350,7 +348,6 @@ func TestParseUXValid(t *testing.T) {
 
 func runGroupContextExpectedErrorTests(t *testing.T, tests []ExpectedErrorTest, parseFn GroupContextParseFunc) {
 	for _, test := range tests {
-		test := test
 		t.Run(test.groupString, func(t *testing.T) {
 			_, err := parseFn(test.groupString)
 			require.Error(t, err, test.groupString)
@@ -361,7 +358,6 @@ func runGroupContextExpectedErrorTests(t *testing.T, tests []ExpectedErrorTest, 
 
 func runGroupContextExpectedResultTests(t *testing.T, tests []ExpectedGroupContextTest, parseFn GroupContextParseFunc) {
 	for _, test := range tests {
-		test := test
 		t.Run(test.groupString, func(t *testing.T) {
 			result, err := parseFn(test.groupString)
 			require.NoError(t, err, test.groupString)
@@ -398,7 +394,6 @@ func TestGroupEncodeName(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := grpr.GroupEncodeName(tt.args.name); got != tt.want {
 				t.Errorf("GroupEncodeName() = %v, want %v", got, tt.want)
@@ -423,7 +418,6 @@ func TestGroupEncodeNames(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := grpr.GroupEncodeNames(tt.args.names); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GroupEncodeNames() = %v, want %v", got, tt.want)
@@ -455,7 +449,6 @@ func TestFromStringToFullGroupStringRoundtrip(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := grpr.ParseGroupName(tt.name)
 			if (err != nil) != tt.wantErr {
@@ -499,7 +492,6 @@ func TestGroup_ToOnBehalfGroupString(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			g := &Group{
 				AppPrefix:      tt.fields.AppPrefix,

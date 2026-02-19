@@ -60,7 +60,6 @@ func TestTagMap_Contains(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tm := NewTagMap(tt.labels)
 			if got := tm.Contains(tt.tag, tt.value); got != tt.want {
@@ -110,7 +109,6 @@ func TestTagMap_Value(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tm := NewTagMap(tt.labels)
 			gotValue, got := tm.Value(tt.key)
@@ -163,7 +161,6 @@ func TestTagMap_Get(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tm := NewTagMap(tt.labels)
 			gotValue, err := tm.Get(tt.key)

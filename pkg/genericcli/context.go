@@ -750,7 +750,7 @@ func contextSorter() *multisort.Sorter[*Context] {
 // getFromViper is a helper function to set ContextUpdateRequest fields
 func getFromViper[T any](key string, getFunc func(string) T) *T {
 	if viper.IsSet(key) {
-		return pointer.Pointer(getFunc(key))
+		return new(getFunc(key))
 	}
 	return nil
 }

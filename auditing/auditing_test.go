@@ -13,7 +13,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/httperrors"
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -43,7 +42,7 @@ var (
 				ForwardedFor: "127.0.0.1",
 				RemoteAddr:   "10.0.0.0",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000000",
-				StatusCode:   pointer.Pointer(200),
+				StatusCode:   new(200),
 				Error:        nil,
 			},
 			{
@@ -60,7 +59,7 @@ var (
 				ForwardedFor: "127.0.0.1",
 				RemoteAddr:   "10.0.0.1",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000001",
-				StatusCode:   pointer.Pointer(201),
+				StatusCode:   new(201),
 				Error:        nil,
 			},
 			{
@@ -225,21 +224,21 @@ var (
 				name: "filter search on status code",
 				t: func(t *testing.T, a auditing.Auditing) {
 					err := a.Index(auditing.Entry{
-						StatusCode: pointer.Pointer(400),
+						StatusCode: new(400),
 						RequestId:  "1",
 						Timestamp:  now,
 					})
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
-						StatusCode: pointer.Pointer(400),
+						StatusCode: new(400),
 					})
 					require.NoError(t, err)
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
 						Component:  "auditing.test",
-						StatusCode: pointer.Pointer(400),
+						StatusCode: new(400),
 						RequestId:  "1",
 						Timestamp:  now,
 					}); diff != "" {
@@ -259,19 +258,19 @@ var (
 					err = a.Index(auditing.Entry{
 						RequestId:  "2",
 						Timestamp:  now,
-						StatusCode: pointer.Pointer(0),
+						StatusCode: new(0),
 					})
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{
-						StatusCode: pointer.Pointer(0),
+						StatusCode: new(0),
 					})
 					require.NoError(t, err)
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
 						Component:  "auditing.test",
-						StatusCode: pointer.Pointer(0),
+						StatusCode: new(0),
 						RequestId:  "2",
 						Timestamp:  now,
 					}); diff != "" {
@@ -571,7 +570,7 @@ var (
 						ForwardedFor: "127.0.0.1",
 						RemoteAddr:   "10.0.0.0",
 						Body:         es[0].Body.(string),
-						StatusCode:   pointer.Pointer(200),
+						StatusCode:   new(200),
 						Error:        "",
 					})
 					require.NoError(t, err)

@@ -67,7 +67,6 @@ func Test_ReadAll(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			m := MultiDocumentYAML[testYAML]{
 				fs: afero.NewMemMapFs(),
@@ -127,7 +126,6 @@ func Test_ReadOneProtoWithUnderscore(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			m := MultiDocumentYAML[*testProto]{
 				fs: afero.NewMemMapFs(),
@@ -177,7 +175,6 @@ func Test_ReadAllWithPtrSlice(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			m := MultiDocumentYAML[*testYAML]{
 				fs: afero.NewMemMapFs(),
@@ -242,7 +239,6 @@ func Test_ReadIndex(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			m := MultiDocumentYAML[*testYAML]{
 				fs: afero.NewMemMapFs(),
@@ -300,7 +296,6 @@ func Test_YamlIsEqual(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := YamlIsEqual(tt.x, tt.y)
 			if diff := cmp.Diff(tt.wantErr, err, testcommon.ErrorStringComparer()); diff != "" {

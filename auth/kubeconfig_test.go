@@ -125,7 +125,6 @@ func Test_GetCurrentUser(t *testing.T) {
 	}
 
 	for _, currentTest := range tests {
-		currentTest := currentTest
 		t.Run(currentTest.filename, func(t *testing.T) {
 			authCtx, err := GetAuthContext(currentTest.filename, currentTest.contextName)
 			validateErr := currentTest.validate(t, authCtx, err)
@@ -440,7 +439,7 @@ func TestReduceAndEncodeKubeconfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// create empty kubeconfig
-	resultCfg := make(map[interface{}]interface{})
+	resultCfg := make(map[any]any)
 	err = CreateFromTemplate(&resultCfg)
 	require.NoError(t, err)
 
