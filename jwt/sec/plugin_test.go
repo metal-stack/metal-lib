@@ -150,7 +150,6 @@ func TestExtractUserProcessGroups(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			plg := plugin
 			if tt.args.plugin != nil {
@@ -371,7 +370,6 @@ func TestGenericOIDCExtractUserProcessGroups(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			plg := plugin
 			if tt.args.plugin != nil {
@@ -772,9 +770,7 @@ func TestHasGroupExpression(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		for _, exp := range tt.args.expression {
-			exp := exp
 			t.Run(fmt.Sprintf("%s:%v", tt.name, exp.expr), func(t *testing.T) {
 				if got := plugin.HasGroupExpression(tt.args.user, tt.args.resourceTenant, exp.expr); got != exp.want {
 					t.Errorf("HasGroupExpression(%v) = %v, want %v", exp.expr, got, exp.want)
@@ -831,7 +827,6 @@ func TestMergeResourceAccess(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := MergeResourceAccess(tt.args.ras...); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MergeResourceAccess() = %v, want %v", got, tt.want)
@@ -998,7 +993,6 @@ func TestTenantsOnBehalf(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotTenants, gotAll, err := plugin.TenantsOnBehalf(tt.args.user, tt.args.groups)
 			if (err != nil) != tt.wantErr {

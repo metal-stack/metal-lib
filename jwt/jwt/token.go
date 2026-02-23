@@ -16,7 +16,7 @@ type ExtendedClaims struct {
 }
 
 // CreateToken creates a jwt token with the given claims
-func CreateToken(signer jose.Signer, cl interface{}, privateClaims ...interface{}) (string, error) {
+func CreateToken(signer jose.Signer, cl any, privateClaims ...any) (string, error) {
 	builder := jwt.Signed(signer).Claims(cl)
 	for i := range privateClaims {
 		builder = builder.Claims(privateClaims[i])

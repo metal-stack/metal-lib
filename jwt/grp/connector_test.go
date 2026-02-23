@@ -80,7 +80,6 @@ func TestParseConnectorId(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			gotJwtTenant, gotDirectory, err := ParseConnectorId(tt.args.connectorId)
 			if (err != nil) != tt.wantErr {

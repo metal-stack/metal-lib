@@ -290,7 +290,6 @@ func (a *MultiArgGenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C,
 	}
 
 	for _, c := range args.beforeAllCallbacks {
-		c := c
 		err := c(docs)
 		if err != nil {
 			return callbackErr(err)
@@ -299,7 +298,6 @@ func (a *MultiArgGenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C,
 
 	for index := range docs {
 		for _, c := range args.beforeCallbacks {
-			c := c
 			err := c(docs[index])
 			if err != nil {
 				return callbackErr(err)
@@ -313,7 +311,6 @@ func (a *MultiArgGenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C,
 		results = append(results, result)
 
 		for _, c := range args.afterCallbacks {
-			c := c
 			err := c(result)
 			if err != nil {
 				return callbackErr(err)
@@ -322,7 +319,6 @@ func (a *MultiArgGenericCLI[C, U, R]) multiOperation(args *multiOperationArgs[C,
 	}
 
 	for _, c := range args.afterAllCallbacks {
-		c := c
 		err := c(results)
 		if err != nil {
 			return callbackErr(err)

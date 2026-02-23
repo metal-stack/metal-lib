@@ -58,7 +58,6 @@ func TestTruncateMiddleEllipsis(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got := TruncateMiddleEllipsis(tt.input, tt.ellipsis, tt.maxlength)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
@@ -106,7 +105,6 @@ func TestTruncateEndellipsis(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got := TruncateEndEllipsis(tt.input, tt.ellipsis, tt.maxlength)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
@@ -154,7 +152,6 @@ func TestTruncateStartellipsis(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			got := TruncateStartEllipsis(tt.input, tt.ellipsis, tt.maxlength)
 			if diff := cmp.Diff(tt.want, got); diff != "" {

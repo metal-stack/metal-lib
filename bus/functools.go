@@ -49,24 +49,26 @@ type Function struct {
 	name         string
 }
 
-type Func func(interface{}) error
+type Func func(any) error
 
 // Function creates a Function from the the given endpoints. The name of the function will be a
 // distributed selector for the given go function. So every function which is registered with the same
 // name can receive the invocation inside the cluster.
 // The function must be a normal go function with one parameter and one result of type error:
-//   ep := NewEndpoints(...)
-//   fn, f, err := ep.Function("hello", func (s string) error {
-//      fmt.Printf("Hello %s\n", s)
-//      return nil
-//   })
-//   f("world"); // prints "Hello world"
-//   ...
-//   fn.Close()
+//
+//	ep := NewEndpoints(...)
+//	fn, f, err := ep.Function("hello", func (s string) error {
+//	   fmt.Printf("Hello %s\n", s)
+//	   return nil
+//	})
+//	f("world"); // prints "Hello world"
+//	...
+//	fn.Close()
+//
 // The target function can receive structs or pointer to structs. Please notice that when using
 // `DirectEndpoints` the parameters are not marshalled/unmarshalled via JSON, so using addresses
 // can have side effects.
-func (e *Endpoints) Function(name string, fn interface{}) (*Function, Func, error) {
+func (e *Endpoints) Function(name string, fn any) (*Function, Func, error) {
 	return e.function(name, "function", fn)
 }
 
@@ -82,7 +84,7 @@ func (e *Endpoints) Client(name string) (*Function, Func, error) {
 // `Function` function to invoke it.
 // You **must** supply a fn parameter, because a Unique function creates a new unique name
 // which must dispatch to exact one receiver. If `fn` is nil, an error is returned.
-func (e *Endpoints) Unique(name string, fn interface{}) (*Function, Func, string, error) {
+func (e *Endpoints) Unique(name string, fn any) (*Function, Func, string, error) {
 	if fn == nil {
 		return nil, nil, "", fmt.Errorf("unique function without func is not allowed")
 	}
@@ -92,7 +94,7 @@ func (e *Endpoints) Unique(name string, fn interface{}) (*Function, Func, string
 	return fnc, f, topic, err
 }
 
-func (e *Endpoints) function(name, chanName string, fn interface{}) (*Function, Func, error) {
+func (e *Endpoints) function(name, chanName string, fn any) (*Function, Func, error) {
 	if fn != nil {
 		fntype := reflect.TypeOf(fn)
 		if fntype.Kind() != reflect.Func {
@@ -131,7 +133,7 @@ func (e *Endpoints) function(name, chanName string, fn interface{}) (*Function, 
 		}
 		cb.registration = reg
 		partype := reflect.TypeOf(fn).In(0)
-		for partype.Kind() == reflect.Ptr {
+		for partype.Kind() == reflect.Pointer {
 			partype = partype.Elem()
 		}
 		pvalue := reflect.New(partype).Elem()
@@ -156,7 +158,7 @@ func (f *Function) Close() error {
 // a pointer will be passed if there is one; if the function is invoked with a
 // value type, this value will be copied so we can pass a pointer to the target
 // function.
-func (f *Function) receive(par interface{}) error {
+func (f *Function) receive(par any) error {
 	v := reflect.ValueOf(par)
 	vkind := reflect.TypeOf(par).Kind()
 	pkind := vkind
@@ -166,13 +168,13 @@ func (f *Function) receive(par interface{}) error {
 
 	params := []reflect.Value{v}
 	if vkind != pkind {
-		if pkind == reflect.Ptr {
+		if pkind == reflect.Pointer {
 			// function wants a ptr but we got a value
 			// --> copy value and pass pointer to this copy
 			nv := reflect.New(reflect.TypeOf(par))
 			nv.Elem().Set(v)
 			params = []reflect.Value{nv}
-		} else if vkind == reflect.Ptr {
+		} else if vkind == reflect.Pointer {
 			// function wants value
 			params = []reflect.Value{v.Elem()}
 		}
@@ -185,7 +187,7 @@ func (f *Function) receive(par interface{}) error {
 }
 
 func (f *Function) invoker() Func {
-	return func(arg interface{}) error {
+	return func(arg any) error {
 		return f.must(arg)
 	}
 }
@@ -193,9 +195,9 @@ func (f *Function) invoker() Func {
 // must invokes the function with no limit. So nsq will invoke the connected go function
 // until no error is returned. The function itself returns an error if there is a
 // communication problem with nsq.
-func (f *Function) must(arg interface{}) error {
+func (f *Function) must(arg any) error {
 	if f.endpoints == nil {
-		go func(arg interface{}) {
+		go func(arg any) {
 			// local function. this is not the "normal" use case so here we do a
 			// simple fork of a goroutine. it is up to the target function to
 			// return a nil value. if no nil value is returned ever, this goroutine

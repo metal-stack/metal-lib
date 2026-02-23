@@ -196,7 +196,6 @@ error creating entity: creation error for id 1
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			cli := newMockCLI(t, tt.mockFn, tt.fileMockFn)
 			got, err := cli.ApplyFromFile(testFile)
@@ -225,7 +224,6 @@ error creating entity: creation error for id 1
 					want: tt.wantBulkOutput,
 				},
 			} {
-				ttt := ttt
 				t.Run(ttt.name, func(t *testing.T) {
 					cli = newMockCLI(t, tt.mockFn, tt.fileMockFn)
 					buffer := new(bytes.Buffer)

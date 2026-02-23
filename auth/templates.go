@@ -66,7 +66,7 @@ func renderToken(w http.ResponseWriter, idToken, refreshToken string, claims []b
 	})
 }
 
-func renderTemplate(w http.ResponseWriter, tmpl *template.Template, data interface{}) {
+func renderTemplate(w http.ResponseWriter, tmpl *template.Template, data any) {
 	err := tmpl.Execute(w, data)
 	if err == nil {
 		return

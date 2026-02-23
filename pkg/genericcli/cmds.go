@@ -153,13 +153,14 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if c.OnlyCmds[DescribeCmd] {
-		use := "describe"
+		var use strings.Builder
+		use.WriteString("describe")
 		for _, arg := range c.Args {
-			use += fmt.Sprintf(" <%s>", arg)
+			fmt.Fprintf(&use, " <%s>", arg)
 		}
 
 		cmd := &cobra.Command{
-			Use:     use,
+			Use:     use.String(),
 			Aliases: []string{"get"},
 			Short:   fmt.Sprintf("describes the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -210,15 +211,16 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if c.OnlyCmds[UpdateCmd] {
-		use := "update"
+		var use strings.Builder
+		use.WriteString("update")
 		if c.UpdateRequestFromCLI != nil {
 			for _, arg := range c.Args {
-				use += fmt.Sprintf(" <%s>", arg)
+				fmt.Fprintf(&use, " <%s>", arg)
 			}
 		}
 
 		cmd := &cobra.Command{
-			Use:   use,
+			Use:   use.String(),
 			Short: fmt.Sprintf("updates the %s", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if c.UpdateRequestFromCLI != nil && !viper.IsSet("file") {
@@ -247,13 +249,14 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if c.OnlyCmds[DeleteCmd] {
-		use := "delete"
+		var use strings.Builder
+		use.WriteString("delete")
 		for _, arg := range c.Args {
-			use += fmt.Sprintf(" <%s>", arg)
+			fmt.Fprintf(&use, " <%s>", arg)
 		}
 
 		cmd := &cobra.Command{
-			Use:     use,
+			Use:     use.String(),
 			Short:   fmt.Sprintf("deletes the %s", c.Singular),
 			Aliases: []string{"destroy", "rm", "remove"},
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -308,13 +311,14 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 	}
 
 	if c.OnlyCmds[EditCmd] {
-		use := "edit"
+		var use strings.Builder
+		use.WriteString("edit")
 		for _, arg := range c.Args {
-			use += fmt.Sprintf(" <%s>", arg)
+			fmt.Fprintf(&use, " <%s>", arg)
 		}
 
 		cmd := &cobra.Command{
-			Use:   use,
+			Use:   use.String(),
 			Short: fmt.Sprintf("edit the %s through an editor and update", c.Singular),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return c.MultiArgGenericCLI.EditAndPrint(len(c.Args), args, c.DescribePrinter())

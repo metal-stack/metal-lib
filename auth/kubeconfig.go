@@ -74,7 +74,7 @@ func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtra
 
 	usersSlice, err := dyno.GetSlice(cfg, "users")
 	if err != nil {
-		usersSlice = make([]interface{}, 0)
+		usersSlice = make([]any, 0)
 	}
 	cfg["users"] = usersSlice
 
@@ -121,19 +121,19 @@ func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtra
 	return outputFilename, nil
 }
 
-//AddUserConfigMap adds the given user-auth-configMap to the kubecfg or replaces an already existing user
-func AddUserConfigMap(kubecfg map[interface{}]interface{}, userName string, configMap map[string]string) error {
+// AddUserConfigMap adds the given user-auth-configMap to the kubecfg or replaces an already existing user
+func AddUserConfigMap(kubecfg map[any]any, userName string, configMap map[string]string) error {
 
-	authProviderMap := map[string]interface{}{
+	authProviderMap := map[string]any{
 		"config": configMap,
 		"name":   "oidc",
 	}
 
-	userMap := map[string]interface{}{
+	userMap := map[string]any{
 		"auth-provider": authProviderMap,
 	}
 
-	user := map[string]interface{}{
+	user := map[string]any{
 		"name": userName,
 		"user": userMap,
 	}
@@ -161,8 +161,8 @@ func AddUserConfigMap(kubecfg map[interface{}]interface{}, userName string, conf
 	return nil
 }
 
-//AddUser adds the given user-authconfig to the kubecfg or replaces an already existing user
-func AddUser(kubecfg map[interface{}]interface{}, authCtx AuthContext) error {
+// AddUser adds the given user-authconfig to the kubecfg or replaces an already existing user
+func AddUser(kubecfg map[any]any, authCtx AuthContext) error {
 
 	userName := authCtx.User
 
@@ -178,15 +178,15 @@ func AddUser(kubecfg map[interface{}]interface{}, authCtx AuthContext) error {
 	return AddUserConfigMap(kubecfg, userName, configMap)
 }
 
-//AddContext adds or replaces the given context with given clusterName and userName.
-func AddContext(cfg map[interface{}]interface{}, contextName string, clusterName string, userName string) error {
+// AddContext adds or replaces the given context with given clusterName and userName.
+func AddContext(cfg map[any]any, contextName string, clusterName string, userName string) error {
 	type Context struct {
-		Context map[string]interface{}
+		Context map[string]any
 		Name    string
 	}
 
 	// check & create context
-	ctxData := make(map[string]interface{})
+	ctxData := make(map[string]any)
 	ctxData["cluster"] = clusterName
 	ctxData["user"] = userName
 
@@ -221,13 +221,13 @@ func AddContext(cfg map[interface{}]interface{}, contextName string, clusterName
 	return nil
 }
 
-//SetCurrentContext sets the current context to the given name
-func SetCurrentContext(cfg map[interface{}]interface{}, contextName string) {
+// SetCurrentContext sets the current context to the given name
+func SetCurrentContext(cfg map[any]any, contextName string) {
 	cfg["current-context"] = contextName
 }
 
-//GetClusterNames returns all clusternames
-func GetClusterNames(cfg map[interface{}]interface{}) ([]string, error) {
+// GetClusterNames returns all clusternames
+func GetClusterNames(cfg map[any]any) ([]string, error) {
 
 	clusterNames := []string{}
 	clusters, err := dyno.GetSlice(cfg, "clusters")
@@ -247,10 +247,10 @@ func GetClusterNames(cfg map[interface{}]interface{}) ([]string, error) {
 	return clusterNames, nil
 }
 
-//AddCluster adds or replaces the given cluster with given clusterName and data.
-func AddCluster(cfg map[interface{}]interface{}, clusterName string, clusterData map[string]interface{}) error {
+// AddCluster adds or replaces the given cluster with given clusterName and data.
+func AddCluster(cfg map[any]any, clusterName string, clusterData map[string]any) error {
 	type Cluster struct {
-		Cluster map[string]interface{}
+		Cluster map[string]any
 		Name    string
 	}
 
@@ -285,8 +285,8 @@ func AddCluster(cfg map[interface{}]interface{}, clusterName string, clusterData
 	return nil
 }
 
-//EncodeKubeconfig serializes the given kubeconfig
-func EncodeKubeconfig(kubeconfig map[interface{}]interface{}) (bytes.Buffer, error) {
+// EncodeKubeconfig serializes the given kubeconfig
+func EncodeKubeconfig(kubeconfig map[any]any) (bytes.Buffer, error) {
 	var yamlBytes bytes.Buffer
 	e := yaml.NewEncoder(&yamlBytes)
 	e.SetIndent(2)
@@ -303,7 +303,7 @@ func ensureDirectory(fqFile string) error {
 	return nil
 }
 
-//AuthContext models the data in the kubeconfig user/auth-provider/config/oidc-config-map
+// AuthContext models the data in the kubeconfig user/auth-provider/config/oidc-config-map
 type AuthContext struct {
 	// Name of the context for metalctl auth
 	Ctx string
@@ -324,13 +324,13 @@ type AuthContext struct {
 }
 
 // finds the listKey from the given map, gets the list of maps, finds the map with matchKey == matchValue, returns map, index, error
-func findMapListMap(cfg map[interface{}]interface{}, listKey string, matchKey string, matchValue string) (map[string]interface{}, int, error) { //nolint:unparam
+func findMapListMap(cfg map[any]any, listKey string, matchKey string, matchValue string) (map[string]any, int, error) { //nolint:unparam
 	ctxSlice, err := dyno.GetSlice(cfg, listKey)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	for i := 0; i < len(ctxSlice); i++ {
+	for i := range ctxSlice {
 		currentContextItemMap, err := dyno.GetMapS(ctxSlice[i])
 		if err != nil {
 			break
@@ -441,10 +441,10 @@ func GetAuthContext(kubeConfig string, contextName string) (AuthContext, error) 
 // If kubeconfig is explicitly given and no file exists at the location, an error is returned.
 // If the default location is used and no file exists, the contents of the kubeconfigTemplate are returned.
 // returns map, filename, isDefaultLocation and error
-func LoadKubeConfig(kubeConfig string) (content map[interface{}]interface{}, filename string, isDefaultLocation bool, e error) {
+func LoadKubeConfig(kubeConfig string) (content map[any]any, filename string, isDefaultLocation bool, e error) {
 
 	var err error
-	var cfg map[interface{}]interface{}
+	var cfg map[any]any
 	var outputFilename string
 
 	isDefault := false
@@ -521,9 +521,9 @@ func LoadKubeConfig(kubeConfig string) (content map[interface{}]interface{}, fil
 
 // reads the given yaml-file and unmarshalls the contents (top level map)
 // if the file does not exits or if the file is empty, an empty map is returned
-func readFile(filename string) (map[interface{}]interface{}, error) {
+func readFile(filename string) (map[any]any, error) {
 	// we expect a map top level
-	cfg := make(map[interface{}]interface{})
+	cfg := make(map[any]any)
 
 	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
@@ -549,7 +549,7 @@ users: []
 `
 
 // CreateFromTemplate returns a minimal kubeconfig
-func CreateFromTemplate(cfg *map[interface{}]interface{}) error {
+func CreateFromTemplate(cfg *map[any]any) error {
 
 	return yaml.Unmarshal([]byte(kubeconfigTemplate), cfg)
 }

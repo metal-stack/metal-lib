@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
-
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 )
 
 const (
@@ -44,7 +42,7 @@ func NewAsync(backend Auditing, log *slog.Logger, ac AsyncConfig) (Auditing, err
 	}
 
 	if ac.AsyncBackoff == nil {
-		ac.AsyncBackoff = pointer.Pointer(asyncDefaultBackoff)
+		ac.AsyncBackoff = new(asyncDefaultBackoff)
 	}
 
 	a.log.Info("wrapping audit backend in async")

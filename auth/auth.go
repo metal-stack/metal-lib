@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -97,7 +98,7 @@ type app struct {
 }
 
 // logs to console if it is configured
-func (a *app) Consolef(format string, args ...interface{}) {
+func (a *app) Consolef(format string, args ...any) {
 	if a.config.Console != nil {
 		_, err := fmt.Fprintf(a.config.Console, format, args...)
 		if err != nil {
@@ -113,7 +114,7 @@ type Claims struct {
 	NotBefore       int64             `json:"nbf,omitempty"`
 	Issuer          string            `json:"iss,omitempty"`
 	Subject         string            `json:"sub,omitempty"`
-	Audience        interface{}       `json:"aud,omitempty"`
+	Audience        any               `json:"aud,omitempty"`
 	Groups          []string          `json:"groups"`
 	EMail           string            `json:"email"`
 	Name            string            `json:"name"`
@@ -229,12 +230,7 @@ func oidcFlow(appModel *app) error {
 	} else {
 		// See if scopes_supported has the "offline_access" scope.
 		appModel.offlineAsScope = func() bool {
-			for _, scope := range s.ScopesSupported {
-				if scope == oidc.ScopeOfflineAccess {
-					return true
-				}
-			}
-			return false
+			return slices.Contains(s.ScopesSupported, oidc.ScopeOfflineAccess)
 		}()
 	}
 

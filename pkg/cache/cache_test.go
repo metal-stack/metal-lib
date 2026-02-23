@@ -45,7 +45,6 @@ func Test_Cache(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			count := 0
 			cache := New(tt.expiration, func(_ context.Context, key string) (*TestResponse, error) {

@@ -49,7 +49,6 @@ func TestTemplatePrinter_Print(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			var out bytes.Buffer
 			p := NewTemplatePrinter(tt.t).WithOut(&out)
