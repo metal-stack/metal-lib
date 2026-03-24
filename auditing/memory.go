@@ -10,6 +10,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
+)
+
+const (
+	MemoryBackendName = "memory"
 )
 
 type (
@@ -43,7 +48,7 @@ func NewMemory(c Config, mc MemoryConfig) (Auditing, error) {
 
 	a := &memoryAuditing{
 		component: c.Component,
-		log:       c.Log.WithGroup("auditing").With("audit-backend", "memory"),
+		log:       c.Log.WithGroup("auditing").With("audit-backend", MemoryBackendName),
 		memory:    []Entry{},
 		config:    &mc,
 	}
@@ -200,4 +205,11 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 	}
 
 	return entries, nil
+}
+
+func (a *memoryAuditing) Health(context.Context) *healthstatus.HealthResult {
+	return &healthstatus.HealthResult{
+		Message: fmt.Sprintf("audit backend %q is healthy", MemoryBackendName),
+		Status:  healthstatus.HealthStatusHealthy,
+	}
 }
