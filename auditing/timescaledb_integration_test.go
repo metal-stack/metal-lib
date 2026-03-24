@@ -37,8 +37,10 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 		})
 	}
 
-	healthResult := aud.Health(t.Context())
-	assert.Equal(t, &healthstatus.HealthResult{
+	healthResult, err := aud.Check(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, healthstatus.HealthResult{
 		Status:  healthstatus.HealthStatusHealthy,
 		Message: `audit backend "timescaledb" is healthy`,
 	}, healthResult)

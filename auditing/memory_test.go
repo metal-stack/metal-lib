@@ -39,8 +39,10 @@ func TestAuditing_Memory(t *testing.T) {
 	}, auditing.MemoryConfig{})
 	require.NoError(t, err)
 
-	healthResult := auditing.Health(t.Context())
-	assert.Equal(t, &healthstatus.HealthResult{
+	healthResult, err := auditing.Check(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, healthstatus.HealthResult{
 		Status:  healthstatus.HealthStatusHealthy,
 		Message: `audit backend "memory" is healthy`,
 	}, healthResult)

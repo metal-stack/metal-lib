@@ -139,16 +139,17 @@ func (t *testBackend) Search(ctx context.Context, filter EntryFilter) ([]Entry, 
 	panic("not required")
 }
 
-func (t *testBackend) Health(context.Context) *healthstatus.HealthResult {
+func (t *testBackend) ServiceName() string {
+	return "test"
+}
+
+func (t *testBackend) Check(ctx context.Context) (healthstatus.HealthResult, error) {
 	if t.health != nil {
-		return &healthstatus.HealthResult{
-			Status:  healthstatus.HealthStatusUnhealthy,
-			Message: fmt.Sprintf("audit backend is unhealthy: %s", t.health.Error()),
-		}
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend is unhealthy: %s", t.health.Error())
 	}
 
-	return &healthstatus.HealthResult{
+	return healthstatus.HealthResult{
 		Status:  healthstatus.HealthStatusHealthy,
 		Message: "audit backend is healthy",
-	}
+	}, nil
 }

@@ -106,11 +106,11 @@ func Test_splunkAuditing_Index(t *testing.T) {
 func Test_splunkAuditing_Health(t *testing.T) {
 	tests := []struct {
 		name string
-		want *healthstatus.HealthResult
+		want healthstatus.HealthResult
 	}{
 		{
 			name: "healthy",
-			want: &healthstatus.HealthResult{
+			want: healthstatus.HealthResult{
 				Status:  healthstatus.HealthStatusHealthy,
 				Message: `audit backend "splunk" is healthy: HEC is healthy`,
 			},
@@ -137,7 +137,8 @@ func Test_splunkAuditing_Health(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			got := a.Health(t.Context())
+			got, err := a.Check(t.Context())
+			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
 		})
 	}

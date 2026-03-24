@@ -87,6 +87,10 @@ func (a *asyncAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry
 	return a.a.Search(ctx, filter)
 }
 
-func (a *asyncAuditing) Health(ctx context.Context) *healthstatus.HealthResult {
-	return a.a.Health(ctx)
+func (a *asyncAuditing) ServiceName() string {
+	return a.a.ServiceName()
+}
+
+func (a *asyncAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return a.a.Check(ctx)
 }

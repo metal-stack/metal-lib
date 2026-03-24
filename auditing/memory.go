@@ -207,9 +207,13 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 	return entries, nil
 }
 
-func (a *memoryAuditing) Health(context.Context) *healthstatus.HealthResult {
-	return &healthstatus.HealthResult{
+func (a *memoryAuditing) ServiceName() string {
+	return MemoryBackendName
+}
+
+func (a *memoryAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return healthstatus.HealthResult{
 		Message: fmt.Sprintf("audit backend %q is healthy", MemoryBackendName),
 		Status:  healthstatus.HealthStatusHealthy,
-	}
+	}, nil
 }

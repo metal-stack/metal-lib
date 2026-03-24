@@ -377,16 +377,17 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	return entries, nil
 }
 
-func (a *timescaleAuditing) Health(ctx context.Context) *healthstatus.HealthResult {
+func (a *timescaleAuditing) ServiceName() string {
+	return TimescaleDbBackendName
+}
+
+func (a *timescaleAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
 	if err := a.db.PingContext(ctx); err != nil {
-		return &healthstatus.HealthResult{
-			Message: fmt.Sprintf("audit backend %q is unhealthy, database is not reachable: %s", TimescaleDbBackendName, err.Error()),
-			Status:  healthstatus.HealthStatusUnhealthy,
-		}
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend %q is unhealthy, database is not reachable: %w", TimescaleDbBackendName, err)
 	}
 
-	return &healthstatus.HealthResult{
+	return healthstatus.HealthResult{
 		Message: fmt.Sprintf("audit backend %q is healthy", TimescaleDbBackendName),
 		Status:  healthstatus.HealthStatusHealthy,
-	}
+	}, nil
 }

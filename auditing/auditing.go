@@ -129,8 +129,9 @@ type Auditing interface {
 	// By default only recent entries will be returned.
 	// The returned entries will be sorted by timestamp in descending order.
 	Search(context.Context, EntryFilter) ([]Entry, error)
-	// Health returns info about the audit backend health.
-	Health(ctx context.Context) *healthstatus.HealthResult
+
+	// Implements the health check interface
+	healthstatus.HealthCheck
 }
 
 func defaultComponent() (string, error) {

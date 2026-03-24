@@ -159,17 +159,18 @@ func (a *splunkAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 	return nil, fmt.Errorf("search not implemented for splunk audit backend")
 }
 
-func (a *splunkAuditing) Health(ctx context.Context) *healthstatus.HealthResult {
+func (a *splunkAuditing) ServiceName() string {
+	return SplunkBackendName
+}
+
+func (a *splunkAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
 	resp, err := a.splunkRequest(ctx, splunkRequestEndpoint{
 		path:   "/services/collector/health",
 		method: http.MethodGet,
 		body:   nil,
 	})
 	if err != nil {
-		return &healthstatus.HealthResult{
-			Message: fmt.Sprintf("audit backend %q is unhealthy, collector is unhealthy: %s", SplunkBackendName, err.Error()),
-			Status:  healthstatus.HealthStatusUnhealthy,
-		}
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend %q is unhealthy, collector is unhealthy: %w", SplunkBackendName, err)
 	}
 
 	type healthResp struct {
@@ -180,23 +181,17 @@ func (a *splunkAuditing) Health(ctx context.Context) *healthstatus.HealthResult 
 	health := healthResp{}
 
 	if err := json.Unmarshal(resp, &health); err != nil {
-		return &healthstatus.HealthResult{
-			Message: fmt.Sprintf("audit backend %q is unhealthy, unable to unmarshal health response: %s", SplunkBackendName, err.Error()),
-			Status:  healthstatus.HealthStatusUnhealthy,
-		}
+		return healthstatus.HealthResult{}, fmt.Errorf("unable to unmarshal health response: %w", err)
 	}
 
 	if health.Code != splunkHealthyCode {
-		return &healthstatus.HealthResult{
-			Message: fmt.Sprintf("audit backend %q is degraded: %s", SplunkBackendName, health.Text),
-			Status:  healthstatus.HealthStatusDegraded,
-		}
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend %q is degraded: %s", SplunkBackendName, health.Text)
 	}
 
-	return &healthstatus.HealthResult{
+	return healthstatus.HealthResult{
 		Message: fmt.Sprintf("audit backend %q is healthy: %s", SplunkBackendName, health.Text),
 		Status:  healthstatus.HealthStatusHealthy,
-	}
+	}, nil
 }
 
 func (a *splunkAuditing) splunkRequest(ctx context.Context, ep splunkRequestEndpoint) ([]byte, error) {
