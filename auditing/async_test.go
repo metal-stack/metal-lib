@@ -3,12 +3,14 @@ package auditing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -110,10 +112,11 @@ func Test_asyncAuditing_Index(t *testing.T) {
 }
 
 type testBackend struct {
-	mutex sync.Mutex
-	done  chan bool
-	count int
-	idxFn func(count int) error
+	mutex  sync.Mutex
+	done   chan bool
+	count  int
+	idxFn  func(count int) error
+	health error
 }
 
 func (t *testBackend) Index(e Entry) error {
@@ -134,4 +137,19 @@ func (t *testBackend) Index(e Entry) error {
 
 func (t *testBackend) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	panic("not required")
+}
+
+func (t *testBackend) ServiceName() string {
+	return "test"
+}
+
+func (t *testBackend) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	if t.health != nil {
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend is unhealthy: %s", t.health.Error())
+	}
+
+	return healthstatus.HealthResult{
+		Status:  healthstatus.HealthStatusHealthy,
+		Message: "audit backend is healthy",
+	}, nil
 }

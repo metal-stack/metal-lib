@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
 const (
@@ -83,4 +85,12 @@ func (a *asyncAuditing) Index(entry Entry) error {
 
 func (a *asyncAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	return a.a.Search(ctx, filter)
+}
+
+func (a *asyncAuditing) ServiceName() string {
+	return a.a.ServiceName()
+}
+
+func (a *asyncAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	return a.a.Check(ctx)
 }

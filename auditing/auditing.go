@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
 type Config struct {
@@ -14,14 +16,6 @@ type Config struct {
 	// IndexTimeout sets a timeout for indexing a trace for the backend.
 	IndexTimeout time.Duration
 }
-
-type Interval string
-
-var (
-	HourlyInterval  Interval = "@hourly"
-	DailyInterval   Interval = "@daily"
-	MonthlyInterval Interval = "@monthly"
-)
 
 type EntryType string
 
@@ -135,6 +129,9 @@ type Auditing interface {
 	// By default only recent entries will be returned.
 	// The returned entries will be sorted by timestamp in descending order.
 	Search(context.Context, EntryFilter) ([]Entry, error)
+
+	// Implements the health check interface
+	healthstatus.HealthCheck
 }
 
 func defaultComponent() (string, error) {

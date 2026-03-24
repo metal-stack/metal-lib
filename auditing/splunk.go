@@ -7,12 +7,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
-const spunkIndexTimeout = 5 * time.Second
+const (
+	SplunkBackendName = "splunk"
+
+	spunkIndexTimeout = 5 * time.Second
+	// See on their docs in troubleshoot-http-event-collector (Possible_error_codes)
+	splunkHealthyCode = 17
+)
 
 type (
 	SplunkConfig struct {
@@ -51,6 +60,12 @@ type (
 		Index string `json:"index,omitempty"`
 		// Event is the actual event data in whatever format you want: a string, a number, another JSON object, and so on.
 		Event Entry `json:"event,omitempty"`
+	}
+
+	splunkRequestEndpoint struct {
+		path   string
+		method string
+		body   []byte
 	}
 )
 
@@ -91,7 +106,7 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 
 	a := &splunkAuditing{
 		component:    c.Component,
-		log:          c.Log.WithGroup("auditing").With("audit-backend", "splunk"),
+		log:          c.Log.WithGroup("auditing").With("audit-backend", SplunkBackendName),
 		indexTimeout: c.IndexTimeout,
 		client:       &http.Client{Transport: &http.Transport{TLSClientConfig: sc.TlsConfig}},
 		endpoint:     endpoint,
@@ -128,24 +143,84 @@ func (a *splunkAuditing) Index(entry Entry) error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.indexTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.endpoint+"/services/collector", bytes.NewBuffer(e))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Authorization", "Splunk "+a.hecToken)
-
-	resp, err := a.client.Do(req)
+	_, err = a.splunkRequest(ctx, splunkRequestEndpoint{
+		path:   "/services/collector",
+		method: http.MethodPost,
+		body:   e,
+	})
 	if err != nil {
 		return fmt.Errorf("error indexing audit entry in splunk: %w", err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
 
 	return nil
 }
 
 func (a *splunkAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	return nil, fmt.Errorf("search not implemented for splunk audit backend")
+}
+
+func (a *splunkAuditing) ServiceName() string {
+	return SplunkBackendName
+}
+
+func (a *splunkAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	resp, err := a.splunkRequest(ctx, splunkRequestEndpoint{
+		path:   "/services/collector/health",
+		method: http.MethodGet,
+		body:   nil,
+	})
+	if err != nil {
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend %q is unhealthy, collector is unhealthy: %w", SplunkBackendName, err)
+	}
+
+	type healthResp struct {
+		Text string `json:"text"`
+		Code int    `json:"code"`
+	}
+
+	health := healthResp{}
+
+	if err := json.Unmarshal(resp, &health); err != nil {
+		return healthstatus.HealthResult{}, fmt.Errorf("unable to unmarshal health response: %w", err)
+	}
+
+	if health.Code != splunkHealthyCode {
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend %q is degraded: %s", SplunkBackendName, health.Text)
+	}
+
+	return healthstatus.HealthResult{
+		Message: fmt.Sprintf("audit backend %q is healthy: %s", SplunkBackendName, health.Text),
+		Status:  healthstatus.HealthStatusHealthy,
+	}, nil
+}
+
+func (a *splunkAuditing) splunkRequest(ctx context.Context, ep splunkRequestEndpoint) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, a.indexTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, ep.method, a.endpoint+ep.path, bytes.NewBuffer(ep.body))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", "Splunk "+a.hecToken)
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error during splunk request: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %w", err)
+	}
+
+	if code := resp.StatusCode; code >= http.StatusBadRequest {
+		return nil, fmt.Errorf("splunk endpoint %q did not return ok (%d)", ep.path, code)
+	}
+
+	return bytes, nil
 }

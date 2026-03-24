@@ -12,11 +12,16 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lopezator/migrator"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 
 	_ "github.com/lib/pq"
 )
 
-const timescaleDbIndexTimeout = 2 * time.Second
+const (
+	TimescaleDbBackendName = "timescaledb"
+
+	timescaleDbIndexTimeout = 2 * time.Second
+)
 
 type (
 	TimescaleDbConfig struct {
@@ -106,7 +111,7 @@ func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
 	a := &timescaleAuditing{
 		component:    c.Component,
 		indexTimeout: c.IndexTimeout,
-		log:          c.Log.WithGroup("auditing").With("audit-backend", "timescaledb"),
+		log:          c.Log.WithGroup("auditing").With("audit-backend", TimescaleDbBackendName),
 		db:           db,
 		config:       &tc,
 	}
@@ -370,4 +375,19 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 	}
 
 	return entries, nil
+}
+
+func (a *timescaleAuditing) ServiceName() string {
+	return TimescaleDbBackendName
+}
+
+func (a *timescaleAuditing) Check(ctx context.Context) (healthstatus.HealthResult, error) {
+	if err := a.db.PingContext(ctx); err != nil {
+		return healthstatus.HealthResult{}, fmt.Errorf("audit backend %q is unhealthy, database is not reachable: %w", TimescaleDbBackendName, err)
+	}
+
+	return healthstatus.HealthResult{
+		Message: fmt.Sprintf("audit backend %q is healthy", TimescaleDbBackendName),
+		Status:  healthstatus.HealthStatusHealthy,
+	}, nil
 }
