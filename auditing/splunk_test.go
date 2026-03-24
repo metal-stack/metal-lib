@@ -120,7 +120,7 @@ func Test_splunkAuditing_Health(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mux := http.NewServeMux()
 			mux.HandleFunc("/services/collector/health", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte(`{"text":"HEC is healthy","code":17}`))
+				_, _ = w.Write([]byte(`{"text":"HEC is healthy","code":17}`))
 				w.WriteHeader(http.StatusOK)
 			})
 			server := httptest.NewServer(mux)

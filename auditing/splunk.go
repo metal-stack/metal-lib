@@ -200,7 +200,7 @@ func (a *splunkAuditing) Health(ctx context.Context) *healthstatus.HealthResult 
 }
 
 func (a *splunkAuditing) splunkRequest(ctx context.Context, ep splunkRequestEndpoint) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), a.indexTimeout)
+	ctx, cancel := context.WithTimeout(ctx, a.indexTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, ep.method, a.endpoint+ep.path, bytes.NewBuffer(ep.body))
