@@ -10,6 +10,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -34,6 +36,12 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 			tt.t(t, aud)
 		})
 	}
+
+	healthResult := aud.Health(t.Context())
+	assert.Equal(t, &healthstatus.HealthResult{
+		Status:  healthstatus.HealthStatusHealthy,
+		Message: `audit backend "timescaledb" is healthy`,
+	}, healthResult)
 }
 
 func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Container, *sqlx.DB, auditing.Auditing) {

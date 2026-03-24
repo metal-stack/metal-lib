@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/pkg/healthstatus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,4 +33,15 @@ func TestAuditing_Memory(t *testing.T) {
 			tt.t(t, auditing)
 		})
 	}
+
+	auditing, err := auditing.NewMemory(auditing.Config{
+		Log: slog.Default(),
+	}, auditing.MemoryConfig{})
+	require.NoError(t, err)
+
+	healthResult := auditing.Health(t.Context())
+	assert.Equal(t, &healthstatus.HealthResult{
+		Status:  healthstatus.HealthStatusHealthy,
+		Message: `audit backend "memory" is healthy`,
+	}, healthResult)
 }
