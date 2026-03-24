@@ -149,7 +149,7 @@ func (a *splunkAuditing) Index(entry Entry) error {
 		body:   e,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("error indexing audit entry in splunk: %w", err)
 	}
 
 	return nil
@@ -212,7 +212,7 @@ func (a *splunkAuditing) splunkRequest(ctx context.Context, ep splunkRequestEndp
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error indexing audit entry in splunk: %w", err)
+		return nil, fmt.Errorf("error during splunk request: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
