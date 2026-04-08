@@ -1,6 +1,6 @@
 //go:build integration
 
-package auditing_test
+package test
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing/timescaledb"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ import (
 
 func TestAuditing_TimescaleDB(t *testing.T) {
 	ctx := context.Background()
-	container, db, aud := StartTimescaleDB(t, auditing.Config{
+	container, db, aud := StartTimescaleDB(t, api.Config{
 		Log: slog.Default(),
 	})
 	defer func() {
@@ -46,7 +47,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 	}, healthResult)
 }
 
-func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Container, *sqlx.DB, auditing.Auditing) {
+func StartTimescaleDB(t testing.TB, config api.Config) (testcontainers.Container, *sqlx.DB, api.Auditing) {
 	req := testcontainers.ContainerRequest{
 		Image:        "timescale/timescaledb:2.16.1-pg16",
 		ExposedPorts: []string{"5432/tcp"},
@@ -72,7 +73,7 @@ func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Cont
 	port, err := container.MappedPort(ctx, "5432")
 	require.NoError(t, err)
 
-	auditing, err := auditing.NewTimescaleDB(config, auditing.TimescaleDbConfig{
+	auditing, err := timescaledb.NewTimescaleDB(config, timescaledb.TimescaleDbConfig{
 		Host:     ip,
 		Port:     port.Port(),
 		DB:       "postgres",

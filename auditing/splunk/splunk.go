@@ -1,4 +1,4 @@
-package auditing
+package splunk
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/metal-stack/metal-lib/auditing/api"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
@@ -47,7 +48,7 @@ type (
 		host       string
 	}
 
-	splunkEvent struct {
+	SplunkEvent struct {
 		// Time is the event time. The default time format is UNIX time format.
 		Time int64 `json:"time,omitempty"`
 		// Host value to assign to the event data. This key is typically the hostname of the client from which you're sending data.
@@ -59,7 +60,7 @@ type (
 		// Index by which the event data is to be indexed.
 		Index string `json:"index,omitempty"`
 		// Event is the actual event data in whatever format you want: a string, a number, another JSON object, and so on.
-		Event Entry `json:"event,omitempty"`
+		Event api.Entry `json:"event,omitempty"`
 	}
 
 	splunkRequestEndpoint struct {
@@ -70,9 +71,9 @@ type (
 )
 
 // NewSplunk returns a new auditing backend for splunk. It supports the HTTP event collector interface.
-func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
+func NewSplunk(c api.Config, sc SplunkConfig) (api.Auditing, error) {
 	if c.Component == "" {
-		component, err := defaultComponent()
+		component, err := api.DefaultComponent()
 		if err != nil {
 			return nil, err
 		}
@@ -121,12 +122,12 @@ func NewSplunk(c Config, sc SplunkConfig) (Auditing, error) {
 	return a, nil
 }
 
-func (a *splunkAuditing) Index(entry Entry) error {
+func (a *splunkAuditing) Index(entry api.Entry) error {
 	if entry.Timestamp.IsZero() {
 		return errors.New("timestamp is not set")
 	}
 
-	splunkEvent := &splunkEvent{
+	splunkEvent := &SplunkEvent{
 		Time:       entry.Timestamp.Unix(),
 		Host:       a.host,
 		Source:     a.component,
@@ -155,7 +156,7 @@ func (a *splunkAuditing) Index(entry Entry) error {
 	return nil
 }
 
-func (a *splunkAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
+func (a *splunkAuditing) Search(ctx context.Context, filter api.EntryFilter) ([]api.Entry, error) {
 	return nil, fmt.Errorf("search not implemented for splunk audit backend")
 }
 

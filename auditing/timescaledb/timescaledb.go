@@ -1,4 +1,4 @@
-package auditing
+package timescaledb
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lopezator/migrator"
+	"github.com/metal-stack/metal-lib/auditing/api"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 
 	_ "github.com/lib/pq"
@@ -69,9 +70,9 @@ const (
 	phrase sqlCompOp = "phrase"
 )
 
-func NewTimescaleDB(c Config, tc TimescaleDbConfig) (Auditing, error) {
+func NewTimescaleDB(c api.Config, tc TimescaleDbConfig) (api.Auditing, error) {
 	if c.Component == "" {
-		component, err := defaultComponent()
+		component, err := api.DefaultComponent()
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +221,7 @@ func (a *timescaleAuditing) initialize() error {
 	return nil
 }
 
-func (a *timescaleAuditing) Index(entry Entry) error {
+func (a *timescaleAuditing) Index(entry api.Entry) error {
 	if entry.Component == "" {
 		entry.Component = a.component
 	}
@@ -251,7 +252,7 @@ func (a *timescaleAuditing) Index(entry Entry) error {
 	return nil
 }
 
-func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
+func (a *timescaleAuditing) Search(ctx context.Context, filter api.EntryFilter) ([]api.Entry, error) {
 	var (
 		where     []string
 		values    = map[string]any{}
@@ -355,7 +356,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 		}
 	}()
 
-	var entries []Entry
+	var entries []api.Entry
 
 	for rows.Next() {
 		var e timescaledbRow
@@ -365,7 +366,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter EntryFilter) ([]E
 			return nil, err
 		}
 
-		var entry Entry
+		var entry api.Entry
 		err = json.Unmarshal(e.Entry, &entry)
 		if err != nil {
 			return nil, fmt.Errorf("error unmarshalling entry: %w", err)
