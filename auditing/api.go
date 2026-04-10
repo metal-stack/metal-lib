@@ -10,6 +10,19 @@ import (
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
+type Auditing interface {
+	// Adds the given entry to the index.
+	// Some fields like `Id`, `Component` and `Timestamp` will be filled by the auditing driver if not given.
+	Index(Entry) error
+	// Searches for entries matching the given filter.
+	// By default only recent entries will be returned.
+	// The returned entries will be sorted by timestamp in descending order.
+	Search(context.Context, EntryFilter) ([]Entry, error)
+
+	// Implements the health check interface
+	healthstatus.HealthCheck
+}
+
 type Config struct {
 	Component string
 	Log       *slog.Logger
@@ -17,33 +30,15 @@ type Config struct {
 	IndexTimeout time.Duration
 }
 
-type EntryType string
-
-const (
-	EntryTypeHTTP  EntryType = "http"
-	EntryTypeGRPC  EntryType = "grpc"
-	EntryTypeEvent EntryType = "event"
-)
-
-type EntryDetail string
-
-const (
-	EntryDetailGRPCUnary  EntryDetail = "unary"
-	EntryDetailGRPCStream EntryDetail = "stream"
-)
-
-type EntryPhase string
-
-const (
-	EntryPhaseRequest  EntryPhase = "request"
-	EntryPhaseResponse EntryPhase = "response"
-	EntryPhaseSingle   EntryPhase = "single"
-	EntryPhaseError    EntryPhase = "error"
-	EntryPhaseOpened   EntryPhase = "opened"
-	EntryPhaseClosed   EntryPhase = "closed"
-)
-
-const EntryFilterDefaultLimit int64 = 100
+type User struct {
+	EMail   string
+	Name    string
+	Groups  []string
+	Tenant  string
+	Project string
+	Issuer  string
+	Subject string
+}
 
 type Entry struct {
 	Id        string    `json:"-"` // filled by the auditing driver
@@ -73,25 +68,31 @@ type Entry struct {
 	// Internal errors
 	Error any `json:"error"`
 }
+type EntryType string
 
-func (e *Entry) prepareForNextPhase() {
-	e.Id = ""
-	e.Timestamp = time.Now()
-	e.Body = nil
-	e.Error = nil
+const (
+	EntryTypeHTTP  EntryType = "http"
+	EntryTypeGRPC  EntryType = "grpc"
+	EntryTypeEvent EntryType = "event"
+)
 
-	switch e.Phase {
-	case EntryPhaseRequest:
-		e.Phase = EntryPhaseResponse
-	case EntryPhaseOpened:
-		e.Phase = EntryPhaseClosed
-	case EntryPhaseResponse,
-		EntryPhaseSingle,
-		EntryPhaseError,
-		EntryPhaseClosed:
-		// keep the phase
-	}
-}
+type EntryDetail string
+
+const (
+	EntryDetailGRPCUnary  EntryDetail = "unary"
+	EntryDetailGRPCStream EntryDetail = "stream"
+)
+
+type EntryPhase string
+
+const (
+	EntryPhaseRequest  EntryPhase = "request"
+	EntryPhaseResponse EntryPhase = "response"
+	EntryPhaseSingle   EntryPhase = "single"
+	EntryPhaseError    EntryPhase = "error"
+	EntryPhaseOpened   EntryPhase = "opened"
+	EntryPhaseClosed   EntryPhase = "closed"
+)
 
 type EntryFilter struct {
 	Limit int64 `json:"limit" optional:"true"` // default `EntryFilterDefaultLimit`
@@ -121,24 +122,54 @@ type EntryFilter struct {
 	Error string `json:"error" optional:"true"` // free text
 }
 
-type Auditing interface {
-	// Adds the given entry to the index.
-	// Some fields like `Id`, `Component` and `Timestamp` will be filled by the auditing driver if not given.
-	Index(Entry) error
-	// Searches for entries matching the given filter.
-	// By default only recent entries will be returned.
-	// The returned entries will be sorted by timestamp in descending order.
-	Search(context.Context, EntryFilter) ([]Entry, error)
+func (e *Entry) PrepareForNextPhase() {
+	e.Id = ""
+	e.Timestamp = time.Now()
+	e.Body = nil
+	e.Error = nil
 
-	// Implements the health check interface
-	healthstatus.HealthCheck
+	switch e.Phase {
+	case EntryPhaseRequest:
+		e.Phase = EntryPhaseResponse
+	case EntryPhaseOpened:
+		e.Phase = EntryPhaseClosed
+	case EntryPhaseResponse,
+		EntryPhaseSingle,
+		EntryPhaseError,
+		EntryPhaseClosed:
+		// keep the phase
+	}
 }
-
-func defaultComponent() (string, error) {
+func DefaultComponent() (string, error) {
 	ex, err := os.Executable()
 	if err != nil {
 		return "", err
 	}
 
 	return filepath.Base(ex), nil
+}
+
+// use a private type and value for the key inside the context
+type key int
+
+var (
+	userkey = key(0)
+)
+
+// GetUserFromContext returns the current user from the context. If no user is set
+// it returns a guest with no rights.
+func GetUserFromContext(ctx context.Context) *User {
+	u, ok := ctx.Value(userkey).(*User)
+	if ok {
+		return u
+	}
+	return &User{
+		EMail: "anonymous@metal-stack.io",
+		Name:  "anonymous",
+	}
+}
+
+// PutUserInContext puts the given user as a value in the context.
+func PutUserInContext(ctx context.Context, u *User) context.Context {
+	return context.WithValue(ctx, userkey, u)
 }

@@ -1,6 +1,6 @@
 //go:build integration
 
-package auditing_test
+package test
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/auditing/timescaledb"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,7 @@ func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Cont
 	port, err := container.MappedPort(ctx, "5432")
 	require.NoError(t, err)
 
-	auditing, err := auditing.NewTimescaleDB(config, auditing.TimescaleDbConfig{
+	auditing, err := timescaledb.NewTimescaleDB(config, timescaledb.TimescaleDbConfig{
 		Host:     ip,
 		Port:     port.Port(),
 		DB:       "postgres",

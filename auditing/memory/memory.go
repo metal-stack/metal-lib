@@ -1,4 +1,4 @@
-package auditing
+package memory
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
@@ -24,7 +25,7 @@ type (
 		component string
 		log       *slog.Logger
 
-		memory []Entry
+		memory []auditing.Entry
 		mutex  sync.RWMutex
 
 		config *MemoryConfig
@@ -36,9 +37,9 @@ type (
 //
 // Please note that this backend is not intended to be used for production because it is ephemeral
 // and it is not guaranteed to have feature-parity with other auditing backends.
-func NewMemory(c Config, mc MemoryConfig) (Auditing, error) {
+func NewMemory(c auditing.Config, mc MemoryConfig) (auditing.Auditing, error) {
 	if c.Component == "" {
-		component, err := defaultComponent()
+		component, err := auditing.DefaultComponent()
 		if err != nil {
 			return nil, err
 		}
@@ -49,7 +50,7 @@ func NewMemory(c Config, mc MemoryConfig) (Auditing, error) {
 	a := &memoryAuditing{
 		component: c.Component,
 		log:       c.Log.WithGroup("auditing").With("audit-backend", MemoryBackendName),
-		memory:    []Entry{},
+		memory:    []auditing.Entry{},
 		config:    &mc,
 	}
 
@@ -62,7 +63,7 @@ func (a *memoryAuditing) Flush() error {
 	return nil
 }
 
-func (a *memoryAuditing) Index(entry Entry) error {
+func (a *memoryAuditing) Index(entry auditing.Entry) error {
 	if entry.Component == "" {
 		entry.Component = a.component
 	}
@@ -86,13 +87,13 @@ func (a *memoryAuditing) Index(entry Entry) error {
 	return nil
 }
 
-func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
+func (a *memoryAuditing) Search(ctx context.Context, filter auditing.EntryFilter) ([]auditing.Entry, error) {
 	var (
-		filters []func(e Entry) bool
+		filters []func(e auditing.Entry) bool
 	)
 
 	if filter.Body != "" {
-		filters = append(filters, func(e Entry) bool {
+		filters = append(filters, func(e auditing.Entry) bool {
 			body, err := json.Marshal(e.Body)
 			if err != nil {
 				return false
@@ -102,13 +103,13 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		})
 	}
 	if filter.Component != "" {
-		filters = append(filters, func(e Entry) bool { return filter.Component == e.Component })
+		filters = append(filters, func(e auditing.Entry) bool { return filter.Component == e.Component })
 	}
 	if filter.Detail != "" {
-		filters = append(filters, func(e Entry) bool { return string(filter.Detail) == string(e.Detail) })
+		filters = append(filters, func(e auditing.Entry) bool { return string(filter.Detail) == string(e.Detail) })
 	}
 	if filter.Error != "" {
-		filters = append(filters, func(e Entry) bool {
+		filters = append(filters, func(e auditing.Entry) bool {
 			if e.Error == nil {
 				return false
 			}
@@ -126,34 +127,34 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		})
 	}
 	if filter.ForwardedFor != "" {
-		filters = append(filters, func(e Entry) bool { return strings.Contains(e.ForwardedFor, filter.ForwardedFor) })
+		filters = append(filters, func(e auditing.Entry) bool { return strings.Contains(e.ForwardedFor, filter.ForwardedFor) })
 	}
 	if filter.Path != "" {
-		filters = append(filters, func(e Entry) bool { return strings.Contains(e.Path, filter.Path) })
+		filters = append(filters, func(e auditing.Entry) bool { return strings.Contains(e.Path, filter.Path) })
 	}
 	if filter.Phase != "" {
-		filters = append(filters, func(e Entry) bool { return string(filter.Phase) == string(e.Phase) })
+		filters = append(filters, func(e auditing.Entry) bool { return string(filter.Phase) == string(e.Phase) })
 	}
 	if filter.RemoteAddr != "" {
-		filters = append(filters, func(e Entry) bool { return strings.Contains(e.RemoteAddr, filter.RemoteAddr) })
+		filters = append(filters, func(e auditing.Entry) bool { return strings.Contains(e.RemoteAddr, filter.RemoteAddr) })
 	}
 	if filter.RequestId != "" {
-		filters = append(filters, func(e Entry) bool { return filter.RequestId == e.RequestId })
+		filters = append(filters, func(e auditing.Entry) bool { return filter.RequestId == e.RequestId })
 	}
 	if filter.StatusCode != nil {
-		filters = append(filters, func(e Entry) bool { return cmp.Equal(filter.StatusCode, e.StatusCode) })
+		filters = append(filters, func(e auditing.Entry) bool { return cmp.Equal(filter.StatusCode, e.StatusCode) })
 	}
 	if filter.Tenant != "" {
-		filters = append(filters, func(e Entry) bool { return filter.Tenant == e.Tenant })
+		filters = append(filters, func(e auditing.Entry) bool { return filter.Tenant == e.Tenant })
 	}
 	if filter.Project != "" {
-		filters = append(filters, func(e Entry) bool { return filter.Project == e.Project })
+		filters = append(filters, func(e auditing.Entry) bool { return filter.Project == e.Project })
 	}
 	if filter.Type != "" {
-		filters = append(filters, func(e Entry) bool { return string(filter.Type) == string(e.Type) })
+		filters = append(filters, func(e auditing.Entry) bool { return string(filter.Type) == string(e.Type) })
 	}
 	if filter.User != "" {
-		filters = append(filters, func(e Entry) bool { return filter.User == e.User })
+		filters = append(filters, func(e auditing.Entry) bool { return filter.User == e.User })
 	}
 
 	// we always provide From
@@ -161,7 +162,7 @@ func (a *memoryAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entr
 		filter.From = time.Now().Add(-24 * time.Hour).UTC()
 	}
 
-	var entries []Entry
+	var entries []auditing.Entry
 
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()

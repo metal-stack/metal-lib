@@ -1,4 +1,4 @@
-package auditing_test
+package test
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/auditing/memory"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,18 +26,18 @@ func TestAuditing_Memory(t *testing.T) {
 				t.Skipf("skipping because memory backend does not support this")
 			}
 
-			auditing, err := auditing.NewMemory(auditing.Config{
+			auditing, err := memory.NewMemory(auditing.Config{
 				Log: slog.Default(),
-			}, auditing.MemoryConfig{})
+			}, memory.MemoryConfig{})
 			require.NoError(t, err)
 
 			tt.t(t, auditing)
 		})
 	}
 
-	auditing, err := auditing.NewMemory(auditing.Config{
+	auditing, err := memory.NewMemory(auditing.Config{
 		Log: slog.Default(),
-	}, auditing.MemoryConfig{})
+	}, memory.MemoryConfig{})
 	require.NoError(t, err)
 
 	healthResult, err := auditing.Check(t.Context())

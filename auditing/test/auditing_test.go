@@ -1,4 +1,4 @@
-package auditing_test
+package test
 
 import (
 	"context"
@@ -12,10 +12,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/metal-stack/metal-lib/auditing"
+	httpaudit "github.com/metal-stack/metal-lib/auditing/http"
 	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 	testEntries = func() []auditing.Entry {
 		return []auditing.Entry{
 			{
-				Component:    "auditing.test",
+				Component:    "test.test",
 				RequestId:    "00000000-0000-0000-0000-000000000000",
 				Type:         auditing.EntryTypeHTTP,
 				Timestamp:    now,
@@ -46,7 +46,7 @@ var (
 				Error:        nil,
 			},
 			{
-				Component:    "auditing.test",
+				Component:    "test.test",
 				RequestId:    "00000000-0000-0000-0000-000000000001",
 				Type:         auditing.EntryTypeHTTP,
 				Timestamp:    now.Add(1 * time.Second),
@@ -63,7 +63,7 @@ var (
 				Error:        nil,
 			},
 			{
-				Component:    "auditing.test",
+				Component:    "test.test",
 				RequestId:    "00000000-0000-0000-0000-000000000002",
 				Type:         auditing.EntryTypeHTTP,
 				Timestamp:    now.Add(2 * time.Second),
@@ -77,7 +77,7 @@ var (
 				RemoteAddr:   "10.0.0.2",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000002",
 				StatusCode:   nil,
-				Error:        auditing.SerializableError(fmt.Errorf("an error")),
+				Error:        httpaudit.SerializableError(fmt.Errorf("an error")),
 			},
 		}
 	}
@@ -185,7 +185,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component:    "auditing.test",
+						Component:    "test.test",
 						ForwardedFor: "a",
 						RequestId:    "1",
 						Timestamp:    now,
@@ -211,7 +211,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component: "auditing.test",
+						Component: "test.test",
 						Path:      "/a/b/c/d",
 						RequestId: "1",
 						Timestamp: now,
@@ -237,7 +237,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component:  "auditing.test",
+						Component:  "test.test",
 						StatusCode: new(400),
 						RequestId:  "1",
 						Timestamp:  now,
@@ -269,7 +269,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component:  "auditing.test",
+						Component:  "test.test",
 						StatusCode: new(0),
 						RequestId:  "2",
 						Timestamp:  now,
@@ -295,7 +295,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component: "auditing.test",
+						Component: "test.test",
 						Tenant:    "a",
 						RequestId: "1",
 						Timestamp: now,
@@ -321,7 +321,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component: "auditing.test",
+						Component: "test.test",
 						Project:   "a",
 						RequestId: "1",
 						Timestamp: now,
@@ -347,7 +347,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component: "auditing.test",
+						Component: "test.test",
 						User:      "a",
 						RequestId: "1",
 						Timestamp: now,
@@ -412,7 +412,7 @@ var (
 					require.Len(t, entries, 1)
 
 					if diff := cmp.Diff(entries[0], auditing.Entry{
-						Component: "auditing.test",
+						Component: "test.test",
 						RequestId: "1",
 						Timestamp: now,
 					}); diff != "" {
@@ -558,7 +558,7 @@ var (
 						Limit:        1,
 						From:         now.Add(-1 * time.Minute),
 						To:           now.Add(1 * time.Minute),
-						Component:    "auditing.test",
+						Component:    "test.test",
 						RequestId:    "00000000-0000-0000-0000-000000000000",
 						Type:         "http",
 						User:         "admin",
@@ -629,7 +629,7 @@ var (
 					entries, err := a.Search(ctx, auditing.EntryFilter{})
 					require.NoError(t, err)
 					assert.Len(t, entries, 1)
-					assert.Equal(t, "auditing.test", entries[0].Component)
+					assert.Equal(t, "test.test", entries[0].Component)
 					assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 				},
 			},
@@ -637,14 +637,14 @@ var (
 				name: "index an http error",
 				t: func(t *testing.T, a auditing.Auditing) {
 					err := a.Index(auditing.Entry{
-						Error: auditing.SerializableError(httperrors.NewHTTPError(http.StatusConflict, fmt.Errorf("already exists"))),
+						Error: httpaudit.SerializableError(httperrors.NewHTTPError(http.StatusConflict, fmt.Errorf("already exists"))),
 					})
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{})
 					require.NoError(t, err)
 					assert.Len(t, entries, 1)
-					assert.Equal(t, "auditing.test", entries[0].Component)
+					assert.Equal(t, "test.test", entries[0].Component)
 					assert.Equal(t, map[string]any{"statuscode": float64(409), "message": "already exists"}, entries[0].Error)
 					assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 				},
@@ -653,15 +653,15 @@ var (
 				name: "index a connect error",
 				t: func(t *testing.T, a auditing.Auditing) {
 					err := a.Index(auditing.Entry{
-						Error: auditing.SerializableError(connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("already exists"))),
+						Error: httpaudit.SerializableError(connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("already exists"))),
 					})
 					require.NoError(t, err)
 
 					entries, err := a.Search(ctx, auditing.EntryFilter{})
 					require.NoError(t, err)
 					assert.Len(t, entries, 1)
-					assert.Equal(t, "auditing.test", entries[0].Component)
-					assert.Equal(t, map[string]any{"code": float64(codes.AlreadyExists), "error": "already_exists: already exists", "message": "already_exists"}, entries[0].Error)
+					assert.Equal(t, "test.test", entries[0].Component)
+					assert.Equal(t, map[string]any{"error": "already_exists: already exists"}, entries[0].Error)
 					assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 				},
 			},
