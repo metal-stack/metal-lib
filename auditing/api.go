@@ -1,4 +1,4 @@
-package api
+package auditing
 
 import (
 	"context"
@@ -33,10 +33,8 @@ type Config struct {
 type User struct {
 	EMail   string
 	Name    string
-	Groups  []string
 	Tenant  string
 	Project string
-	Issuer  string
 	Subject string
 }
 

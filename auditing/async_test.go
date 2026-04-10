@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/metal-stack/metal-lib/auditing/api"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,7 +90,7 @@ func Test_asyncAuditing_Index(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			err = async.Index(api.Entry{Id: "test"})
+			err = async.Index(Entry{Id: "test"})
 			require.NoError(t, err)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -120,7 +119,7 @@ type testBackend struct {
 	health error
 }
 
-func (t *testBackend) Index(e api.Entry) error {
+func (t *testBackend) Index(e Entry) error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -136,7 +135,7 @@ func (t *testBackend) Index(e api.Entry) error {
 	return nil
 }
 
-func (t *testBackend) Search(ctx context.Context, filter api.EntryFilter) ([]api.Entry, error) {
+func (t *testBackend) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	panic("not required")
 }
 

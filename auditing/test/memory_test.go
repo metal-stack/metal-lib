@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/auditing/memory"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +26,7 @@ func TestAuditing_Memory(t *testing.T) {
 				t.Skipf("skipping because memory backend does not support this")
 			}
 
-			auditing, err := memory.NewMemory(api.Config{
+			auditing, err := memory.NewMemory(auditing.Config{
 				Log: slog.Default(),
 			}, memory.MemoryConfig{})
 			require.NoError(t, err)
@@ -35,7 +35,7 @@ func TestAuditing_Memory(t *testing.T) {
 		})
 	}
 
-	auditing, err := memory.NewMemory(api.Config{
+	auditing, err := memory.NewMemory(auditing.Config{
 		Log: slog.Default(),
 	}, memory.MemoryConfig{})
 	require.NoError(t, err)
