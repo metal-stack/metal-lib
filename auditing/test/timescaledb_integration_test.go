@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/auditing/timescaledb"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ import (
 
 func TestAuditing_TimescaleDB(t *testing.T) {
 	ctx := context.Background()
-	container, db, aud := StartTimescaleDB(t, api.Config{
+	container, db, aud := StartTimescaleDB(t, auditing.Config{
 		Log: slog.Default(),
 	})
 	defer func() {
@@ -47,7 +47,7 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 	}, healthResult)
 }
 
-func StartTimescaleDB(t testing.TB, config api.Config) (testcontainers.Container, *sqlx.DB, api.Auditing) {
+func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Container, *sqlx.DB, auditing.Auditing) {
 	req := testcontainers.ContainerRequest{
 		Image:        "timescale/timescaledb:2.16.1-pg16",
 		ExposedPorts: []string{"5432/tcp"},

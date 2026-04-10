@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/auditing/splunk"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
@@ -22,12 +22,12 @@ func Test_splunkAuditing_Index(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		entry api.Entry
+		entry auditing.Entry
 		want  splunk.SplunkEvent
 	}{
 		{
 			name: "index some entry with async",
-			entry: api.Entry{
+			entry: auditing.Entry{
 				Component:    "entry-component",
 				RequestId:    "request-id",
 				Type:         "entry-type",
@@ -49,7 +49,7 @@ func Test_splunkAuditing_Index(t *testing.T) {
 				Source:     "metal-lib",
 				SourceType: "_json",
 				Index:      "test-index",
-				Event: api.Entry{
+				Event: auditing.Entry{
 					Component:    "entry-component",
 					RequestId:    "request-id",
 					Type:         "entry-type",
@@ -88,7 +88,7 @@ func Test_splunkAuditing_Index(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
-			a, err := splunk.NewSplunk(api.Config{
+			a, err := splunk.NewSplunk(auditing.Config{
 				Component: "metal-lib",
 				Log:       slog.Default(),
 			}, splunk.SplunkConfig{
@@ -128,7 +128,7 @@ func Test_splunkAuditing_Health(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
-			a, err := splunk.NewSplunk(api.Config{
+			a, err := splunk.NewSplunk(auditing.Config{
 				Component: "metal-lib",
 				Log:       slog.Default(),
 			}, splunk.SplunkConfig{

@@ -9,7 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
-	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,12 +23,12 @@ const (
 )
 
 type auditingConnectInterceptor struct {
-	auditing    api.Auditing
+	auditing    auditing.Auditing
 	logger      *slog.Logger
 	shouldAudit func(fullMethod string) bool
 }
 
-func NewConnectInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (connect.Interceptor, error) {
+func NewConnectInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (connect.Interceptor, error) {
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create connect interceptor")
 	}
@@ -58,16 +58,16 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		}
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := api.Entry{
+		auditReqContext := auditing.Entry{
 			Timestamp: time.Now(),
 			RequestId: requestID,
-			Detail:    api.EntryDetailGRPCStream,
+			Detail:    auditing.EntryDetailGRPCStream,
 			Path:      s.Procedure,
-			Phase:     api.EntryPhaseOpened,
-			Type:      api.EntryTypeGRPC,
+			Phase:     auditing.EntryPhaseOpened,
+			Type:      auditing.EntryTypeGRPC,
 		}
 
-		user := api.GetUserFromContext(ctx)
+		user := auditing.GetUserFromContext(ctx)
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
@@ -82,7 +82,7 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		auditReqContext.PrepareForNextPhase()
 		scc := next(childCtx, s)
 
-		auditReqContext.Phase = api.EntryPhaseClosed
+		auditReqContext.Phase = auditing.EntryPhaseClosed
 		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		err = a.auditing.Index(auditReqContext)
@@ -113,13 +113,13 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		}
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := api.Entry{
+		auditReqContext := auditing.Entry{
 			Timestamp:    time.Now(),
 			RequestId:    requestID,
-			Detail:       api.EntryDetailGRPCStream,
+			Detail:       auditing.EntryDetailGRPCStream,
 			Path:         shc.Spec().Procedure,
-			Phase:        api.EntryPhaseOpened,
-			Type:         api.EntryTypeGRPC,
+			Phase:        auditing.EntryPhaseOpened,
+			Type:         auditing.EntryTypeGRPC,
 			RemoteAddr:   shc.RequestHeader().Get("X-Real-Ip"),
 			ForwardedFor: shc.RequestHeader().Get("X-Forwarded-For"),
 		}
@@ -128,7 +128,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			auditReqContext.RemoteAddr = shc.Peer().Addr
 		}
 
-		user := api.GetUserFromContext(ctx)
+		user := auditing.GetUserFromContext(ctx)
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
@@ -154,7 +154,7 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			return err
 		}
 
-		auditReqContext.Phase = api.EntryPhaseClosed
+		auditReqContext.Phase = auditing.EntryPhaseClosed
 		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
@@ -183,13 +183,13 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		}
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := api.Entry{
+		auditReqContext := auditing.Entry{
 			Timestamp:    time.Now(),
 			RequestId:    requestID,
-			Detail:       api.EntryDetailGRPCUnary,
+			Detail:       auditing.EntryDetailGRPCUnary,
 			Path:         ar.Spec().Procedure,
-			Phase:        api.EntryPhaseRequest,
-			Type:         api.EntryTypeGRPC,
+			Phase:        auditing.EntryPhaseRequest,
+			Type:         auditing.EntryTypeGRPC,
 			Body:         ar.Any(),
 			RemoteAddr:   ar.Header().Get("X-Real-Ip"),
 			ForwardedFor: ar.Header().Get("X-Forwarded-For"),
@@ -199,7 +199,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			auditReqContext.RemoteAddr = ar.Peer().Addr
 		}
 
-		user := api.GetUserFromContext(ctx)
+		user := auditing.GetUserFromContext(ctx)
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
@@ -214,7 +214,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 
 		resp, err := next(childCtx, ar)
 
-		auditReqContext.Phase = api.EntryPhaseResponse
+		auditReqContext.Phase = auditing.EntryPhaseResponse
 		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
 		if err != nil {
@@ -234,7 +234,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 	}
 }
 
-func UnaryServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.UnaryServerInterceptor, error) {
+func UnaryServerInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.UnaryServerInterceptor, error) {
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create unary server interceptor")
 	}
@@ -256,16 +256,16 @@ func UnaryServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit fun
 
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := api.Entry{
+		auditReqContext := auditing.Entry{
 			Timestamp: time.Now(),
 			RequestId: requestID,
-			Type:      api.EntryTypeGRPC,
-			Detail:    api.EntryDetailGRPCUnary,
+			Type:      auditing.EntryTypeGRPC,
+			Detail:    auditing.EntryDetailGRPCUnary,
 			Path:      info.FullMethod,
-			Phase:     api.EntryPhaseRequest,
+			Phase:     auditing.EntryPhaseRequest,
 		}
 
-		user := api.GetUserFromContext(ctx)
+		user := auditing.GetUserFromContext(ctx)
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
@@ -280,7 +280,7 @@ func UnaryServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit fun
 		auditReqContext.PrepareForNextPhase()
 		resp, err = handler(childCtx, req)
 
-		auditReqContext.Phase = api.EntryPhaseResponse
+		auditReqContext.Phase = auditing.EntryPhaseResponse
 		auditReqContext.Body = resp
 		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
 
@@ -299,7 +299,7 @@ func UnaryServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit fun
 	}, nil
 }
 
-func StreamServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.StreamServerInterceptor, error) {
+func StreamServerInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.StreamServerInterceptor, error) {
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create stream server interceptor")
 	}
@@ -324,16 +324,16 @@ func StreamServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit fu
 			ctx:          childCtx,
 		}
 
-		auditReqContext := api.Entry{
+		auditReqContext := auditing.Entry{
 			Timestamp: time.Now(),
 			RequestId: requestID,
-			Detail:    api.EntryDetailGRPCStream,
+			Detail:    auditing.EntryDetailGRPCStream,
 			Path:      info.FullMethod,
-			Phase:     api.EntryPhaseOpened,
-			Type:      api.EntryTypeGRPC,
+			Phase:     auditing.EntryPhaseOpened,
+			Type:      auditing.EntryTypeGRPC,
 		}
 
-		user := api.GetUserFromContext(ss.Context())
+		user := auditing.GetUserFromContext(ss.Context())
 		if user != nil {
 			auditReqContext.User = user.Subject
 			auditReqContext.Tenant = user.Tenant
@@ -359,7 +359,7 @@ func StreamServerInterceptor(a api.Auditing, logger *slog.Logger, shouldAudit fu
 			return err
 		}
 
-		auditReqContext.Phase = api.EntryPhaseClosed
+		auditReqContext.Phase = auditing.EntryPhaseClosed
 		err = a.Index(auditReqContext)
 
 		return err

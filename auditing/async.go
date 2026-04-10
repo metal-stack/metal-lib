@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/metal-stack/metal-lib/auditing/api"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
@@ -25,7 +24,7 @@ type (
 	asyncAuditing struct {
 		log    *slog.Logger
 		config *AsyncConfig
-		a      api.Auditing
+		a      Auditing
 	}
 )
 
@@ -35,7 +34,7 @@ type (
 //
 // Dev note: For a backend wrapped in async, it is strictly required that the index function does not modify internal state
 // as otherwise race conditions will occur!
-func NewAsync(backend api.Auditing, log *slog.Logger, ac AsyncConfig) (api.Auditing, error) {
+func NewAsync(backend Auditing, log *slog.Logger, ac AsyncConfig) (Auditing, error) {
 	wrappedBackendType := fmt.Sprintf("%T", backend)
 
 	a := &asyncAuditing{
@@ -53,7 +52,7 @@ func NewAsync(backend api.Auditing, log *slog.Logger, ac AsyncConfig) (api.Audit
 	return a, nil
 }
 
-func (a *asyncAuditing) Index(entry api.Entry) error {
+func (a *asyncAuditing) Index(entry Entry) error {
 	go func() {
 		count := 0
 
@@ -84,7 +83,7 @@ func (a *asyncAuditing) Index(entry api.Entry) error {
 	return nil
 }
 
-func (a *asyncAuditing) Search(ctx context.Context, filter api.EntryFilter) ([]api.Entry, error) {
+func (a *asyncAuditing) Search(ctx context.Context, filter EntryFilter) ([]Entry, error) {
 	return a.a.Search(ctx, filter)
 }
 

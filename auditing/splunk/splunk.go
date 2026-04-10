@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 )
 
@@ -60,7 +60,7 @@ type (
 		// Index by which the event data is to be indexed.
 		Index string `json:"index,omitempty"`
 		// Event is the actual event data in whatever format you want: a string, a number, another JSON object, and so on.
-		Event api.Entry `json:"event,omitempty"`
+		Event auditing.Entry `json:"event,omitempty"`
 	}
 
 	splunkRequestEndpoint struct {
@@ -71,9 +71,9 @@ type (
 )
 
 // NewSplunk returns a new auditing backend for splunk. It supports the HTTP event collector interface.
-func NewSplunk(c api.Config, sc SplunkConfig) (api.Auditing, error) {
+func NewSplunk(c auditing.Config, sc SplunkConfig) (auditing.Auditing, error) {
 	if c.Component == "" {
-		component, err := api.DefaultComponent()
+		component, err := auditing.DefaultComponent()
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func NewSplunk(c api.Config, sc SplunkConfig) (api.Auditing, error) {
 	return a, nil
 }
 
-func (a *splunkAuditing) Index(entry api.Entry) error {
+func (a *splunkAuditing) Index(entry auditing.Entry) error {
 	if entry.Timestamp.IsZero() {
 		return errors.New("timestamp is not set")
 	}
@@ -156,7 +156,7 @@ func (a *splunkAuditing) Index(entry api.Entry) error {
 	return nil
 }
 
-func (a *splunkAuditing) Search(ctx context.Context, filter api.EntryFilter) ([]api.Entry, error) {
+func (a *splunkAuditing) Search(ctx context.Context, filter auditing.EntryFilter) ([]auditing.Entry, error) {
 	return nil, fmt.Errorf("search not implemented for splunk audit backend")
 }
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
-	"github.com/metal-stack/metal-lib/auditing/api"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/rest"
 )
 
@@ -34,7 +34,7 @@ func NewHttpFilterErrorCallback(callback func(err error, response *restful.Respo
 	return &httpFilterErrorCallback{callback: callback}
 }
 
-func HttpFilter(a api.Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful.FilterFunction, error) {
+func HttpFilter(a auditing.Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful.FilterFunction, error) {
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create http middleware")
 	}
@@ -102,17 +102,17 @@ func HttpFilter(a api.Auditing, logger *slog.Logger, opts ...httpFilterOpt) (res
 			}
 			requestID = uuid.String()
 		}
-		auditReqContext := api.Entry{
+		auditReqContext := auditing.Entry{
 			Timestamp:    time.Now(),
 			RequestId:    requestID,
-			Type:         api.EntryTypeHTTP,
-			Detail:       api.EntryDetail(r.Method),
+			Type:         auditing.EntryTypeHTTP,
+			Detail:       auditing.EntryDetail(r.Method),
 			Path:         r.URL.Path,
-			Phase:        api.EntryPhaseRequest,
+			Phase:        auditing.EntryPhaseRequest,
 			ForwardedFor: request.HeaderParameter("x-forwarded-for"),
 			RemoteAddr:   r.RemoteAddr,
 		}
-		user := api.GetUserFromContext(r.Context())
+		user := auditing.GetUserFromContext(r.Context())
 		if user != nil {
 			auditReqContext.User = user.EMail
 			auditReqContext.Tenant = user.Tenant
@@ -149,7 +149,7 @@ func HttpFilter(a api.Auditing, logger *slog.Logger, opts ...httpFilterOpt) (res
 		auditReqContext.PrepareForNextPhase()
 		chain.ProcessFilter(request, response)
 
-		auditReqContext.Phase = api.EntryPhaseResponse
+		auditReqContext.Phase = auditing.EntryPhaseResponse
 		auditReqContext.StatusCode = new(response.StatusCode())
 		strBody := bufferedResponseWriter.Content()
 		body := []byte(strBody)
