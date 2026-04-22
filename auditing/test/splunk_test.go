@@ -1,4 +1,4 @@
-package auditing
+package test
 
 import (
 	"encoding/json"
@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/metal-stack/metal-lib/auditing"
+	"github.com/metal-stack/metal-lib/auditing/splunk"
 	"github.com/metal-stack/metal-lib/pkg/healthstatus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,12 +22,12 @@ func Test_splunkAuditing_Index(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		entry Entry
-		want  splunkEvent
+		entry auditing.Entry
+		want  splunk.SplunkEvent
 	}{
 		{
 			name: "index some entry with async",
-			entry: Entry{
+			entry: auditing.Entry{
 				Component:    "entry-component",
 				RequestId:    "request-id",
 				Type:         "entry-type",
@@ -41,13 +43,13 @@ func Test_splunkAuditing_Index(t *testing.T) {
 				StatusCode:   new(200),
 				Error:        nil,
 			},
-			want: splunkEvent{
+			want: splunk.SplunkEvent{
 				Time:       now.Unix(),
 				Host:       "test-host",
 				Source:     "metal-lib",
 				SourceType: "_json",
 				Index:      "test-index",
-				Event: Entry{
+				Event: auditing.Entry{
 					Component:    "entry-component",
 					RequestId:    "request-id",
 					Type:         "entry-type",
@@ -73,7 +75,7 @@ func Test_splunkAuditing_Index(t *testing.T) {
 				body, err := io.ReadAll(r.Body)
 				assert.NoError(t, err)
 
-				var data splunkEvent
+				var data splunk.SplunkEvent
 				err = json.Unmarshal(body, &data)
 				assert.NoError(t, err)
 
@@ -86,10 +88,10 @@ func Test_splunkAuditing_Index(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
-			a, err := NewSplunk(Config{
+			a, err := splunk.NewSplunk(auditing.Config{
 				Component: "metal-lib",
 				Log:       slog.Default(),
-			}, SplunkConfig{
+			}, splunk.SplunkConfig{
 				Endpoint: server.URL,
 				HECToken: "test-hec",
 				Index:    "test-index",
@@ -126,10 +128,10 @@ func Test_splunkAuditing_Health(t *testing.T) {
 			server := httptest.NewServer(mux)
 			defer server.Close()
 
-			a, err := NewSplunk(Config{
+			a, err := splunk.NewSplunk(auditing.Config{
 				Component: "metal-lib",
 				Log:       slog.Default(),
-			}, SplunkConfig{
+			}, splunk.SplunkConfig{
 				Endpoint: server.URL,
 				HECToken: "test-hec",
 				Index:    "test-index",
