@@ -11,6 +11,7 @@ import (
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/google/uuid"
+	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/metal-stack/security"
 )
@@ -134,6 +135,13 @@ func UserAuth(ug security.UserGetter, fallbackLogger *slog.Logger) restful.Filte
 
 		rq := req.Request
 		ctx := security.PutUserInContext(rq.Context(), usr)
+		ctx = auditing.PutUserInContext(ctx, &auditing.User{
+			EMail: usr.EMail,
+			Name: usr.Name,
+			Tenant: usr.Tenant,
+			Project: usr.Project,
+			Subject: usr.Subject,
+		})
 
 		log = log.With("useremail", usr.EMail, "username", usr.Name, "usertenant", usr.Tenant)
 		ctx = context.WithValue(ctx, RequestLoggerKey, log)
