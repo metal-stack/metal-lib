@@ -54,6 +54,7 @@ type Test[Response, RawObject any] struct {
 	WantWideTable   *string       // for wide table printer
 	WantMarkdown    *string       // for markdown printer
 	WantTemplate    *string       // for template printer
+	WantDefault     *string       // for default printer
 	Template        *string       // for template printer
 
 	WantErr error
@@ -89,7 +90,7 @@ func (c *Test[Response, RawObject]) TestCmd(t *testing.T) {
 
 	formats := outputFormats(c)
 
-	if len(formats) == 0 {
+	if len(formats) == 0 && c.WantErr == nil {
 		t.Errorf("at least one want section for output formats must be specified, otherwise no command is getting executed")
 		return
 	}
@@ -172,12 +173,32 @@ func outputFormats[Response, RawObject any](c *Test[Response, RawObject]) []outp
 		formats = append(formats, &markdownOutputFormat{table: *c.WantMarkdown})
 	}
 
+	if c.WantDefault != nil {
+		formats = append(formats, &defaultOutputFormat{output: *c.WantDefault})
+	}
+
 	return formats
 }
 
 type outputFormat interface {
 	Args() []string
 	Validate(t *testing.T, output []byte)
+}
+
+type defaultOutputFormat struct {
+	output string
+}
+
+func (o *defaultOutputFormat) Args() []string {
+	return []string{}
+}
+
+func (o *defaultOutputFormat) Validate(t *testing.T, output []byte) {
+	t.Logf("got following default output:\n\n%s\n\nconsider using this for test comparison if it looks correct.", string(output))
+
+	if diff := cmp.Diff(strings.TrimSpace(o.output), strings.TrimSpace(string(output))); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
 }
 
 type rawYamlOutputFormat[R any] struct {

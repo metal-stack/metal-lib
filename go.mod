@@ -3,7 +3,7 @@ module github.com/metal-stack/metal-lib
 go 1.26
 
 require (
-	buf.build/go/protoyaml v0.6.0
+	buf.build/go/protoyaml v0.7.0
 	connectrpc.com/connect v1.19.2
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/avast/retry-go/v4 v4.7.0
@@ -219,7 +219,8 @@ require (
 	golang.org/x/tools v0.44.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260523011958-0a33c5d7ca68 // indirect
 	gvisor.dev/gvisor v0.0.0-20240722211153-64c016c92987 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 )
