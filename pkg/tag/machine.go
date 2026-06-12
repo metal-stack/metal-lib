@@ -15,6 +15,8 @@ const (
 	MachineNetworkPrimaryASN = "machine.metal-stack.io/network.primary.asn"
 	// MachineRack tag to store the rack that this machine is placed in.
 	MachineRack = "machine.metal-stack.io/rack"
+	// MachineRoom tag to store the room in which the machine is located.
+	MachineRoom = "machine.metal-stack.io/room"
 	// MachineChassis tag to store the machine chassis.
 	MachineChassis = "machine.metal-stack.io/chassis"
 )
