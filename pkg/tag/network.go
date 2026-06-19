@@ -3,9 +3,12 @@ package tag
 const (
 	// NetworkDefault indicates a network that can serve as a default network for cluster creation
 	// there should only be one default network in a metal control plane, otherwise behavior will be non-deterministic
+	// Deprecated use github.com/metal-stack/api/go/tag/NetworkDefault
 	NetworkDefault = "network.metal-stack.io/default"
 	// NetworkDefaultExternal indicates a network that can serve as a default for IP allocations
+	// Deprecated use github.com/metal-stack/api/go/tag/NetworkDefaultExternal
 	NetworkDefaultExternal = "network.metal-stack.io/default-external"
 	// NetworkPartitionStorage indicates a network that can serve as a storage network in a partition
+	// Deprecated use github.com/metal-stack/api/go/tag/NetworkPartitionStorage
 	NetworkPartitionStorage = "network.metal-stack.io/partition-storage"
 )
