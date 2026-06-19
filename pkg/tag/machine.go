@@ -8,7 +8,6 @@ const (
 	// Deprecated use github.com/metal-stack/api/go/tag/MachineName
 	MachineName = "machine.metal-stack.io/name"
 	// MachineDescription tag to store machine description
-	// Deprecated use github.com/metal-stack/api/go/tag/MachineDescription
 	MachineDescription = "machine.metal-stack.io/description"
 	// MachineProject tag to store the project where the machine belongs to
 	// Deprecated use github.com/metal-stack/api/go/tag/MachineProject
