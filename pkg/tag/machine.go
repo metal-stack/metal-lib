@@ -22,6 +22,7 @@ const (
 	// Deprecated use github.com/metal-stack/api/go/tag/MachineRack
 	MachineRack = "machine.metal-stack.io/rack"
 	// MachineRoom tag to store the room in which the machine is located.
+	// Deprecated use github.com/metal-stack/api/go/tag/MachineRoom
 	MachineRoom = "machine.metal-stack.io/room"
 	// MachineChassis tag to store the machine chassis.
 	// Deprecated use github.com/metal-stack/api/go/tag/MachineChassis
