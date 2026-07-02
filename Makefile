@@ -6,10 +6,6 @@ export GO111MODULE := on
 build: test
 	go build ./...
 
-.PHONY: vendor
-vendor:
-	go mod vendor
-
 .PHONY: test
 test:
 	go test -coverprofile cover.out -cover -race ./... && go tool cover -func cover.out
