@@ -82,6 +82,8 @@ type Foo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
 	State         State                  `protobuf:"varint,2,opt,name=state,proto3,enum=printers_test.State" json:"state,omitempty"`
+	ListFoos      []*NestedFoo           `protobuf:"bytes,3,rep,name=list_foos,json=listFoos,proto3" json:"list_foos,omitempty"`
+	MapFoos       map[string]*NestedFoo  `protobuf:"bytes,4,rep,name=map_foos,json=mapFoos,proto3" json:"map_foos,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,14 +132,79 @@ func (x *Foo) GetState() State {
 	return State_STATE_UNSPECIFIED
 }
 
+func (x *Foo) GetListFoos() []*NestedFoo {
+	if x != nil {
+		return x.ListFoos
+	}
+	return nil
+}
+
+func (x *Foo) GetMapFoos() map[string]*NestedFoo {
+	if x != nil {
+		return x.MapFoos
+	}
+	return nil
+}
+
+type NestedFoo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Text          []string               `protobuf:"bytes,1,rep,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NestedFoo) Reset() {
+	*x = NestedFoo{}
+	mi := &file_pkg_genericcli_printers_proto_test_test_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NestedFoo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NestedFoo) ProtoMessage() {}
+
+func (x *NestedFoo) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_genericcli_printers_proto_test_test_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NestedFoo.ProtoReflect.Descriptor instead.
+func (*NestedFoo) Descriptor() ([]byte, []int) {
+	return file_pkg_genericcli_printers_proto_test_test_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *NestedFoo) GetText() []string {
+	if x != nil {
+		return x.Text
+	}
+	return nil
+}
+
 var File_pkg_genericcli_printers_proto_test_test_proto protoreflect.FileDescriptor
 
 const file_pkg_genericcli_printers_proto_test_test_proto_rawDesc = "" +
 	"\n" +
-	"-pkg/genericcli/printers/proto_test/test.proto\x12\rprinters_test\"E\n" +
+	"-pkg/genericcli/printers/proto_test/test.proto\x12\rprinters_test\"\x8e\x02\n" +
 	"\x03Foo\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12*\n" +
-	"\x05state\x18\x02 \x01(\x0e2\x14.printers_test.StateR\x05state*Y\n" +
+	"\x05state\x18\x02 \x01(\x0e2\x14.printers_test.StateR\x05state\x125\n" +
+	"\tlist_foos\x18\x03 \x03(\v2\x18.printers_test.NestedFooR\blistFoos\x12:\n" +
+	"\bmap_foos\x18\x04 \x03(\v2\x1f.printers_test.Foo.MapFoosEntryR\amapFoos\x1aT\n" +
+	"\fMapFoosEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12.\n" +
+	"\x05value\x18\x02 \x01(\v2\x18.printers_test.NestedFooR\x05value:\x028\x01\"\x1f\n" +
+	"\tNestedFoo\x12\x12\n" +
+	"\x04text\x18\x01 \x03(\tR\x04text*Y\n" +
 	"\x05State\x12\x15\n" +
 	"\x11STATE_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rSTATE_PENDING\x10\x01\x12\x10\n" +
@@ -157,18 +224,23 @@ func file_pkg_genericcli_printers_proto_test_test_proto_rawDescGZIP() []byte {
 }
 
 var file_pkg_genericcli_printers_proto_test_test_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pkg_genericcli_printers_proto_test_test_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_pkg_genericcli_printers_proto_test_test_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_pkg_genericcli_printers_proto_test_test_proto_goTypes = []any{
-	(State)(0),  // 0: printers_test.State
-	(*Foo)(nil), // 1: printers_test.Foo
+	(State)(0),        // 0: printers_test.State
+	(*Foo)(nil),       // 1: printers_test.Foo
+	(*NestedFoo)(nil), // 2: printers_test.NestedFoo
+	nil,               // 3: printers_test.Foo.MapFoosEntry
 }
 var file_pkg_genericcli_printers_proto_test_test_proto_depIdxs = []int32{
 	0, // 0: printers_test.Foo.state:type_name -> printers_test.State
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 1: printers_test.Foo.list_foos:type_name -> printers_test.NestedFoo
+	3, // 2: printers_test.Foo.map_foos:type_name -> printers_test.Foo.MapFoosEntry
+	2, // 3: printers_test.Foo.MapFoosEntry.value:type_name -> printers_test.NestedFoo
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_pkg_genericcli_printers_proto_test_test_proto_init() }
@@ -182,7 +254,7 @@ func file_pkg_genericcli_printers_proto_test_test_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_genericcli_printers_proto_test_test_proto_rawDesc), len(file_pkg_genericcli_printers_proto_test_test_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

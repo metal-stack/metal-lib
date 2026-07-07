@@ -13,15 +13,49 @@ import (
 func TestJsonProtoWithProto(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	printer := printers.NewProtoJSONPrinter().WithOut(buffer)
-	err := printer.Print(&proto_test.Foo{Text: "test"})
+	err := printer.Print(&proto_test.Foo{
+		Text:  "test",
+		State: proto_test.State_STATE_ACTIVE,
+		ListFoos: []*proto_test.NestedFoo{
+			{
+				Text: []string{"nested"},
+			},
+		},
+		MapFoos: map[string]*proto_test.NestedFoo{
+			"1": {Text: []string{"mapped"}},
+		},
+	})
 	if err != nil {
 		t.Error(err)
 	}
+
+	want := `
+{
+    "text":  "test",
+    "state":  "STATE_ACTIVE",
+    "listFoos":  [
+        {
+            "text":  [
+                "nested"
+            ]
+        }
+    ],
+    "mapFoos":  {
+        "1":  {
+            "text":  [
+                "mapped"
+            ]
+        }
+    }
+}`
+
 	// the proto response differs in whitespace from time to time
-	got := strings.ReplaceAll(buffer.String(), " ", "")
-	want := "{\n\"text\":\"test\"\n}\n"
+	got := strings.ReplaceAll(strings.TrimSpace(buffer.String()), " ", "")
+	want = strings.ReplaceAll(strings.TrimSpace(want), " ", "")
+
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("diff (+got -want):\n %s", diff)
+		t.Log("Use this for compare: \n" + buffer.String())
 	}
 }
 
