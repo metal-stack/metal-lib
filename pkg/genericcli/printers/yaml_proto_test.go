@@ -23,6 +23,20 @@ func TestYamlProtoWithProto(t *testing.T) {
 	}
 }
 
+func TestYamlProtoWithProtos(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	printer := printers.NewProtoYAMLPrinter().WithFallback(false).WithOut(buffer)
+	err := printer.Print([]*proto_test.Foo{{Text: "test"}, {Text: "test2"}})
+	if err != nil {
+		t.Error(err)
+	}
+	got := buffer.String()
+	want := "text: test\n---\ntext: test2\n"
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("diff (+got -want):\n %s", diff)
+	}
+}
+
 func TestYamlProtoWithJsonWithoutFallbackFails(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	printer := printers.NewProtoYAMLPrinter().
