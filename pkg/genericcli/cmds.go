@@ -195,13 +195,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.MultiArgGenericCLI.CreateAndPrint(rq, c.DescribePrinter())
 				}
 
-				p := c.evalBulkFlags()
+				p := c.EvalBulkFlags()
 
 				return c.MultiArgGenericCLI.CreateFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 
-		c.addFileFlags(cmd)
+		c.AddFileFlags(cmd)
 
 		if c.CreateCmdMutateFn != nil {
 			c.CreateCmdMutateFn(cmd)
@@ -232,14 +232,14 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.MultiArgGenericCLI.UpdateAndPrint(rq, c.DescribePrinter())
 				}
 
-				p := c.evalBulkFlags()
+				p := c.EvalBulkFlags()
 
 				return c.MultiArgGenericCLI.UpdateFromFileAndPrint(viper.GetString("file"), p())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
 
-		c.addFileFlags(cmd)
+		c.AddFileFlags(cmd)
 
 		if c.UpdateCmdMutateFn != nil {
 			c.UpdateCmdMutateFn(cmd)
@@ -269,14 +269,14 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					return c.MultiArgGenericCLI.DeleteAndPrint(c.DescribePrinter(), id...)
 				}
 
-				p := c.evalBulkFlags()
+				p := c.EvalBulkFlags()
 
 				return c.MultiArgGenericCLI.DeleteFromFileAndPrint(viper.GetString("file"), p())
 			},
 			ValidArgsFunction: c.ValidArgsFn,
 		}
 
-		c.addFileFlags(cmd)
+		c.AddFileFlags(cmd)
 
 		if c.DeleteCmdMutateFn != nil {
 			c.DeleteCmdMutateFn(cmd)
@@ -294,13 +294,13 @@ func NewCmds[C any, U any, R any](c *CmdsConfig[C, U, R], additionalCmds ...*cob
 					c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 				}
 
-				p := c.evalBulkFlags()
+				p := c.EvalBulkFlags()
 
 				return c.MultiArgGenericCLI.ApplyFromFileAndPrint(viper.GetString("file"), p())
 			},
 		}
 
-		c.addFileFlags(cmd)
+		c.AddFileFlags(cmd)
 		Must(cmd.MarkFlagRequired("file"))
 
 		if c.ApplyCmdMutateFn != nil {
@@ -369,6 +369,7 @@ func ParseSortFlags() (multisort.Keys, error) {
 	return keys, nil
 }
 
+// AddSortFlag adds common sort flags to a command.
 func AddSortFlag[R any](cmd *cobra.Command, sorter *multisort.Sorter[R]) {
 	if sortKeys := sorter.AvailableKeys(); len(sortKeys) > 0 {
 		cmd.Flags().StringSlice("sort-by", []string{}, fmt.Sprintf("sort by (comma separated) column(s), sort direction can be changed by appending :asc or :desc behind the column identifier. possible values: %s", strings.Join(sortKeys, "|")))
@@ -376,7 +377,8 @@ func AddSortFlag[R any](cmd *cobra.Command, sorter *multisort.Sorter[R]) {
 	}
 }
 
-func (c *CmdsConfig[C, U, R]) addFileFlags(cmd *cobra.Command) {
+// AddFileFlags adds common flags for file operations to a command.
+func (c *CmdsConfig[C, U, R]) AddFileFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("file", "f", "", c.fileFlagHelpText(cmd.Use))
 	cmd.Flags().Bool("skip-security-prompts", false, c.skipPromptsFlagText())
 	cmd.Flags().Bool("bulk-output", false, c.bulkFlagText())
@@ -415,7 +417,8 @@ func (c *CmdsConfig[C, U, R]) validate() error {
 	return nil
 }
 
-func (c *CmdsConfig[C, U, R]) evalBulkFlags() func() printers.Printer {
+// EvalBulkFlags evaluates flags for bulk operations and applies the given flag options to the generic cli command processor.
+func (c *CmdsConfig[C, U, R]) EvalBulkFlags() func() printers.Printer {
 	if !viper.GetBool("skip-security-prompts") {
 		c.MultiArgGenericCLI = c.MultiArgGenericCLI.WithBulkSecurityPrompt(c.In, c.Out)
 	}
