@@ -1,14 +1,18 @@
 package genericcli
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"strings"
 
+	"buf.build/go/protoyaml"
 	"github.com/google/go-cmp/cmp"
-	"github.com/metal-stack/metal-lib/pkg/pointer"
 	"github.com/spf13/afero"
+	"google.golang.org/protobuf/proto"
 
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
@@ -32,19 +36,21 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 		return nil, err
 	}
 
-	reader, err := getReader(m.fs, from)
+	ioReader, err := getReader(m.fs, from)
 	if err != nil {
 		return nil, err
 	}
 
-	var docs []D
+	var (
+		docs    []D
+		isProto = isProtoMsg[D]()
 
-	dec := utilyaml.NewYAMLToJSONDecoder(reader)
+		bufReader  = bufio.NewReader(ioReader)
+		yamlReader = utilyaml.NewYAMLReader(bufReader)
+	)
 
 	for {
-		var data D
-
-		err := dec.Decode(&data)
+		docBytes, err := yamlReader.Read()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -52,8 +58,20 @@ func (m *MultiDocumentYAML[D]) ReadAll(from string) ([]D, error) {
 			return nil, fmt.Errorf("decode error: %w", err)
 		}
 
-		if pointer.IsZero(data) {
+		if strings.TrimSpace(string(docBytes)) == "" {
 			continue
+		}
+
+		var data D
+
+		if isProto {
+			var err error
+			data, err = unmarshalProto[D](docBytes)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unmarshal document from multi-yaml protoyaml document: %w", err)
+			}
+		} else if err := yaml.Unmarshal(docBytes, &data); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal document from multi-yaml document: %w", err)
 		}
 
 		docs = append(docs, data)
@@ -90,17 +108,21 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 		return zero, err
 	}
 
-	reader, err := getReader(m.fs, from)
+	ioReader, err := getReader(m.fs, from)
 	if err != nil {
 		return zero, err
 	}
 
-	dec := utilyaml.NewYAMLToJSONDecoder(reader)
+	var (
+		count   = 0
+		isProto = isProtoMsg[D]()
 
-	count := 0
+		bufReader  = bufio.NewReader(ioReader)
+		yamlReader = utilyaml.NewYAMLReader(bufReader)
+	)
+
 	for {
-		var data D
-		err := dec.Decode(&data)
+		docBytes, err := yamlReader.Read()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return zero, fmt.Errorf("index not found in document: %d", index)
@@ -108,8 +130,20 @@ func (m *MultiDocumentYAML[D]) ReadIndex(from string, index int) (D, error) {
 			return zero, fmt.Errorf("decode error: %w", err)
 		}
 
-		if pointer.IsZero(data) {
+		if strings.TrimSpace(string(docBytes)) == "" {
 			continue
+		}
+
+		var data D
+
+		if isProto {
+			var err error
+			data, err = unmarshalProto[D](docBytes)
+			if err != nil {
+				return zero, fmt.Errorf("unable to decode index %d from multi-yaml protoyaml document: %w", index, err)
+			}
+		} else if err := yaml.Unmarshal(docBytes, &data); err != nil {
+			return zero, fmt.Errorf("unable to decode index %d from multi-yaml document: %w", index, err)
 		}
 
 		if count == index {
@@ -169,4 +203,28 @@ func validateFrom(fs afero.Fs, from string) error {
 	}
 
 	return nil
+}
+
+func isProtoMsg[D any]() bool {
+	t := reflect.TypeFor[D]()
+	v := protoValue(t)
+	_, ok := v.Interface().(proto.Message)
+	return ok
+}
+
+func unmarshalProto[D any](docBytes []byte) (D, error) {
+	var zero D
+	t := reflect.TypeFor[D]()
+	pm := protoValue(t).Interface().(proto.Message)
+	if err := protoyaml.Unmarshal(docBytes, pm); err != nil {
+		return zero, err
+	}
+	return pm.(D), nil
+}
+
+func protoValue(t reflect.Type) reflect.Value {
+	if t.Kind() == reflect.Pointer {
+		return reflect.New(t.Elem())
+	}
+	return reflect.New(t)
 }

@@ -8,6 +8,20 @@ package printers_test;
 
 option go_package = "pkg/genericcli/printers/proto_test";
 
+enum State {
+  STATE_UNSPECIFIED = 0;
+  STATE_PENDING = 1;
+  STATE_ACTIVE = 2;
+  STATE_TERMINATED = 3;
+}
+
 message Foo {
   string text = 1;
+  State state = 2;
+  repeated NestedFoo list_foos = 3;
+  map<string, NestedFoo> map_foos = 4;
+}
+
+message NestedFoo {
+  repeated string text = 1;
 }

@@ -1,14 +1,14 @@
 package printers
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 
-	"google.golang.org/protobuf/encoding/protojson"
+	"buf.build/go/protoyaml"
 	"google.golang.org/protobuf/proto"
-	"sigs.k8s.io/yaml"
 )
 
 // ProtoYAMLPrinter prints data of type proto.Message in YAML format
@@ -34,31 +34,66 @@ func (p *ProtoYAMLPrinter) WithFallback(fallback bool) *ProtoYAMLPrinter {
 }
 
 func (p *ProtoYAMLPrinter) Print(data any) error {
-	msg, ok := data.(proto.Message)
-	if !ok {
-		if p.fallback {
-			return NewYAMLPrinter().WithOut(p.out).Print(data)
+	val := reflect.ValueOf(data)
+	switch val.Kind() {
+	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 {
+			return nil
 		}
-		return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
+
+		items := make([]proto.Message, 0, val.Len())
+
+		for i := range val.Len() {
+			msg, ok := val.Index(i).Interface().(proto.Message)
+			if !ok {
+				if p.fallback {
+					return NewYAMLPrinter().WithOut(p.out).Print(data)
+				}
+
+				return fmt.Errorf("unable to marshal proto message because element at index %d is not of type proto.Message", i)
+			}
+
+			items = append(items, msg)
+		}
+
+		for _, doc := range items {
+			content, err := protoyaml.Marshal(doc)
+			if err != nil {
+				return err
+			}
+
+			cleaned := bytes.TrimSuffix(content, []byte{'\n'})
+			lines := bytes.Split(cleaned, []byte{'\n'})
+			for li, line := range lines {
+				if bytes.TrimSpace(line) == nil {
+					continue
+				}
+				if li == 0 {
+					_, _ = fmt.Fprintf(p.out, "- %s\n", line)
+				} else {
+					_, _ = fmt.Fprintf(p.out, "  %s\n", line)
+				}
+			}
+		}
+
+		return nil
+
+	default:
+		msg, ok := data.(proto.Message)
+		if !ok {
+			if p.fallback {
+				return NewYAMLPrinter().WithOut(p.out).Print(data)
+			}
+			return fmt.Errorf("unable to marshal proto message because given data is not of type proto.Message")
+		}
+
+		content, err := protoyaml.Marshal(msg)
+		if err != nil {
+			return err
+		}
+
+		_, _ = fmt.Fprintf(p.out, "%s", string(content))
+
+		return nil
 	}
-
-	intermediate, err := protojson.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	var r any
-	err = json.Unmarshal(intermediate, &r)
-	if err != nil {
-		return err
-	}
-
-	content, err := yaml.Marshal(r)
-	if err != nil {
-		return err
-	}
-
-	_, _ = fmt.Fprintf(p.out, "%s", string(content))
-
-	return nil
 }
