@@ -226,7 +226,7 @@ func fakeEditorChange(t *testing.T, afterUpdate any) (editorPath string, cleanup
 	err = os.WriteFile(scriptPath, []byte(script), 0755)
 	require.NoError(t, err)
 
-	cleanup = func() { os.RemoveAll(dir) }
+	cleanup = func() { _ = os.RemoveAll(dir) }
 
 	return scriptPath, cleanup
 }
@@ -239,5 +239,5 @@ func makeFailEditor(t *testing.T) (editorPath string, cleanup func()) {
 	err = os.WriteFile(scriptPath, []byte("#!/bin/sh\nexit 1\n"), 0755)
 	require.NoError(t, err)
 
-	return scriptPath, func() { os.RemoveAll(dir) }
+	return scriptPath, func() { _ = os.RemoveAll(dir) }
 }

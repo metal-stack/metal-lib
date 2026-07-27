@@ -70,17 +70,16 @@ func TestYamlProtoWithProtos(t *testing.T) {
 	}
 
 	got := buffer.String()
-	want := `text: test
-state: STATE_ACTIVE
-listFoos:
-    - text:
-        - nested
-mapFoos:
-    "1":
-        text:
-            - mapped
----
-text: test2
+	want := `- text: test
+  state: STATE_ACTIVE
+  listFoos:
+      - text:
+          - nested
+  mapFoos:
+      "1":
+          text:
+              - mapped
+- text: test2
 `
 
 	if diff := cmp.Diff(want, got); diff != "" {

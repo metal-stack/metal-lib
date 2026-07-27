@@ -1,6 +1,7 @@
 package printers
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -55,17 +56,24 @@ func (p *ProtoYAMLPrinter) Print(data any) error {
 			items = append(items, msg)
 		}
 
-		for i, doc := range items {
+		for _, doc := range items {
 			content, err := protoyaml.Marshal(doc)
 			if err != nil {
 				return err
 			}
 
-			if i > 0 {
-				_, _ = fmt.Fprint(p.out, "---\n")
+			cleaned := bytes.TrimSuffix(content, []byte{'\n'})
+			lines := bytes.Split(cleaned, []byte{'\n'})
+			for li, line := range lines {
+				if bytes.TrimSpace(line) == nil {
+					continue
+				}
+				if li == 0 {
+					_, _ = fmt.Fprintf(p.out, "- %s\n", line)
+				} else {
+					_, _ = fmt.Fprintf(p.out, "  %s\n", line)
+				}
 			}
-
-			_, _ = p.out.Write(content)
 		}
 
 		return nil
