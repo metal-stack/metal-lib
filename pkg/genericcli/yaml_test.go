@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/metal-stack/metal-lib/pkg/genericcli/printers/proto_test"
+	"github.com/metal-stack/metal-lib/pkg/genericcli/teststructs"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -351,16 +351,16 @@ func Test_ReadIndexProto(t *testing.T) {
 func Test_ReadAllProto(t *testing.T) {
 	const testFile = "/test.yaml"
 
-	docs := []*proto_test.Foo{
-		{Text: "pending", State: proto_test.State_STATE_PENDING},
-		{Text: "active", State: proto_test.State_STATE_ACTIVE},
-		{Text: "terminated", State: proto_test.State_STATE_TERMINATED},
+	docs := []*teststructs.Foo{
+		{Text: "pending", State: teststructs.State_STATE_PENDING},
+		{Text: "active", State: teststructs.State_STATE_ACTIVE},
+		{Text: "terminated", State: teststructs.State_STATE_TERMINATED},
 	}
 
 	tests := []struct {
 		name    string
 		mockFn  func(fs afero.Fs)
-		want    []*proto_test.Foo
+		want    []*teststructs.Foo
 		wantErr error
 	}{
 		{
@@ -382,7 +382,7 @@ state: "STATE_TERMINATED"
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := MultiDocumentYAML[*proto_test.Foo]{
+			m := MultiDocumentYAML[*teststructs.Foo]{
 				fs: afero.NewMemMapFs(),
 			}
 

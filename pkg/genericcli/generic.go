@@ -190,29 +190,3 @@ func (v multiArgMapper[C, U, R]) Convert(r R) ([]string, C, U, error) {
 	id, cr, ur, err := v.singleArg.Convert(r)
 	return []string{id}, cr, ur, err
 }
-
-// following only used for mock generation (has to be in non-test file), do not use:
-
-type (
-	testClient interface {
-		Get(id string) (*testResponse, error)
-		List() ([]*testResponse, error)
-		Create(rq *testCreate) (*testResponse, error)
-		Update(rq *testUpdate) (*testResponse, error)
-		Delete(id string) (*testResponse, error)
-		Convert(r *testResponse) ([]string, *testCreate, *testUpdate, error)
-	}
-	testCRUD   struct{ client testClient }
-	testCreate struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	testUpdate struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	testResponse struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-)

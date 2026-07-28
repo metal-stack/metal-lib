@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
+	"github.com/metal-stack/metal-lib/pkg/genericcli/teststructs"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -21,28 +22,28 @@ func TestApplyFromFile(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		mockFn         func(mock *mockTestClient)
+		mockFn         func(mock *teststructs.MockTestClient)
 		fileMockFn     func(fs afero.Fs)
-		want           BulkResults[*testResponse]
+		want           BulkResults[*teststructs.TestResponse]
 		wantOutput     string
 		wantBulkOutput string
 		wantErr        error
 	}{
 		{
 			name: "apply single entity, create it",
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Create", &testCreate{ID: "1", Name: "one"}).Return(&testResponse{ID: "1", Name: "one"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Create", &teststructs.TestCreate{ID: "1", Name: "one"}).Return(&teststructs.TestResponse{ID: "1", Name: "one"}, nil)
 			},
 			fileMockFn: func(fs afero.Fs) {
-				require.NoError(t, afero.WriteFile(fs, testFile, mustMarshal(t, &testCreate{
+				require.NoError(t, afero.WriteFile(fs, testFile, mustMarshal(t, &teststructs.TestCreate{
 					ID:   "1",
 					Name: "one",
 				}), 0755))
 			},
-			want: BulkResults[*testResponse]{
+			want: BulkResults[*teststructs.TestResponse]{
 				{
 					Action: BulkCreated,
-					Result: &testResponse{
+					Result: &teststructs.TestResponse{
 						ID:   "1",
 						Name: "one",
 					},
@@ -61,9 +62,9 @@ func TestApplyFromFile(t *testing.T) {
 		},
 		{
 			name: "apply two entities, create both",
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Create", &testCreate{ID: "1", Name: "one"}).Return(&testResponse{ID: "1", Name: "one"}, nil)
-				mock.On("Create", &testCreate{ID: "2", Name: "two"}).Return(&testResponse{ID: "2", Name: "two"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Create", &teststructs.TestCreate{ID: "1", Name: "one"}).Return(&teststructs.TestResponse{ID: "1", Name: "one"}, nil)
+				mock.On("Create", &teststructs.TestCreate{ID: "2", Name: "two"}).Return(&teststructs.TestResponse{ID: "2", Name: "two"}, nil)
 			},
 			fileMockFn: func(fs afero.Fs) {
 				require.NoError(t, afero.WriteFile(fs, testFile, []byte(`---
@@ -74,17 +75,17 @@ id: "2"
 name: two
 `), 0755))
 			},
-			want: BulkResults[*testResponse]{
+			want: BulkResults[*teststructs.TestResponse]{
 				{
 					Action: BulkCreated,
-					Result: &testResponse{
+					Result: &teststructs.TestResponse{
 						ID:   "1",
 						Name: "one",
 					},
 				},
 				{
 					Action: BulkCreated,
-					Result: &testResponse{
+					Result: &teststructs.TestResponse{
 						ID:   "2",
 						Name: "two",
 					},
@@ -107,10 +108,10 @@ name: two
 		},
 		{
 			name: "apply two entities, update one",
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Create", &testCreate{ID: "1", Name: "one"}).Return(&testResponse{ID: "1", Name: "one"}, nil)
-				mock.On("Create", &testCreate{ID: "2", Name: "two"}).Return(nil, AlreadyExistsError()).Once()
-				mock.On("Update", &testUpdate{ID: "2", Name: "two"}).Return(&testResponse{ID: "2", Name: "two"}, nil).Once()
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Create", &teststructs.TestCreate{ID: "1", Name: "one"}).Return(&teststructs.TestResponse{ID: "1", Name: "one"}, nil)
+				mock.On("Create", &teststructs.TestCreate{ID: "2", Name: "two"}).Return(nil, AlreadyExistsError()).Once()
+				mock.On("Update", &teststructs.TestUpdate{ID: "2", Name: "two"}).Return(&teststructs.TestResponse{ID: "2", Name: "two"}, nil).Once()
 			},
 			fileMockFn: func(fs afero.Fs) {
 				require.NoError(t, afero.WriteFile(fs, testFile, []byte(`---
@@ -121,17 +122,17 @@ id: "2"
 name: two
 `), 0755))
 			},
-			want: BulkResults[*testResponse]{
+			want: BulkResults[*teststructs.TestResponse]{
 				{
 					Action: BulkCreated,
-					Result: &testResponse{
+					Result: &teststructs.TestResponse{
 						ID:   "1",
 						Name: "one",
 					},
 				},
 				{
 					Action: BulkUpdated,
-					Result: &testResponse{
+					Result: &teststructs.TestResponse{
 						ID:   "2",
 						Name: "two",
 					},
@@ -154,10 +155,10 @@ name: two
 		},
 		{
 			name: "apply two entities, first one fails, second gets created",
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Create", &testCreate{ID: "1", Name: "one"}).Return(nil, fmt.Errorf("creation error for id 1"))
-				mock.On("Create", &testCreate{ID: "2", Name: "two"}).Return(nil, AlreadyExistsError()).Once()
-				mock.On("Update", &testUpdate{ID: "2", Name: "two"}).Return(&testResponse{ID: "2", Name: "two"}, nil).Once()
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Create", &teststructs.TestCreate{ID: "1", Name: "one"}).Return(nil, fmt.Errorf("creation error for id 1"))
+				mock.On("Create", &teststructs.TestCreate{ID: "2", Name: "two"}).Return(nil, AlreadyExistsError()).Once()
+				mock.On("Update", &teststructs.TestUpdate{ID: "2", Name: "two"}).Return(&teststructs.TestResponse{ID: "2", Name: "two"}, nil).Once()
 			},
 			fileMockFn: func(fs afero.Fs) {
 				require.NoError(t, afero.WriteFile(fs, testFile, []byte(`---
@@ -168,14 +169,14 @@ id: "2"
 name: two
 `), 0755))
 			},
-			want: BulkResults[*testResponse]{
+			want: BulkResults[*teststructs.TestResponse]{
 				{
 					Action: BulkErrorOnCreate,
 					Error:  fmt.Errorf("error creating entity: creation error for id 1"),
 				},
 				{
 					Action: BulkUpdated,
-					Result: &testResponse{
+					Result: &teststructs.TestResponse{
 						ID:   "2",
 						Name: "two",
 					},
@@ -232,9 +233,9 @@ error creating entity: creation error for id 1
 						Markdown: true,
 						ToHeaderAndRows: func(data any, wide bool) ([]string, [][]string, error) {
 							switch d := data.(type) {
-							case *testResponse:
+							case *teststructs.TestResponse:
 								return []string{"ID", "Name"}, [][]string{{d.ID, d.Name}}, nil
-							case []*testResponse:
+							case []*teststructs.TestResponse:
 								var rows [][]string
 								for i := range d {
 									rows = append(rows, []string{d[i].ID, d[i].Name})
@@ -267,14 +268,14 @@ error creating entity: creation error for id 1
 	}
 }
 
-func newMockCLI(t *testing.T, mockFn func(mock *mockTestClient), fileMockFn func(fs afero.Fs)) *MultiArgGenericCLI[*testCreate, *testUpdate, *testResponse] {
-	client := newMockTestClient(t)
+func newMockCLI(t *testing.T, mockFn func(mock *teststructs.MockTestClient), fileMockFn func(fs afero.Fs)) *MultiArgGenericCLI[*teststructs.TestCreate, *teststructs.TestUpdate, *teststructs.TestResponse] {
+	client := teststructs.NewMockTestClient(t)
 	fs := afero.NewMemMapFs()
 
-	cli := MultiArgGenericCLI[*testCreate, *testUpdate, *testResponse]{
-		crud:   testCRUD{client: client},
+	cli := MultiArgGenericCLI[*teststructs.TestCreate, *teststructs.TestUpdate, *teststructs.TestResponse]{
+		crud:   teststructs.NewTestCRUD(client),
 		fs:     fs,
-		parser: MultiDocumentYAML[*testResponse]{fs: fs},
+		parser: MultiDocumentYAML[*teststructs.TestResponse]{fs: fs},
 	}
 
 	if mockFn != nil {
