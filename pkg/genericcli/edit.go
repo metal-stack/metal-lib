@@ -5,8 +5,10 @@ import (
 	"os"
 	"os/exec"
 
+	"buf.build/go/protoyaml"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
 	"github.com/spf13/afero"
+	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
 )
 
@@ -41,7 +43,12 @@ func (a *MultiArgGenericCLI[C, U, R]) Edit(n int, args []string) (R, error) {
 		return zero, err
 	}
 
-	raw, err := yaml.Marshal(updateDoc)
+	var raw []byte
+	if msg, ok := any(updateDoc).(proto.Message); ok {
+		raw, err = protoyaml.Marshal(msg)
+	} else {
+		raw, err = yaml.Marshal(updateDoc)
+	}
 	if err != nil {
 		return zero, err
 	}

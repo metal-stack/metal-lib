@@ -7,11 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"buf.build/go/protoyaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
+	"github.com/metal-stack/metal-lib/pkg/genericcli/printers/proto_test"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
 )
 
@@ -213,7 +216,12 @@ func fakeEditorChange(t *testing.T, afterUpdate any) (editorPath string, cleanup
 	dir, err := os.MkdirTemp("", "edit-editor")
 	require.NoError(t, err)
 
-	changedYAML, err := yaml.Marshal(&afterUpdate)
+	var changedYAML []byte
+	if msg, ok := afterUpdate.(proto.Message); ok {
+		changedYAML, err = protoyaml.Marshal(msg)
+	} else {
+		changedYAML, err = yaml.Marshal(&afterUpdate)
+	}
 	require.NoError(t, err)
 
 	changedRef := filepath.Join(dir, "changed.yaml")
@@ -240,4 +248,49 @@ func makeFailEditor(t *testing.T) (editorPath string, cleanup func()) {
 	require.NoError(t, err)
 
 	return scriptPath, func() { _ = os.RemoveAll(dir) }
+}
+
+func Test_Edit_WithProto(t *testing.T) {
+	foo := &proto_test.Foo{
+		Text:  "original",
+		State: proto_test.State_STATE_PENDING,
+	}
+
+	changedFoo := &proto_test.Foo{
+		Text:  "changed",
+		State: proto_test.State_STATE_ACTIVE,
+	}
+
+	t.Run("edit proto succeeds with changes", func(t *testing.T) {
+		editorPath, cleanup := fakeEditorChange(t, changedFoo)
+		defer cleanup()
+		t.Setenv("EDITOR", editorPath)
+
+		crud := &proto_test.TestCRUD{Foo: foo}
+		cli := &MultiArgGenericCLI[*proto_test.Foo, *proto_test.Foo, *proto_test.Foo]{
+			crud:   crud,
+			fs:     afero.NewOsFs(),
+			parser: MultiDocumentYAML[*proto_test.Foo]{fs: afero.NewOsFs()},
+		}
+
+		got, err := cli.Edit(1, []string{"some-id"})
+		require.NoError(t, err)
+		require.True(t, proto.Equal(changedFoo, got))
+	})
+
+	t.Run("edit proto with no changes returns error", func(t *testing.T) {
+		editorPath, cleanup := fakeEditorChange(t, foo)
+		defer cleanup()
+		t.Setenv("EDITOR", editorPath)
+
+		crud := &proto_test.TestCRUD{Foo: foo}
+		cli := &MultiArgGenericCLI[*proto_test.Foo, *proto_test.Foo, *proto_test.Foo]{
+			crud:   crud,
+			fs:     afero.NewOsFs(),
+			parser: MultiDocumentYAML[*proto_test.Foo]{fs: afero.NewOsFs()},
+		}
+
+		_, err := cli.Edit(1, []string{"some-id"})
+		require.ErrorContains(t, err, "no changes were made")
+	})
 }
