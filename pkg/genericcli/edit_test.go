@@ -10,7 +10,7 @@ import (
 	"buf.build/go/protoyaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/metal-stack/metal-lib/pkg/genericcli/printers"
-	"github.com/metal-stack/metal-lib/pkg/genericcli/printers/proto_test"
+	"github.com/metal-stack/metal-lib/pkg/genericcli/teststructs"
 	"github.com/metal-stack/metal-lib/pkg/testcommon"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -23,10 +23,10 @@ type editorSetup = func(t *testing.T) (editorPath string, cleanup func())
 type editTestCase struct {
 	name       string
 	setupFn    editorSetup
-	mockFn     func(mock *mockTestClient)
+	mockFn     func(mock *teststructs.MockTestClient)
 	args       []string
 	wantErr    func(t *testing.T, err error)
-	wantResult *testResponse
+	wantResult *teststructs.TestResponse
 }
 
 func Test_Edit(t *testing.T) {
@@ -34,22 +34,22 @@ func Test_Edit(t *testing.T) {
 		{
 			name: "edit succeeds with changes",
 			setupFn: func(t *testing.T) (string, func()) {
-				return fakeEditorChange(t, &testUpdate{ID: "foo", Name: "two"})
+				return fakeEditorChange(t, &teststructs.TestUpdate{ID: "foo", Name: "two"})
 			},
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Get", "foo").Return(&testResponse{ID: "foo", Name: "one"}, nil)
-				mock.On("Update", &testUpdate{ID: "foo", Name: "two"}).Return(&testResponse{ID: "foo", Name: "two"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Get", "foo").Return(&teststructs.TestResponse{ID: "foo", Name: "one"}, nil)
+				mock.On("Update", &teststructs.TestUpdate{ID: "foo", Name: "two"}).Return(&teststructs.TestResponse{ID: "foo", Name: "two"}, nil)
 			},
 			args:       []string{"foo"},
-			wantResult: &testResponse{ID: "foo", Name: "two"},
+			wantResult: &teststructs.TestResponse{ID: "foo", Name: "two"},
 		},
 		{
 			name: "no changes returns error",
 			setupFn: func(t *testing.T) (string, func()) {
-				return fakeEditorChange(t, &testUpdate{ID: "foo", Name: "one"})
+				return fakeEditorChange(t, &teststructs.TestUpdate{ID: "foo", Name: "one"})
 			},
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Get", "foo").Return(&testResponse{ID: "foo", Name: "one"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Get", "foo").Return(&teststructs.TestResponse{ID: "foo", Name: "one"}, nil)
 			},
 			args:       []string{"foo"},
 			wantErr:    func(t *testing.T, err error) { require.ErrorContains(t, err, "no changes were made") },
@@ -60,8 +60,8 @@ func Test_Edit(t *testing.T) {
 			setupFn: func(t *testing.T) (string, func()) {
 				return makeFailEditor(t)
 			},
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Get", "foo").Return(&testResponse{ID: "foo", Name: "one"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Get", "foo").Return(&teststructs.TestResponse{ID: "foo", Name: "one"}, nil)
 			},
 			args:       []string{"foo"},
 			wantErr:    func(t *testing.T, err error) { require.ErrorContains(t, err, "exit status 1") },
@@ -72,7 +72,7 @@ func Test_Edit(t *testing.T) {
 			setupFn: func(t *testing.T) (string, func()) {
 				return makeFailEditor(t)
 			},
-			mockFn: func(mock *mockTestClient) {
+			mockFn: func(mock *teststructs.MockTestClient) {
 				mock.On("Get", "foo").Return(nil, fmt.Errorf("not found"))
 			},
 			args:       []string{"foo"},
@@ -81,7 +81,7 @@ func Test_Edit(t *testing.T) {
 		},
 		{
 			name:       "wrong number of args returns error",
-			mockFn:     func(mock *mockTestClient) {},
+			mockFn:     func(mock *teststructs.MockTestClient) {},
 			args:       []string{"foo", "bar"},
 			wantErr:    func(t *testing.T, err error) { require.ErrorContains(t, err, "2 were provided") },
 			wantResult: nil,
@@ -89,11 +89,11 @@ func Test_Edit(t *testing.T) {
 		{
 			name: "CRUD update fails returns error",
 			setupFn: func(t *testing.T) (string, func()) {
-				return fakeEditorChange(t, &testUpdate{ID: "foo", Name: "two"})
+				return fakeEditorChange(t, &teststructs.TestUpdate{ID: "foo", Name: "two"})
 			},
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Get", "foo").Return(&testResponse{ID: "foo", Name: "one"}, nil)
-				mock.On("Update", &testUpdate{ID: "foo", Name: "two"}).Return(nil, fmt.Errorf("update failed"))
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Get", "foo").Return(&teststructs.TestResponse{ID: "foo", Name: "one"}, nil)
+				mock.On("Update", &teststructs.TestUpdate{ID: "foo", Name: "two"}).Return(nil, fmt.Errorf("update failed"))
 			},
 			args:       []string{"foo"},
 			wantErr:    func(t *testing.T, err error) { require.ErrorContains(t, err, "error updating entity: update failed") },
@@ -104,7 +104,7 @@ func Test_Edit(t *testing.T) {
 			setupFn: func(t *testing.T) (string, func()) {
 				return makeFailEditor(t)
 			},
-			mockFn:     func(mock *mockTestClient) {},
+			mockFn:     func(mock *teststructs.MockTestClient) {},
 			args:       nil,
 			wantErr:    func(t *testing.T, err error) { require.ErrorContains(t, err, "none was provided") },
 			wantResult: nil,
@@ -113,7 +113,7 @@ func Test_Edit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := newMockTestClient(t)
+			mock := teststructs.NewMockTestClient(t)
 			if tt.mockFn != nil {
 				tt.mockFn(mock)
 			}
@@ -124,10 +124,10 @@ func Test_Edit(t *testing.T) {
 				t.Setenv("EDITOR", editorPath)
 			}
 
-			cli := &MultiArgGenericCLI[*testCreate, *testUpdate, *testResponse]{
-				crud:   testCRUD{client: mock},
+			cli := &MultiArgGenericCLI[*teststructs.TestCreate, *teststructs.TestUpdate, *teststructs.TestResponse]{
+				crud:   teststructs.NewTestCRUD(mock),
 				fs:     afero.NewOsFs(),
-				parser: MultiDocumentYAML[*testResponse]{fs: afero.NewOsFs()},
+				parser: MultiDocumentYAML[*teststructs.TestResponse]{fs: afero.NewOsFs()},
 			}
 
 			got, err := cli.Edit(1, tt.args)
@@ -148,7 +148,7 @@ func Test_Edit(t *testing.T) {
 type editAndPrintTestCase struct {
 	name    string
 	setupFn editorSetup
-	mockFn  func(mock *mockTestClient)
+	mockFn  func(mock *teststructs.MockTestClient)
 	args    []string
 	wantErr func(t *testing.T, err error)
 }
@@ -158,21 +158,21 @@ func Test_EditAndPrint(t *testing.T) {
 		{
 			name: "edit and print succeeds with changes",
 			setupFn: func(t *testing.T) (string, func()) {
-				return fakeEditorChange(t, &testUpdate{ID: "foo", Name: "two"})
+				return fakeEditorChange(t, &teststructs.TestUpdate{ID: "foo", Name: "two"})
 			},
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Get", "foo").Return(&testResponse{ID: "foo", Name: "one"}, nil)
-				mock.On("Update", &testUpdate{ID: "foo", Name: "two"}).Return(&testResponse{ID: "foo", Name: "two"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Get", "foo").Return(&teststructs.TestResponse{ID: "foo", Name: "one"}, nil)
+				mock.On("Update", &teststructs.TestUpdate{ID: "foo", Name: "two"}).Return(&teststructs.TestResponse{ID: "foo", Name: "two"}, nil)
 			},
 			args: []string{"foo"},
 		},
 		{
 			name: "edit with no changes returns error",
 			setupFn: func(t *testing.T) (string, func()) {
-				return fakeEditorChange(t, &testUpdate{ID: "foo", Name: "one"})
+				return fakeEditorChange(t, &teststructs.TestUpdate{ID: "foo", Name: "one"})
 			},
-			mockFn: func(mock *mockTestClient) {
-				mock.On("Get", "foo").Return(&testResponse{ID: "foo", Name: "one"}, nil)
+			mockFn: func(mock *teststructs.MockTestClient) {
+				mock.On("Get", "foo").Return(&teststructs.TestResponse{ID: "foo", Name: "one"}, nil)
 			},
 			args:    []string{"foo"},
 			wantErr: func(t *testing.T, err error) { require.ErrorContains(t, err, "no changes were made") },
@@ -181,7 +181,7 @@ func Test_EditAndPrint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock := newMockTestClient(t)
+			mock := teststructs.NewMockTestClient(t)
 			if tt.mockFn != nil {
 				tt.mockFn(mock)
 			}
@@ -195,10 +195,10 @@ func Test_EditAndPrint(t *testing.T) {
 				t.Setenv("EDITOR", editorPath)
 			}
 
-			cli := &MultiArgGenericCLI[*testCreate, *testUpdate, *testResponse]{
-				crud:   testCRUD{client: mock},
+			cli := &MultiArgGenericCLI[*teststructs.TestCreate, *teststructs.TestUpdate, *teststructs.TestResponse]{
+				crud:   teststructs.NewTestCRUD(mock),
 				fs:     afero.NewOsFs(),
-				parser: MultiDocumentYAML[*testResponse]{fs: afero.NewOsFs()},
+				parser: MultiDocumentYAML[*teststructs.TestResponse]{fs: afero.NewOsFs()},
 			}
 
 			err := cli.EditAndPrint(1, tt.args, p)
@@ -251,14 +251,14 @@ func makeFailEditor(t *testing.T) (editorPath string, cleanup func()) {
 }
 
 func Test_Edit_WithProto(t *testing.T) {
-	foo := &proto_test.Foo{
+	foo := &teststructs.Foo{
 		Text:  "original",
-		State: proto_test.State_STATE_PENDING,
+		State: teststructs.State_STATE_PENDING,
 	}
 
-	changedFoo := &proto_test.Foo{
+	changedFoo := &teststructs.Foo{
 		Text:  "changed",
-		State: proto_test.State_STATE_ACTIVE,
+		State: teststructs.State_STATE_ACTIVE,
 	}
 
 	t.Run("edit proto succeeds with changes", func(t *testing.T) {
@@ -266,11 +266,11 @@ func Test_Edit_WithProto(t *testing.T) {
 		defer cleanup()
 		t.Setenv("EDITOR", editorPath)
 
-		crud := &proto_test.TestCRUD{Foo: foo}
-		cli := &MultiArgGenericCLI[*proto_test.Foo, *proto_test.Foo, *proto_test.Foo]{
+		crud := &teststructs.ProtoTestCRUD{Foo: foo}
+		cli := &MultiArgGenericCLI[*teststructs.Foo, *teststructs.Foo, *teststructs.Foo]{
 			crud:   crud,
 			fs:     afero.NewOsFs(),
-			parser: MultiDocumentYAML[*proto_test.Foo]{fs: afero.NewOsFs()},
+			parser: MultiDocumentYAML[*teststructs.Foo]{fs: afero.NewOsFs()},
 		}
 
 		got, err := cli.Edit(1, []string{"some-id"})
@@ -283,11 +283,11 @@ func Test_Edit_WithProto(t *testing.T) {
 		defer cleanup()
 		t.Setenv("EDITOR", editorPath)
 
-		crud := &proto_test.TestCRUD{Foo: foo}
-		cli := &MultiArgGenericCLI[*proto_test.Foo, *proto_test.Foo, *proto_test.Foo]{
+		crud := &teststructs.ProtoTestCRUD{Foo: foo}
+		cli := &MultiArgGenericCLI[*teststructs.Foo, *teststructs.Foo, *teststructs.Foo]{
 			crud:   crud,
 			fs:     afero.NewOsFs(),
-			parser: MultiDocumentYAML[*proto_test.Foo]{fs: afero.NewOsFs()},
+			parser: MultiDocumentYAML[*teststructs.Foo]{fs: afero.NewOsFs()},
 		}
 
 		_, err := cli.Edit(1, []string{"some-id"})
