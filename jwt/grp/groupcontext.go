@@ -7,20 +7,20 @@ import (
 )
 
 /*
-	Naming conventions for groups:
+Naming conventions for groups:
 
-	ActiveDirectory: 	TnPg_Srv_Appkaas-clustername-namespace-role_full
+ActiveDirectory: 	TnPg_Srv_Appkaas-clustername-namespace-role_full
 
-	TenantPrefix:   	Tn = Tenant-Prefix
-	GroupType:			Pg = PermissionGroup
-	SecondLevelOU:		Srv
-	Reference:			App (App-Permission)
-	innerGroupName:		kaas-clustername-namespace-role
-	Permission:			Full | Mod | Read
+TenantPrefix:   	Tn = Tenant-Prefix
+GroupType:			Pg = PermissionGroup
+SecondLevelOU:		Srv
+Reference:			App (App-Permission)
+innerGroupName:		kaas-clustername-namespace-role
+Permission:			Full | Mod | Read
 
-	UNIX-LDAP:			tnnt_kaas-clustername-namespace-role
-	TenantPrefix:   	tnnt
-	innerGroupName:		kaas-clustername-namespace-role
+UNIX-LDAP:			tnnt_kaas-clustername-namespace-role
+TenantPrefix:   	tnnt
+innerGroupName:		kaas-clustername-namespace-role
 */
 const (
 	// separator for outer parts in a group: TnPg_Srv_[inner group]_full
