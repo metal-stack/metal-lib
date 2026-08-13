@@ -1,6 +1,6 @@
 package auth
 
-//IssuerConfig holds the config for openID connect issuer
+// IssuerConfig holds the config for openID connect issuer
 type IssuerConfig struct {
 	// Client-ID
 	ClientID string

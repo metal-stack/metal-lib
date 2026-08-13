@@ -17,7 +17,7 @@ type GroupExpression struct {
 	Role string
 }
 
-//Matches returns if the given groupExpression matches this Group
+// Matches returns if the given groupExpression matches this Group
 func (g *GroupExpression) Matches(group Group) bool {
 
 	ok := matchField(group.AppPrefix, g.AppPrefix, false)
