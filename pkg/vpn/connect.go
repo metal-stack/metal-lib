@@ -22,6 +22,14 @@ type connectOptOutputWriter struct {
 	out io.Writer
 }
 
+type connectOptVpnIP struct {
+	ip string
+}
+
+func ConnectOptWithVpnIPAddress(ip string) ConnectOpt {
+	return connectOptVpnIP{ip: ip}
+}
+
 func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
 	return connectOptOutputWriter{out: out}
 }
@@ -36,13 +44,22 @@ type vpn struct {
 // Connect to the given target host with tailscale, controllerURL specifies the URL where the coordination server lives
 // authKey is the key to authenticate to the vpn.
 func Connect(ctx context.Context, target, controllerURL, authkey string, opts ...ConnectOpt) (*vpn, error) {
-	var out io.Writer
+	var (
+		out   io.Writer
+		vpnIp netip.Addr
+	)
 	out = os.Stdout
 
 	for _, opt := range opts {
 		switch o := opt.(type) {
 		case connectOptOutputWriter:
 			out = o.out
+		case connectOptVpnIP:
+			var err error
+			vpnIp, err = netip.ParseAddr(o.ip)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, fmt.Errorf("unknown connect opt: %T", opt)
 		}
@@ -76,9 +93,11 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 	if err != nil {
 		return nil, err
 	}
-	var firewallVPNIP netip.Addr
 	err = retry.Do(
 		func() error {
+			if vpnIp.IsValid() {
+				return nil
+			}
 			_, _ = fmt.Fprintf(out, ".")
 			status, err := lc.Status(ctx)
 			if err != nil {
@@ -87,8 +106,8 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 			if status.Self.Online {
 				for _, peer := range status.Peer {
 					if strings.HasPrefix(peer.HostName, target) {
-						firewallVPNIP = peer.TailscaleIPs[0]
-						_, _ = fmt.Fprintf(out, " connected to %s (ip %s) took: %s\n", target, firewallVPNIP, time.Since(start))
+						vpnIp = peer.TailscaleIPs[0]
+						_, _ = fmt.Fprintf(out, " connected to %s (ip %s) took: %s\n", target, vpnIp, time.Since(start))
 						return nil
 					}
 				}
@@ -103,8 +122,8 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 	// disable logging after successful connect
 	s.Logf = func(format string, args ...any) {}
 
-	conn, err := lc.DialTCP(ctx, firewallVPNIP.String(), 22)
-	return &vpn{Conn: conn, server: s, tempDir: tempDir, TargetIP: firewallVPNIP.String()}, err
+	conn, err := lc.DialTCP(ctx, vpnIp.String(), 22)
+	return &vpn{Conn: conn, server: s, tempDir: tempDir, TargetIP: vpnIp.String()}, err
 }
 
 // Close all open connections after vpn was used.
