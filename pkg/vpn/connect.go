@@ -22,6 +22,14 @@ type connectOptOutputWriter struct {
 	out io.Writer
 }
 
+type machineVPNIP struct {
+	ip string
+}
+
+func ConnectOptWithFirewallVPNIPAddress(ip string) ConnectOpt {
+	return machineVPNIP{ip: ip}
+}
+
 func ConnectOptOutputWriter(out io.Writer) ConnectOpt {
 	return connectOptOutputWriter{out: out}
 }
@@ -36,13 +44,22 @@ type vpn struct {
 // Connect to the given target host with tailscale, controllerURL specifies the URL where the coordination server lives
 // authKey is the key to authenticate to the vpn.
 func Connect(ctx context.Context, target, controllerURL, authkey string, opts ...ConnectOpt) (*vpn, error) {
-	var out io.Writer
+	var (
+		out           io.Writer
+		firewallVPNIP netip.Addr
+	)
 	out = os.Stdout
 
 	for _, opt := range opts {
 		switch o := opt.(type) {
 		case connectOptOutputWriter:
 			out = o.out
+		case machineVPNIP:
+			var err error
+			firewallVPNIP, err = netip.ParseAddr(o.ip)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, fmt.Errorf("unknown connect opt: %T", opt)
 		}
@@ -76,9 +93,11 @@ func Connect(ctx context.Context, target, controllerURL, authkey string, opts ..
 	if err != nil {
 		return nil, err
 	}
-	var firewallVPNIP netip.Addr
 	err = retry.Do(
 		func() error {
+			if firewallVPNIP.IsValid() {
+				return nil
+			}
 			_, _ = fmt.Fprintf(out, ".")
 			status, err := lc.Status(ctx)
 			if err != nil {
