@@ -26,7 +26,7 @@ type connectOptVpnIP struct {
 	ip string
 }
 
-func ConnectOptWithFirewallVPNIPAddress(ip string) ConnectOpt {
+func ConnectOptWithVpnIPAddress(ip string) ConnectOpt {
 	return connectOptVpnIP{ip: ip}
 }
 
@@ -45,7 +45,7 @@ type vpn struct {
 // authKey is the key to authenticate to the vpn.
 func Connect(ctx context.Context, target, controllerURL, authkey string, opts ...ConnectOpt) (*vpn, error) {
 	var (
-		out           io.Writer
+		out   io.Writer
 		vpnIp netip.Addr
 	)
 	out = os.Stdout
