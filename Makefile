@@ -6,10 +6,6 @@ export GO111MODULE := on
 build: test
 	go build ./...
 
-.PHONY: vendor
-vendor:
-	go mod vendor
-
 .PHONY: test
 test:
 	go test -coverprofile cover.out -cover -race ./... && go tool cover -func cover.out
@@ -37,4 +33,8 @@ testenv:
 
 .PHONY: mocks
 mocks:
-	docker run --user $$(id -u):$$(id -g) --rm -w /work -v ${PWD}:/work vektra/mockery:v2.45.1 --name testClient --dir /work/pkg/genericcli --output /work/pkg/genericcli --filename generic_mock_test.go --testonly --inpackage
+	docker run --rm \
+		--user $$(id -u):$$(id -g) \
+		-w /work \
+		-v ${PWD}:/work \
+		vektra/mockery:v3.7.2

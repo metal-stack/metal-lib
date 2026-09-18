@@ -136,9 +136,9 @@ func UserAuth(ug security.UserGetter, fallbackLogger *slog.Logger) restful.Filte
 		rq := req.Request
 		ctx := security.PutUserInContext(rq.Context(), usr)
 		ctx = auditing.PutUserInContext(ctx, &auditing.User{
-			EMail: usr.EMail,
-			Name: usr.Name,
-			Tenant: usr.Tenant,
+			EMail:   usr.EMail,
+			Name:    usr.Name,
+			Tenant:  usr.Tenant,
 			Project: usr.Project,
 			Subject: usr.Subject,
 		})

@@ -1,0 +1,6 @@
+---
+all: true
+recursive: false
+structname: 'MockTestClient'
+packages:
+  github.com/metal-stack/metal-lib/pkg/genericcli/teststructs:
