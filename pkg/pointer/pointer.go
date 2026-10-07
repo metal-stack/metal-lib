@@ -2,12 +2,6 @@ package pointer
 
 import "reflect"
 
-// Deprecated: use new() instead
-// Pointer returns the pointer of the given value.
-func Pointer[T any](t T) *T {
-	return new(t)
-}
-
 // PointerOrDefault returns the pointer of the given value.
 // If the given value is equal to the zero value, the pointer of the default value will be returned instead.
 func PointerOrDefault[T any](t T, defaultValue T) *T {

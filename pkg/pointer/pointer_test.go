@@ -6,30 +6,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestPointer(t *testing.T) {
-	// test for strings
-	testString := "test"
-	gotString := Pointer(testString)
-	if diff := cmp.Diff(gotString, &testString); diff != "" {
-		t.Errorf("Pointer() = %s", diff)
-	}
-
-	// test for bool
-	testBool := true
-	gotBool := Pointer(testBool)
-	if diff := cmp.Diff(gotBool, &testBool); diff != "" {
-		t.Errorf("Pointer() = %s", diff)
-	}
-
-	// test for object
-	type testStructDef struct{}
-	testStruct := testStructDef{}
-	getStruct := Pointer(testStruct)
-	if diff := cmp.Diff(getStruct, &testStruct); diff != "" {
-		t.Errorf("Pointer() = %s", diff)
-	}
-}
-
 func TestPointerOrDefault(t *testing.T) {
 	// test for strings
 	testString := "test"
