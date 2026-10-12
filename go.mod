@@ -5,6 +5,7 @@ go 1.26.5
 require (
 	buf.build/go/protoyaml v0.7.0
 	connectrpc.com/connect v1.20.0
+	connectrpc.com/connect/v2 v2.0.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/coreos/go-oidc/v3 v3.20.0

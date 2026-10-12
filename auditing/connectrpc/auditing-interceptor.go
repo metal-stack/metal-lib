@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	connectv2 "connectrpc.com/connect/v2"
 	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/auditing"
 	"google.golang.org/grpc/codes"
@@ -43,36 +44,17 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 		if !a.shouldAudit(s.Procedure) {
 			return next(ctx, s)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				a.logger.Error("unable to generate uuid", "error", err)
-			}
-			requestID = uuid.String()
+		requestID, err := requestIDFromContext(ctx)
+		if err != nil {
+			a.logger.Error("unable to generate uuid", "error", err)
 		}
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := auditing.Entry{
-			Timestamp: time.Now(),
-			RequestId: requestID,
-			Detail:    auditing.EntryDetailGRPCStream,
-			Path:      s.Procedure,
-			Phase:     auditing.EntryPhaseOpened,
-			Type:      auditing.EntryTypeGRPC,
-		}
+		auditReqContext := a.baseEntry(ctx, requestID, s.Procedure)
+		auditReqContext.Detail = auditing.EntryDetailGRPCStream
+		auditReqContext.Phase = auditing.EntryPhaseOpened
 
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
-		err := a.auditing.Index(auditReqContext)
+		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
 		}
@@ -98,42 +80,18 @@ func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 		if !a.shouldAudit(shc.Spec().Procedure) {
 			return next(ctx, shc)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				return err
-			}
-			requestID = uuid.String()
+		requestID, err := requestIDFromContext(ctx)
+		if err != nil {
+			return err
 		}
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := auditing.Entry{
-			Timestamp:    time.Now(),
-			RequestId:    requestID,
-			Detail:       auditing.EntryDetailGRPCStream,
-			Path:         shc.Spec().Procedure,
-			Phase:        auditing.EntryPhaseOpened,
-			Type:         auditing.EntryTypeGRPC,
-			RemoteAddr:   shc.RequestHeader().Get("X-Real-Ip"),
-			ForwardedFor: shc.RequestHeader().Get("X-Forwarded-For"),
-		}
+		auditReqContext := a.baseEntry(ctx, requestID, shc.Spec().Procedure)
+		auditReqContext.Detail = auditing.EntryDetailGRPCStream
+		auditReqContext.Phase = auditing.EntryPhaseOpened
+		setRemoteAddr(&auditReqContext, shc.RequestHeader().Get, shc.Peer().Addr)
 
-		if auditReqContext.RemoteAddr == "" {
-			auditReqContext.RemoteAddr = shc.Peer().Addr
-		}
-
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
-		err := a.auditing.Index(auditReqContext)
+		err = a.auditing.Index(auditReqContext)
 		if err != nil {
 			a.logger.Error("unable to index", "error", err)
 		}
@@ -168,42 +126,19 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		if !i.shouldAudit(ar.Spec().Procedure) {
 			return next(ctx, ar)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				return nil, err
-			}
-			requestID = uuid.String()
+		requestID, err := requestIDFromContext(ctx)
+		if err != nil {
+			return nil, err
 		}
 		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := auditing.Entry{
-			Timestamp:    time.Now(),
-			RequestId:    requestID,
-			Detail:       auditing.EntryDetailGRPCUnary,
-			Path:         ar.Spec().Procedure,
-			Phase:        auditing.EntryPhaseRequest,
-			Type:         auditing.EntryTypeGRPC,
-			Body:         ar.Any(),
-			RemoteAddr:   ar.Header().Get("X-Real-Ip"),
-			ForwardedFor: ar.Header().Get("X-Forwarded-For"),
-		}
+		auditReqContext := i.baseEntry(ctx, requestID, ar.Spec().Procedure)
+		auditReqContext.Detail = auditing.EntryDetailGRPCUnary
+		auditReqContext.Phase = auditing.EntryPhaseRequest
+		auditReqContext.Body = ar.Any()
+		setRemoteAddr(&auditReqContext, ar.Header().Get, ar.Peer().Addr)
 
-		if auditReqContext.RemoteAddr == "" {
-			auditReqContext.RemoteAddr = ar.Peer().Addr
-		}
-
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-		err := i.auditing.Index(auditReqContext)
+		err = i.auditing.Index(auditReqContext)
 		if err != nil {
 			return nil, err
 		}
@@ -232,9 +167,60 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 	}
 }
 
+// requestIDFromContext returns the request id stored in ctx, or generates a new
+// one if none is present. It is shared between the connect-go v1 and v2
+// interceptors.
+func requestIDFromContext(ctx context.Context) (string, error) {
+	if str, ok := ctx.Value(RequestIDKey).(string); ok && str != "" {
+		return str, nil
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		return "", err
+	}
+	return id.String(), nil
+}
+
+// baseEntry fills the audit entry fields shared by all interceptor variants.
+func (a auditingConnectInterceptor) baseEntry(ctx context.Context, requestID, procedure string) auditing.Entry {
+	entry := auditing.Entry{
+		Timestamp: time.Now(),
+		RequestId: requestID,
+		Path:      procedure,
+		Type:      auditing.EntryTypeGRPC,
+	}
+
+	user := auditing.GetUserFromContext(ctx)
+	if user != nil {
+		entry.User = user.Subject
+		entry.Tenant = user.Tenant
+		entry.Project = user.Project
+	}
+
+	return entry
+}
+
+// setRemoteAddr fills the remote address fields from the given header getter,
+// falling back to the peer address.
+func setRemoteAddr(entry *auditing.Entry, headerGet func(string) string, peerAddr string) {
+	entry.RemoteAddr = headerGet("X-Real-Ip")
+	entry.ForwardedFor = headerGet("X-Forwarded-For")
+	if entry.RemoteAddr == "" {
+		entry.RemoteAddr = peerAddr
+	}
+}
+
 func statusCode(err error) *int {
+	if err == nil {
+		return new(int)
+	}
+
 	if connectErr, ok := errors.AsType[*connect.Error](err); ok {
 		return new(int(connectErr.Code()))
+	}
+
+	if connectErrV2, ok := errors.AsType[*connectv2.Error](err); ok {
+		return new(int(connectErrV2.Code()))
 	}
 
 	s, ok := status.FromError(err)
@@ -263,6 +249,14 @@ func serializableError(err error) any {
 			Code:    uint32(connectErr.Code()),
 			Message: connectErr.Code().String(),
 			Err:     connectErr.Error(),
+		}
+	}
+
+	if connectErrV2, ok := errors.AsType[*connectv2.Error](err); ok {
+		return ConnectError{
+			Code:    uint32(connectErrV2.Code()),
+			Message: connectErrV2.Code().String(),
+			Err:     connectErrV2.Error(),
 		}
 	}
 
