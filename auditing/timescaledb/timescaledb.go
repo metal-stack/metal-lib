@@ -54,6 +54,8 @@ type (
 		indexTimeout time.Duration
 
 		config *TimescaleDbConfig
+
+		insertQueryPrepared *sqlx.NamedStmt
 	}
 
 	timescaledbRow struct {
@@ -68,6 +70,8 @@ const (
 	equals sqlCompOp = "equals"
 	like   sqlCompOp = "like"
 	phrase sqlCompOp = "phrase"
+
+	insertQuery = "INSERT INTO traces (timestamp, entry) VALUES (:timestamp, :entry)"
 )
 
 func NewTimescaleDB(c auditing.Config, tc TimescaleDbConfig) (auditing.Auditing, error) {
@@ -139,6 +143,12 @@ func NewTimescaleDB(c auditing.Config, tc TimescaleDbConfig) (auditing.Auditing,
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize timescaledb backend: %w", err)
 	}
+
+	insertQueryPrepared, err := a.db.PrepareNamed(insertQuery)
+	if err != nil {
+		return nil, err
+	}
+	a.insertQueryPrepared = insertQueryPrepared
 
 	a.log.Info("connected to timescaledb backend")
 
@@ -229,8 +239,6 @@ func (a *timescaleAuditing) Index(entry auditing.Entry) error {
 		entry.Timestamp = time.Now()
 	}
 
-	q := "INSERT INTO traces (timestamp, entry) VALUES (:timestamp, :entry)"
-
 	e, err := json.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("error marshaling entry: %w", err)
@@ -244,7 +252,7 @@ func (a *timescaleAuditing) Index(entry auditing.Entry) error {
 	ctx, cancel := context.WithTimeout(context.Background(), a.indexTimeout)
 	defer cancel()
 
-	_, err = a.db.NamedExecContext(ctx, q, row)
+	_, err = a.insertQueryPrepared.QueryxContext(ctx, row)
 	if err != nil {
 		return fmt.Errorf("unable to index audit trace: %w", err)
 	}
