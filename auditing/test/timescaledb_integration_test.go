@@ -20,7 +20,7 @@ import (
 
 func TestAuditing_TimescaleDB(t *testing.T) {
 	ctx := context.Background()
-	container, db, aud := StartTimescaleDB(t, auditing.Config{
+	container, db, aud := startTimescaleDB(t, auditing.Config{
 		Log: slog.Default(),
 	})
 	defer func() {
@@ -47,9 +47,9 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 	}, healthResult)
 }
 
-func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Container, *sqlx.DB, auditing.Auditing) {
+func startTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Container, *sqlx.DB, auditing.Auditing) {
 	req := testcontainers.ContainerRequest{
-		Image:        "timescale/timescaledb:2.16.1-pg16",
+		Image:        "timescale/timescaledb:2.25.1-pg17",
 		ExposedPorts: []string{"5432/tcp"},
 		Env:          map[string]string{"POSTGRES_PASSWORD": "password"},
 		WaitingFor: wait.ForAll(
@@ -59,7 +59,7 @@ func StartTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Cont
 		Cmd: []string{"postgres", "-c", "max_connections=200"},
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
