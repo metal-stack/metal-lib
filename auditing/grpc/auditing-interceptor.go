@@ -12,9 +12,14 @@ import (
 type Key int
 
 const (
-	// Deprecated: use auditing.Session.RequestID instead.
-	RequestIDKey Key = iota
+	requestIDKey Key = iota
 )
+
+// RequestIDKey is the context key under which the audit request ID is made
+// available to downstream handlers.
+//
+// Deprecated: use auditing.Session.RequestID instead.
+const RequestIDKey = requestIDKey
 
 // UnaryServerInterceptor returns a gRPC unary server interceptor that audits
 // invocations through the given backend. If indexing the request phase fails,
@@ -39,7 +44,7 @@ func UnaryServerInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudi
 			return nil, err
 		}
 
-		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
+		childCtx := context.WithValue(sess.Context(), requestIDKey, sess.RequestID())
 		resp, err = handler(childCtx, req)
 
 		if ferr := sess.Finish(auditing.Outcome{Err: err}); ferr != nil {
@@ -74,7 +79,7 @@ func StreamServerInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAud
 
 		childSS := grpcServerStreamWithContext{
 			ServerStream: ss,
-			ctx:          context.WithValue(sess.Context(), RequestIDKey, sess.RequestID()),
+			ctx:          context.WithValue(sess.Context(), requestIDKey, sess.RequestID()),
 		}
 
 		err = handler(srv, childSS)
@@ -93,7 +98,7 @@ func newRecorder(a auditing.Auditing, logger *slog.Logger) (*auditing.Recorder, 
 }
 
 func existingRequestID(ctx context.Context) string {
-	if str, ok := ctx.Value(RequestIDKey).(string); ok {
+	if str, ok := ctx.Value(requestIDKey).(string); ok {
 		return str
 	}
 	return ""

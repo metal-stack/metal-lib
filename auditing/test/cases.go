@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/metal-stack/metal-lib/auditing"
-	httpaudit "github.com/metal-stack/metal-lib/auditing/http"
 	"github.com/metal-stack/metal-lib/httperrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,7 +75,7 @@ var (
 				RemoteAddr:   "10.0.0.2",
 				Body:         "This is the body of 00000000-0000-0000-0000-000000000002",
 				StatusCode:   nil,
-				Error:        httpaudit.SerializableError(fmt.Errorf("an error")),
+				Error:        auditing.SerializableError(auditing.EntryTypeHTTP, fmt.Errorf("an error")),
 			},
 		}
 	}
@@ -640,7 +639,7 @@ func cases() []conformanceCase {
 			name: "index an http error",
 			t: func(t *testing.T, a auditing.Auditing) {
 				err := a.Index(auditing.Entry{
-					Error: httpaudit.SerializableError(httperrors.NewHTTPError(http.StatusConflict, fmt.Errorf("already exists"))),
+					Error: auditing.SerializableError(auditing.EntryTypeHTTP, httperrors.NewHTTPError(http.StatusConflict, fmt.Errorf("already exists"))),
 				})
 				require.NoError(t, err)
 
@@ -656,7 +655,9 @@ func cases() []conformanceCase {
 			name: "index a connect error",
 			t: func(t *testing.T, a auditing.Auditing) {
 				err := a.Index(auditing.Entry{
-					Error: httpaudit.SerializableError(connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("already exists"))),
+					// the connect adapter records entries as EntryTypeGRPC, so
+					// the error is serialized with the RPC shape
+					Error: auditing.SerializableError(auditing.EntryTypeGRPC, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("already exists"))),
 				})
 				require.NoError(t, err)
 
@@ -664,7 +665,7 @@ func cases() []conformanceCase {
 				require.NoError(t, err)
 				assert.Len(t, entries, 1)
 				assert.Equal(t, "test.test", entries[0].Component)
-				assert.Equal(t, map[string]any{"error": "already_exists: already exists"}, entries[0].Error)
+				assert.Equal(t, map[string]any{"code": float64(connect.CodeAlreadyExists), "message": "already_exists", "error": "already_exists: already exists"}, entries[0].Error)
 				assert.WithinDuration(t, time.Now(), entries[0].Timestamp, 1*time.Second)
 			},
 		},

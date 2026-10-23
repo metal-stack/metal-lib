@@ -141,7 +141,7 @@ func (r *Recorder) Begin(ctx context.Context, t Transport) (*Session, error) {
 
 func (r *Recorder) finish(s *Session, o Outcome) error {
 	e := s.entry
-	e.PrepareForNextPhase()
+	e.prepareForNextPhase()
 
 	e.StatusCode = new(deriveStatusCode(e.Type, o))
 	e.Body = o.Body

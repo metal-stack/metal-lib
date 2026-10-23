@@ -141,6 +141,10 @@ func (f *EntryFilter) FillDefaults() {
 //
 // Deprecated: use auditing.Recorder, which owns the phase transition.
 func (e *Entry) PrepareForNextPhase() {
+	e.prepareForNextPhase()
+}
+
+func (e *Entry) prepareForNextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()
 	e.Body = nil

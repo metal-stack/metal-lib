@@ -12,9 +12,14 @@ import (
 type Key int
 
 const (
-	// Deprecated: use auditing.Session.RequestID instead.
-	RequestIDKey Key = iota
+	requestIDKey Key = iota
 )
+
+// RequestIDKey is the context key under which the audit request ID is made
+// available to downstream handlers.
+//
+// Deprecated: use auditing.Session.RequestID instead.
+const RequestIDKey = requestIDKey
 
 type auditingConnectInterceptor struct {
 	recorder    *auditing.Recorder
@@ -58,7 +63,7 @@ func (i auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 			return next(ctx, s)
 		}
 
-		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
+		childCtx := context.WithValue(sess.Context(), requestIDKey, sess.RequestID())
 		scc := next(childCtx, s)
 
 		// NOTE: the connect interceptor surface offers no hook for stream
@@ -97,7 +102,7 @@ func (i auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingH
 			return next(ctx, shc)
 		}
 
-		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
+		childCtx := context.WithValue(sess.Context(), requestIDKey, sess.RequestID())
 		err = next(childCtx, shc)
 		if ferr := sess.Finish(auditing.Outcome{Err: err}); ferr != nil {
 			i.logger.Error("unable to index", "error", ferr)
@@ -131,7 +136,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 			return nil, err
 		}
 
-		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
+		childCtx := context.WithValue(sess.Context(), requestIDKey, sess.RequestID())
 		resp, err := next(childCtx, ar)
 
 		var outcome auditing.Outcome
@@ -147,7 +152,7 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 }
 
 func existingRequestID(ctx context.Context) string {
-	if str, ok := ctx.Value(RequestIDKey).(string); ok {
+	if str, ok := ctx.Value(requestIDKey).(string); ok {
 		return str
 	}
 	return ""
