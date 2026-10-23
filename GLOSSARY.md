@@ -10,7 +10,13 @@ Domain language for metal-lib. Use these terms in code, docs, and review.
 
 **Auditing backend** — an adapter at the backend seam satisfying the `Auditing` interface (`Index`, `Search`, health check). Current adapters: memory (dev/test), timescaledb, splunk. Async is a cross-cutting adapter over any backend.
 
-**Conformance suite** — the shared behavioural test set in `auditing/test` that every search-capable backend must pass. Parity gaps between backends are declared as skips per backend.
+**Conformance suite** — the shared behavioural test set in `auditing/test` that every search-capable backend must pass. A backend runs it through `Run` with a Suite; parity gaps stay declared because cases name the capabilities they require and profiles declare what the backend has.
+
+**Capability** — a named backend feature (`search`, `multi-word-body`) that conformance cases may require. Declared in a Profile, checked per case; missing capabilities produce visible skips instead of name-matched skip lists.
+
+**Profile** — the set of capabilities a backend under test declares. Together with the Suite it fully describes what the run will execute.
+
+**Suite** — one configured run of the conformance cases: how to obtain the backend under test (fresh instance or shared), its Profile, optional state cleanup between cases, and the expected health-check message.
 
 **Recorder** — the deep module in `auditing` that owns the audit conventions behind the transport seam: request-ID generation, actor mapping (identity is always the subject), the two-phase index flow, error serialization, and status-code derivation. Transport adapters hand it raw facts (`Transport`) and outcomes (`Outcome`); they do not know audit conventions.
 

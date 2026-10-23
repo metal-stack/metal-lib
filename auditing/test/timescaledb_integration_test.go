@@ -7,19 +7,17 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/auditing/timescaledb"
-	"github.com/metal-stack/metal-lib/pkg/healthstatus"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestAuditing_TimescaleDB(t *testing.T) {
-	ctx := context.Background()
 	container, db, aud := startTimescaleDB(t, auditing.Config{
 		Log: slog.Default(),
 	})
@@ -28,23 +26,19 @@ func TestAuditing_TimescaleDB(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	for i, tt := range tests(ctx) {
-		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
-			defer func() {
-				db.MustExec("DELETE FROM traces;")
-			}()
-
-			tt.t(t, aud)
-		})
-	}
-
-	healthResult, err := aud.Check(t.Context())
-
-	require.NoError(t, err)
-	assert.Equal(t, healthstatus.HealthResult{
-		Status:  healthstatus.HealthStatusHealthy,
-		Message: `audit backend "timescaledb" is healthy`,
-	}, healthResult)
+	Run(t, Suite{
+		Backend: func(t testing.TB) auditing.Auditing {
+			return aud
+		},
+		Profile: Profile{Capabilities: []Capability{
+			CapabilitySearch,
+			CapabilityMultiWordBody,
+		}},
+		Cleanup: func() {
+			db.MustExec("DELETE FROM traces;")
+		},
+		HealthMessage: `audit backend "timescaledb" is healthy`,
+	})
 }
 
 func startTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Container, *sqlx.DB, auditing.Auditing) {
@@ -70,17 +64,29 @@ func startTimescaleDB(t testing.TB, config auditing.Config) (testcontainers.Cont
 	ip, err := container.Host(ctx)
 	require.NoError(t, err)
 
-	port, err := container.MappedPort(ctx, "5432")
+	port, err := container.MappedPort(ctx, "5432/tcp")
 	require.NoError(t, err)
 
-	auditing, err := timescaledb.NewTimescaleDB(config, timescaledb.TimescaleDbConfig{
-		Host:     ip,
-		Port:     port.Port(),
-		DB:       "postgres",
-		User:     "postgres",
-		Password: "password",
-	})
-	require.NoError(t, err)
+	// the container can report ready while postgres is still finishing its
+	// startup; retry the backend construction, whose migrations are idempotent
+	var (
+		auditing   auditing.Auditing
+		backendErr error
+	)
+	for attempt := 1; attempt <= 10; attempt++ {
+		auditing, backendErr = timescaledb.NewTimescaleDB(config, timescaledb.TimescaleDbConfig{
+			Host:     ip,
+			Port:     port.Port(),
+			DB:       "postgres",
+			User:     "postgres",
+			Password: "password",
+		})
+		if backendErr == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	require.NoError(t, backendErr)
 
 	source := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", ip, port.Port(), "postgres", "postgres", "password")
 
