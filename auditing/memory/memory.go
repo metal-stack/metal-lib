@@ -157,10 +157,7 @@ func (a *memoryAuditing) Search(ctx context.Context, filter auditing.EntryFilter
 		filters = append(filters, func(e auditing.Entry) bool { return filter.User == e.User })
 	}
 
-	// we always provide From
-	if filter.From.IsZero() {
-		filter.From = time.Now().Add(-24 * time.Hour).UTC()
-	}
+	filter.FillDefaults()
 
 	var entries []auditing.Entry
 

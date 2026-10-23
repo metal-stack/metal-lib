@@ -23,3 +23,5 @@ Domain language for metal-lib. Use these terms in code, docs, and review.
 **Transport adapter** — the protocol-specific modules at the transport seam (`auditing/http`, `auditing/grpc`, `auditing/connectrpc`). Each extracts its protocol's facts from an incoming invocation and drives the Recorder. They own routing policy (which invocations are audited), body capture, and their failure policy when indexing fails.
 
 **Request ID** — the correlation identifier shared by both phases of an invocation. Reused from upstream middleware when present (e.g. the rest logging filter), otherwise generated as UUIDv7 by the Recorder.
+
+**Search window** — the implicit time span of a Search whose `From` is left unset: the last `DefaultSearchWindow` (24h). `EntryFilter.FillDefaults` materializes it so every backend sees a non-zero `From`; `EntryFilterDefaultLimit` documents the suggested result limit but stays advisory — backends treat a zero limit as unlimited.

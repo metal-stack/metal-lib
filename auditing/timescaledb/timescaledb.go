@@ -331,9 +331,7 @@ func (a *timescaleAuditing) Search(ctx context.Context, filter auditing.EntryFil
 	}
 
 	// to make queries more efficient for timescaledb, we always provide from
-	if filter.From.IsZero() {
-		filter.From = time.Now().Add(-24 * time.Hour).UTC()
-	}
+	filter.FillDefaults()
 
 	values["from"] = filter.From.UTC()
 	where = append(where, "timestamp >= :from")

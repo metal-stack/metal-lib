@@ -4,7 +4,10 @@ import (
 	"github.com/metal-stack/metal-lib/auditing"
 )
 
-const EntryFilterDefaultLimit int64 = 100
+// EntryFilterDefaultLimit is the suggested default for auditing.EntryFilter.Limit.
+//
+// Deprecated: use auditing.EntryFilterDefaultLimit.
+const EntryFilterDefaultLimit = auditing.EntryFilterDefaultLimit
 
 // SerializableError attempts to turn an error into something that is usable for the audit backends.
 //
