@@ -84,6 +84,10 @@ func NewSplunk(c auditing.Config, sc SplunkConfig) (auditing.Auditing, error) {
 		c.IndexTimeout = spunkIndexTimeout
 	}
 
+	if sc.HECToken == "" {
+		return nil, fmt.Errorf("HEC token must be configured")
+	}
+
 	var (
 		endpoint   = "http://localhost:8088"
 		sourceType = "_json"
@@ -92,17 +96,8 @@ func NewSplunk(c auditing.Config, sc SplunkConfig) (auditing.Auditing, error) {
 	if sc.Endpoint != "" {
 		endpoint = sc.Endpoint
 	}
-
-	if sc.HECToken == "" {
-		return nil, fmt.Errorf("HEC token must be configured")
-	}
-
 	if sc.SourceType != "" {
 		sourceType = sc.SourceType
-	}
-
-	if sc.Endpoint != "" {
-		endpoint = sc.Endpoint
 	}
 
 	a := &splunkAuditing{

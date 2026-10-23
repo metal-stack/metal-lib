@@ -1,50 +1,25 @@
 package test
 
 import (
-	"context"
-	"fmt"
 	"log/slog"
-	"slices"
 	"testing"
 
 	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/auditing/memory"
-	"github.com/metal-stack/metal-lib/pkg/healthstatus"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAuditing_Memory(t *testing.T) {
-	skips := []string{
-		"filter on body missing one word",
-		"backwards compatibility with old error type",
-	}
-
-	for i, tt := range tests(context.Background()) {
-		t.Run(fmt.Sprintf("%d %s", i, tt.name), func(t *testing.T) {
-			if slices.Contains(skips, tt.name) {
-				t.Skipf("skipping because memory backend does not support this")
-			}
-
-			auditing, err := memory.NewMemory(auditing.Config{
-				Log: slog.Default(),
-			}, memory.MemoryConfig{})
+	Run(t, Suite{
+		Backend: func(t testing.TB) auditing.Auditing {
+			a, err := memory.NewMemory(auditing.Config{Log: slog.Default()}, memory.MemoryConfig{})
 			require.NoError(t, err)
-
-			tt.t(t, auditing)
-		})
-	}
-
-	auditing, err := memory.NewMemory(auditing.Config{
-		Log: slog.Default(),
-	}, memory.MemoryConfig{})
-	require.NoError(t, err)
-
-	healthResult, err := auditing.Check(t.Context())
-
-	require.NoError(t, err)
-	assert.Equal(t, healthstatus.HealthResult{
-		Status:  healthstatus.HealthStatusHealthy,
-		Message: `audit backend "memory" is healthy`,
-	}, healthResult)
+			return a
+		},
+		// the memory backend matches body filters as contiguous substrings only
+		Profile: Profile{Capabilities: []Capability{
+			CapabilitySearch,
+		}},
+		HealthMessage: `audit backend "memory" is healthy`,
+	})
 }

@@ -120,7 +120,31 @@ type EntryFilter struct {
 	Error string `json:"error" optional:"true"` // free text
 }
 
+// EntryFilterDefaultLimit is the suggested default for EntryFilter.Limit.
+// It is advisory: backends treat a zero limit as unlimited and do not apply
+// this value themselves.
+const EntryFilterDefaultLimit int64 = 100
+
+// DefaultSearchWindow is how far back a Search reaches when its From is left unset.
+const DefaultSearchWindow = 24 * time.Hour
+
+// FillDefaults applies the documented defaults of the filter: an unset From
+// becomes the start of DefaultSearchWindow relative to now.
+func (f *EntryFilter) FillDefaults() {
+	if f.From.IsZero() {
+		f.From = time.Now().Add(-DefaultSearchWindow).UTC()
+	}
+}
+
+// PrepareForNextPhase resets the entry for the next phase of the invocation
+// (request -> response, opened -> closed).
+//
+// Deprecated: use auditing.Recorder, which owns the phase transition.
 func (e *Entry) PrepareForNextPhase() {
+	e.prepareForNextPhase()
+}
+
+func (e *Entry) prepareForNextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()
 	e.Body = nil

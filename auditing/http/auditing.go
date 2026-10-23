@@ -1,12 +1,13 @@
 package http
 
 import (
-	"errors"
-
-	"github.com/metal-stack/metal-lib/httperrors"
+	"github.com/metal-stack/metal-lib/auditing"
 )
 
-const EntryFilterDefaultLimit int64 = 100
+// EntryFilterDefaultLimit is the suggested default for auditing.EntryFilter.Limit.
+//
+// Deprecated: use auditing.EntryFilterDefaultLimit.
+const EntryFilterDefaultLimit = auditing.EntryFilterDefaultLimit
 
 // SerializableError attempts to turn an error into something that is usable for the audit backends.
 //
@@ -15,20 +16,8 @@ const EntryFilterDefaultLimit int64 = 100
 //
 // some error types (e.g. httperror of this library) can be serialized without any issues, so these
 // should stay untouched.
+//
+// Deprecated: use auditing.SerializableError(auditing.EntryTypeHTTP, err).
 func SerializableError(err error) any {
-	if err == nil {
-		return nil
-	}
-
-	var httpErr *httperrors.HTTPErrorResponse
-	if ok := errors.As(err, &httpErr); ok {
-		return *httpErr
-	}
-
-	// fallback to string (which is better than nothing)
-	return struct {
-		Error string `json:"error"`
-	}{
-		Error: err.Error(),
-	}
+	return auditing.SerializableError(auditing.EntryTypeHTTP, err)
 }
