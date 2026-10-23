@@ -4,190 +4,104 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/auditing"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type Key int
 
 const (
+	// Deprecated: use auditing.Session.RequestID instead.
 	RequestIDKey Key = iota
 )
 
+// UnaryServerInterceptor returns a gRPC unary server interceptor that audits
+// invocations through the given backend. If indexing the request phase fails,
+// the invocation is failed; failures indexing the response phase are logged.
 func UnaryServerInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.UnaryServerInterceptor, error) {
-	if a == nil {
-		return nil, fmt.Errorf("cannot use nil auditing to create unary server interceptor")
+	rec, err := newRecorder(a, logger)
+	if err != nil {
+		return nil, err
 	}
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		if !shouldAudit(info.FullMethod) {
 			return handler(ctx, req)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				return nil, err
-			}
-			requestID = uuid.String()
-		}
 
-		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
-
-		auditReqContext := auditing.Entry{
-			Timestamp: time.Now(),
-			RequestId: requestID,
-			Type:      auditing.EntryTypeGRPC,
+		sess, err := rec.Begin(ctx, auditing.Transport{
+			Kind:      auditing.EntryTypeGRPC,
 			Detail:    auditing.EntryDetailGRPCUnary,
 			Path:      info.FullMethod,
-			Phase:     auditing.EntryPhaseRequest,
-		}
-
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
-		err = a.Index(auditReqContext)
+			RequestID: existingRequestID(ctx),
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		auditReqContext.PrepareForNextPhase()
+		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
 		resp, err = handler(childCtx, req)
 
-		auditReqContext.Phase = auditing.EntryPhaseResponse
-		auditReqContext.Body = resp
-		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
-
-		if err != nil {
-			auditReqContext.Error = serializableError(err)
-
-			err2 := a.Index(auditReqContext)
-			if err2 != nil {
-				logger.Error("unable to index", "error", err2)
-			}
-			return nil, err
+		if ferr := sess.Finish(auditing.Outcome{Err: err}); ferr != nil {
+			logger.Error("unable to index", "error", ferr)
 		}
-
-		err = a.Index(auditReqContext)
 		return resp, err
 	}, nil
 }
 
+// StreamServerInterceptor returns a gRPC stream server interceptor that audits
+// invocations through the given backend. If indexing the opened phase fails,
+// the invocation is failed; failures indexing the closed phase are logged.
 func StreamServerInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (grpc.StreamServerInterceptor, error) {
-	if a == nil {
-		return nil, fmt.Errorf("cannot use nil auditing to create stream server interceptor")
+	rec, err := newRecorder(a, logger)
+	if err != nil {
+		return nil, err
 	}
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if !shouldAudit(info.FullMethod) {
 			return handler(srv, ss)
 		}
-		var requestID string
-		if str, ok := ss.Context().Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				return err
-			}
-			requestID = uuid.String()
-		}
-		childCtx := context.WithValue(ss.Context(), RequestIDKey, requestID)
-		childSS := grpcServerStreamWithContext{
-			ServerStream: ss,
-			ctx:          childCtx,
-		}
 
-		auditReqContext := auditing.Entry{
-			Timestamp: time.Now(),
-			RequestId: requestID,
+		sess, err := rec.Begin(ss.Context(), auditing.Transport{
+			Kind:      auditing.EntryTypeGRPC,
 			Detail:    auditing.EntryDetailGRPCStream,
 			Path:      info.FullMethod,
-			Phase:     auditing.EntryPhaseOpened,
-			Type:      auditing.EntryTypeGRPC,
-		}
-
-		user := auditing.GetUserFromContext(ss.Context())
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
-		err := a.Index(auditReqContext)
+			RequestID: existingRequestID(ss.Context()),
+		})
 		if err != nil {
 			return err
 		}
 
-		auditReqContext.PrepareForNextPhase()
+		childSS := grpcServerStreamWithContext{
+			ServerStream: ss,
+			ctx:          context.WithValue(sess.Context(), RequestIDKey, sess.RequestID()),
+		}
+
 		err = handler(srv, childSS)
-		auditReqContext.StatusCode = statusCodeFromGrpcOrConnect(err)
-
-		if err != nil {
-			auditReqContext.Error = serializableError(err)
-
-			err2 := a.Index(auditReqContext)
-			if err2 != nil {
-				logger.Error("unable to index", "error", err2)
-			}
-			return err
+		if ferr := sess.Finish(auditing.Outcome{Err: err}); ferr != nil {
+			logger.Error("unable to index", "error", ferr)
 		}
-
-		auditReqContext.Phase = auditing.EntryPhaseClosed
-		err = a.Index(auditReqContext)
-
 		return err
 	}, nil
 }
 
-func statusCodeFromGrpcOrConnect(err error) *int {
-	s, ok := status.FromError(err)
-	if !ok {
-		return new(int(codes.Unknown))
+func newRecorder(a auditing.Auditing, logger *slog.Logger) (*auditing.Recorder, error) {
+	if a == nil {
+		return nil, fmt.Errorf("cannot use nil auditing to create interceptor")
 	}
-
-	return new(int(s.Code()))
+	return auditing.NewRecorder(a, logger)
 }
 
-// SerializableError attempts to turn an error into something that is usable for the audit backends.
-//
-// most errors do not contain public fields (e.g. connect error) and when being serialized will turn into
-// an empty map.
-//
-// some error types (e.g. httperror of this library) can be serialized without any issues, so these
-// should stay untouched.
-func serializableError(err error) any {
-	if err == nil {
-		return nil
+func existingRequestID(ctx context.Context) string {
+	if str, ok := ctx.Value(RequestIDKey).(string); ok {
+		return str
 	}
-	s, ok := status.FromError(err)
-	if ok {
-		return GrpcError{
-			Code:    uint32(s.Code()),
-			Message: s.Code().String(),
-			Err:     s.Message(),
-		}
-	}
-
-	// fallback to string (which is better than nothing)
-	return struct {
-		Error string `json:"error"`
-	}{
-		Error: err.Error(),
-	}
+	return ""
 }
 
+// GrpcError is the serialized shape of a gRPC status error in audit entries.
+//
+// Deprecated: produced by auditing.SerializableError; kept for compatibility.
 type GrpcError struct {
 	Code    uint32 `json:"code"`
 	Message string `json:"message"`

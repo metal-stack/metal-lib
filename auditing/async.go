@@ -67,7 +67,7 @@ func (a *asyncAuditing) Index(entry Entry) error {
 			}
 
 			if count >= a.config.AsyncRetry {
-				log.Error("maximum amount of retries reached for sending event to splunk, giving up", "error", err)
+				log.Error("maximum amount of retries reached for indexing audit trace, giving up", "error", err)
 				return
 			}
 

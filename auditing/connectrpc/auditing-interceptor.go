@@ -2,90 +2,70 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/auditing"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type Key int
 
 const (
+	// Deprecated: use auditing.Session.RequestID instead.
 	RequestIDKey Key = iota
 )
 
 type auditingConnectInterceptor struct {
-	auditing    auditing.Auditing
+	recorder    *auditing.Recorder
 	logger      *slog.Logger
 	shouldAudit func(fullMethod string) bool
 }
 
+// NewConnectInterceptor returns a connect interceptor that audits invocations
+// through the given backend. Indexing failures never fail the invocation;
+// they are logged.
 func NewConnectInterceptor(a auditing.Auditing, logger *slog.Logger, shouldAudit func(fullMethod string) bool) (connect.Interceptor, error) {
 	if a == nil {
 		return nil, fmt.Errorf("cannot use nil auditing to create connect interceptor")
 	}
+	rec, err := auditing.NewRecorder(a, logger)
+	if err != nil {
+		return nil, err
+	}
 	return auditingConnectInterceptor{
-		auditing:    a,
+		recorder:    rec,
 		logger:      logger,
 		shouldAudit: shouldAudit,
 	}, nil
 }
 
 // WrapStreamingClient implements connect.Interceptor
-func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+func (i auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, s connect.Spec) connect.StreamingClientConn {
-		if !a.shouldAudit(s.Procedure) {
+		if !i.shouldAudit(s.Procedure) {
 			return next(ctx, s)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				a.logger.Error("unable to generate uuid", "error", err)
-			}
-			requestID = uuid.String()
-		}
-		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := auditing.Entry{
-			Timestamp: time.Now(),
-			RequestId: requestID,
+		sess, err := i.recorder.Begin(ctx, auditing.Transport{
+			Kind:      auditing.EntryTypeGRPC,
 			Detail:    auditing.EntryDetailGRPCStream,
 			Path:      s.Procedure,
-			Phase:     auditing.EntryPhaseOpened,
-			Type:      auditing.EntryTypeGRPC,
-		}
-
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
-		err := a.auditing.Index(auditReqContext)
+			RequestID: existingRequestID(ctx),
+		})
 		if err != nil {
-			a.logger.Error("unable to index", "error", err)
+			i.logger.Error("unable to index", "error", err)
+			return next(ctx, s)
 		}
 
-		auditReqContext.PrepareForNextPhase()
+		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
 		scc := next(childCtx, s)
 
-		auditReqContext.Phase = auditing.EntryPhaseClosed
-		auditReqContext.StatusCode = statusCode(err)
-
-		err = a.auditing.Index(auditReqContext)
-		if err != nil {
-			a.logger.Error("unable to index", "error", err)
+		// NOTE: the connect interceptor surface offers no hook for stream
+		// completion, so the closed phase is recorded when the connection is
+		// established.
+		if ferr := sess.Finish(auditing.Outcome{}); ferr != nil {
+			i.logger.Error("unable to index", "error", ferr)
 		}
 
 		return scc
@@ -93,71 +73,35 @@ func (a auditingConnectInterceptor) WrapStreamingClient(next connect.StreamingCl
 }
 
 // WrapStreamingHandler implements connect.Interceptor
-func (a auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (i auditingConnectInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, shc connect.StreamingHandlerConn) error {
-		if !a.shouldAudit(shc.Spec().Procedure) {
+		if !i.shouldAudit(shc.Spec().Procedure) {
 			return next(ctx, shc)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				return err
-			}
-			requestID = uuid.String()
-		}
-		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := auditing.Entry{
-			Timestamp:    time.Now(),
-			RequestId:    requestID,
+		remoteAddr := shc.RequestHeader().Get("X-Real-Ip")
+		if remoteAddr == "" {
+			remoteAddr = shc.Peer().Addr
+		}
+
+		sess, err := i.recorder.Begin(ctx, auditing.Transport{
+			Kind:         auditing.EntryTypeGRPC,
 			Detail:       auditing.EntryDetailGRPCStream,
 			Path:         shc.Spec().Procedure,
-			Phase:        auditing.EntryPhaseOpened,
-			Type:         auditing.EntryTypeGRPC,
-			RemoteAddr:   shc.RequestHeader().Get("X-Real-Ip"),
+			RemoteAddr:   remoteAddr,
 			ForwardedFor: shc.RequestHeader().Get("X-Forwarded-For"),
-		}
-
-		if auditReqContext.RemoteAddr == "" {
-			auditReqContext.RemoteAddr = shc.Peer().Addr
-		}
-
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
-		err := a.auditing.Index(auditReqContext)
+			RequestID:    existingRequestID(ctx),
+		})
 		if err != nil {
-			a.logger.Error("unable to index", "error", err)
+			i.logger.Error("unable to index", "error", err)
+			return next(ctx, shc)
 		}
 
-		auditReqContext.PrepareForNextPhase()
+		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
 		err = next(childCtx, shc)
-		auditReqContext.StatusCode = statusCode(err)
-
-		if err != nil {
-			auditReqContext.Error = serializableError(err)
-
-			err2 := a.auditing.Index(auditReqContext)
-			if err2 != nil {
-				a.logger.Error("unable to index", "error", err2)
-			}
-			return err
+		if ferr := sess.Finish(auditing.Outcome{Err: err}); ferr != nil {
+			i.logger.Error("unable to index", "error", ferr)
 		}
-
-		auditReqContext.Phase = auditing.EntryPhaseClosed
-		err = a.auditing.Index(auditReqContext)
-		if err != nil {
-			a.logger.Error("unable to index", "error", err)
-		}
-
 		return err
 	}
 }
@@ -168,112 +112,50 @@ func (i auditingConnectInterceptor) WrapUnary(next connect.UnaryFunc) connect.Un
 		if !i.shouldAudit(ar.Spec().Procedure) {
 			return next(ctx, ar)
 		}
-		var requestID string
-		if str, ok := ctx.Value(RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				return nil, err
-			}
-			requestID = uuid.String()
-		}
-		childCtx := context.WithValue(ctx, RequestIDKey, requestID)
 
-		auditReqContext := auditing.Entry{
-			Timestamp:    time.Now(),
-			RequestId:    requestID,
+		remoteAddr := ar.Header().Get("X-Real-Ip")
+		if remoteAddr == "" {
+			remoteAddr = ar.Peer().Addr
+		}
+
+		sess, err := i.recorder.Begin(ctx, auditing.Transport{
+			Kind:         auditing.EntryTypeGRPC,
 			Detail:       auditing.EntryDetailGRPCUnary,
 			Path:         ar.Spec().Procedure,
-			Phase:        auditing.EntryPhaseRequest,
-			Type:         auditing.EntryTypeGRPC,
-			Body:         ar.Any(),
-			RemoteAddr:   ar.Header().Get("X-Real-Ip"),
+			RemoteAddr:   remoteAddr,
 			ForwardedFor: ar.Header().Get("X-Forwarded-For"),
-		}
-
-		if auditReqContext.RemoteAddr == "" {
-			auditReqContext.RemoteAddr = ar.Peer().Addr
-		}
-
-		user := auditing.GetUserFromContext(ctx)
-		if user != nil {
-			auditReqContext.User = user.Subject
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-		err := i.auditing.Index(auditReqContext)
+			RequestID:    existingRequestID(ctx),
+			Body:         ar.Any(),
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		auditReqContext.PrepareForNextPhase()
-
+		childCtx := context.WithValue(sess.Context(), RequestIDKey, sess.RequestID())
 		resp, err := next(childCtx, ar)
 
-		auditReqContext.Phase = auditing.EntryPhaseResponse
-		auditReqContext.StatusCode = statusCode(err)
-
-		if err != nil {
-			auditReqContext.Error = serializableError(err)
-
-			err2 := i.auditing.Index(auditReqContext)
-			if err2 != nil {
-				i.logger.Error("unable to index", "error", err2)
-			}
-			return nil, err
-		} else if resp != nil {
-			auditReqContext.Body = resp.Any()
+		var outcome auditing.Outcome
+		outcome.Err = err
+		if resp != nil {
+			outcome.Body = resp.Any()
 		}
-
-		err = i.auditing.Index(auditReqContext)
+		if ferr := sess.Finish(outcome); ferr != nil {
+			i.logger.Error("unable to index", "error", ferr)
+		}
 		return resp, err
 	}
 }
 
-func statusCode(err error) *int {
-	if connectErr, ok := errors.AsType[*connect.Error](err); ok {
-		return new(int(connectErr.Code()))
+func existingRequestID(ctx context.Context) string {
+	if str, ok := ctx.Value(RequestIDKey).(string); ok {
+		return str
 	}
-
-	s, ok := status.FromError(err)
-	if !ok {
-		return new(int(codes.Unknown))
-	}
-
-	return new(int(s.Code()))
+	return ""
 }
 
-// SerializableError attempts to turn an error into something that is usable for the audit backends.
+// ConnectError is the serialized shape of a connect error in audit entries.
 //
-// most errors do not contain public fields (e.g. connect error) and when being serialized will turn into
-// an empty map.
-//
-// some error types (e.g. httperror of this library) can be serialized without any issues, so these
-// should stay untouched.
-func serializableError(err error) any {
-	if err == nil {
-		return nil
-	}
-
-	var connectErr *connect.Error
-	if ok := errors.As(err, &connectErr); ok {
-		return ConnectError{
-			Code:    uint32(connectErr.Code()),
-			Message: connectErr.Code().String(),
-			Err:     connectErr.Error(),
-		}
-	}
-
-	// fallback to string (which is better than nothing)
-	return struct {
-		Error string `json:"error"`
-	}{
-		Error: err.Error(),
-	}
-}
-
+// Deprecated: produced by auditing.SerializableError; kept for compatibility.
 type ConnectError struct {
 	Code    uint32 `json:"code"`
 	Message string `json:"message"`

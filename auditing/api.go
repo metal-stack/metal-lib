@@ -120,6 +120,10 @@ type EntryFilter struct {
 	Error string `json:"error" optional:"true"` // free text
 }
 
+// PrepareForNextPhase resets the entry for the next phase of the invocation
+// (request -> response, opened -> closed).
+//
+// Deprecated: use auditing.Recorder, which owns the phase transition.
 func (e *Entry) PrepareForNextPhase() {
 	e.Id = ""
 	e.Timestamp = time.Now()

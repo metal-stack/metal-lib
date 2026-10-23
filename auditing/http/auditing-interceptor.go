@@ -7,10 +7,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/emicklei/go-restful/v3"
-	"github.com/google/uuid"
 	"github.com/metal-stack/metal-lib/auditing"
 	"github.com/metal-stack/metal-lib/rest"
 )
@@ -34,9 +32,13 @@ func NewHttpFilterErrorCallback(callback func(err error, response *restful.Respo
 	return &httpFilterErrorCallback{callback: callback}
 }
 
+// HttpFilter returns a restful filter that audits requests through the given
+// backend. If indexing the request phase fails, the request is failed via the
+// error callback; failures indexing the response phase are logged.
 func HttpFilter(a auditing.Auditing, logger *slog.Logger, opts ...httpFilterOpt) (restful.FilterFunction, error) {
-	if a == nil {
-		return nil, fmt.Errorf("cannot use nil auditing to create http middleware")
+	rec, err := auditing.NewRecorder(a, logger)
+	if err != nil {
+		return nil, fmt.Errorf("cannot use nil auditing to create http middleware: %w", err)
 	}
 
 	errorCallback := func(err error, response *restful.Response) {
@@ -57,84 +59,34 @@ func HttpFilter(a auditing.Auditing, logger *slog.Logger, opts ...httpFilterOpt)
 	return func(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
 		r := request.Request
 
-		switch r.Method {
-		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
-			break
-		default:
-			if request.SelectedRoute() == nil {
-				logger.Debug("selected route is not defined, continue request processing")
-				chain.ProcessFilter(request, response)
-				return
-			}
-			included, ok := request.SelectedRoute().Metadata()[Include].(bool)
-			if ok && included {
-				break
-			} else {
-				chain.ProcessFilter(request, response)
-				return
-			}
-		}
-
-		if request.SelectedRoute() == nil {
-			logger.Debug("selected route is not defined, continue request processing")
+		if !shouldAuditRoute(logger, request, r.Method) {
 			chain.ProcessFilter(request, response)
 			return
 		}
 
-		excluded, ok := request.SelectedRoute().Metadata()[Exclude].(bool)
-		if ok && excluded {
-			logger.Debug("excluded route from auditing through metadata annotation", "path", request.SelectedRoute().Path())
-			chain.ProcessFilter(request, response)
-			return
-		}
-
-		var requestID string
-		if str, ok := r.Context().Value(rest.RequestIDKey).(string); ok {
-			requestID = str
-		}
-		if requestID == "" {
-			uuid, err := uuid.NewV7()
-			if err != nil {
-				logger.Error("unable to generate uuid", "error", err)
-				_, _ = response.Write([]byte("unable to generate request uuid " + err.Error()))
-				response.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			requestID = uuid.String()
-		}
-		auditReqContext := auditing.Entry{
-			Timestamp:    time.Now(),
-			RequestId:    requestID,
-			Type:         auditing.EntryTypeHTTP,
-			Detail:       auditing.EntryDetail(r.Method),
-			Path:         r.URL.Path,
-			Phase:        auditing.EntryPhaseRequest,
-			ForwardedFor: request.HeaderParameter("x-forwarded-for"),
-			RemoteAddr:   r.RemoteAddr,
-		}
-		user := auditing.GetUserFromContext(r.Context())
-		if user != nil {
-			auditReqContext.User = user.EMail
-			auditReqContext.Tenant = user.Tenant
-			auditReqContext.Project = user.Project
-		}
-
+		var requestBody any
 		if r.Method != http.MethodGet && r.Body != nil {
-			bodyReader := r.Body
-			body, err := io.ReadAll(bodyReader)
-			r.Body = io.NopCloser(bytes.NewReader(body))
+			raw, err := io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewReader(raw))
 			if err != nil {
 				logger.Error("unable to read request body", "error", err)
 				errorCallback(err, response)
 				return
 			}
-			err = json.Unmarshal(body, &auditReqContext.Body)
-			if err != nil {
-				auditReqContext.Body = string(body)
+			if err := json.Unmarshal(raw, &requestBody); err != nil {
+				requestBody = string(raw)
 			}
 		}
 
-		err := a.Index(auditReqContext)
+		sess, err := rec.Begin(r.Context(), auditing.Transport{
+			Kind:         auditing.EntryTypeHTTP,
+			Detail:       auditing.EntryDetail(r.Method),
+			Path:         r.URL.Path,
+			ForwardedFor: request.HeaderParameter("x-forwarded-for"),
+			RemoteAddr:   r.RemoteAddr,
+			RequestID:    existingRequestID(r),
+			Body:         requestBody,
+		})
 		if err != nil {
 			logger.Error("unable to index", "error", err)
 			errorCallback(err, response)
@@ -146,26 +98,61 @@ func HttpFilter(a auditing.Auditing, logger *slog.Logger, opts ...httpFilterOpt)
 		}
 		response.ResponseWriter = bufferedResponseWriter
 
-		auditReqContext.PrepareForNextPhase()
 		chain.ProcessFilter(request, response)
 
-		auditReqContext.Phase = auditing.EntryPhaseResponse
-		auditReqContext.StatusCode = new(response.StatusCode())
 		strBody := bufferedResponseWriter.Content()
-		body := []byte(strBody)
-		err = json.Unmarshal(body, &auditReqContext.Body)
-		if err != nil {
-			auditReqContext.Body = strBody
-			auditReqContext.Error = err
+		var responseBody any
+		if err := json.Unmarshal([]byte(strBody), &responseBody); err != nil {
+			responseBody = strBody
 		}
 
-		err = a.Index(auditReqContext)
-		if err != nil {
-			logger.Error("unable to index", "error", err)
-			errorCallback(err, response)
-			return
+		if ferr := sess.Finish(auditing.Outcome{
+			StatusCode: response.StatusCode(),
+			Body:       responseBody,
+		}); ferr != nil {
+			logger.Error("unable to index", "error", ferr)
 		}
 	}, nil
+}
+
+// shouldAuditRoute applies the transport-specific routing policy: mutating
+// methods are always audited, others only when the route opts in via the
+// Include metadata annotation. Routes opting out via Exclude are never
+// audited.
+func shouldAuditRoute(logger *slog.Logger, request *restful.Request, method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		break
+	default:
+		if request.SelectedRoute() == nil {
+			logger.Debug("selected route is not defined, continue request processing")
+			return false
+		}
+		included, ok := request.SelectedRoute().Metadata()[Include].(bool)
+		if !ok || !included {
+			return false
+		}
+	}
+
+	if request.SelectedRoute() == nil {
+		logger.Debug("selected route is not defined, continue request processing")
+		return false
+	}
+
+	excluded, ok := request.SelectedRoute().Metadata()[Exclude].(bool)
+	if ok && excluded {
+		logger.Debug("excluded route from auditing through metadata annotation", "path", request.SelectedRoute().Path())
+		return false
+	}
+
+	return true
+}
+
+func existingRequestID(r *http.Request) string {
+	if str, ok := r.Context().Value(rest.RequestIDKey).(string); ok {
+		return str
+	}
+	return ""
 }
 
 type bufferedHttpResponseWriter struct {
