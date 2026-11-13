@@ -53,7 +53,7 @@ func UpdateKubeConfig(kubeConfig string, tokenInfo TokenInfo, userIDExtractor Us
 // otherwise the location of the kubeconfig is determined from env KUBECONFIG or default location.
 //
 // we modify/append a user with auth-provider from given tokenInfo.
-// we modify/append the given context that references the user.
+// we modify/append the given context that references the user, other fields of an existing context are kept.
 //
 // returns filename the config got written to or error if any
 func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtractor UserIDExtractor, contextName string) (string, error) {
@@ -94,9 +94,13 @@ func UpdateKubeConfigContext(kubeConfig string, tokenInfo TokenInfo, userIDExtra
 		return "", err
 	}
 
-	err = AddContext(cfg, contextName, "", userName)
-	if err != nil {
-		return "", err
+	// update only the user of an existing context, so a cluster or namespace set there is kept
+	existingContext, _, err := findMapListMap(cfg, "contexts", "name", contextName)
+	if err != nil || dyno.Set(existingContext, userName, "context", "user") != nil {
+		err = AddContext(cfg, contextName, "", userName)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// use configured yaml
