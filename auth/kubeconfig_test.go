@@ -394,6 +394,27 @@ func TestUpdateExistingProdConfig(t *testing.T) {
 	diffFiles(t, "./testdata/UEMCexpectedProdConfig", tmpfile.Name())
 }
 
+func TestUpdateExistingProdConfigKeepsCluster(t *testing.T) {
+	tmpfile := writeTemplate(t, "./testdata/UEMCgivenProdConfigCluster")
+	defer func() {
+		_ = os.Remove(tmpfile.Name())
+	}() // clean up
+
+	_, err := UpdateKubeConfigContext(tmpfile.Name(), demoToken2, ExtractEMail, testCloudContextNameProd)
+	if err != nil {
+		t.Fatalf("error updating config: %v", err)
+	}
+
+	diffFiles(t, "./testdata/UEMCexpectedProdConfigCluster", tmpfile.Name())
+
+	_, err = UpdateKubeConfigContext(tmpfile.Name(), demoToken2, ExtractEMail, testCloudContextNameProd)
+	if err != nil {
+		t.Fatalf("error updating config: %v", err)
+	}
+
+	diffFiles(t, "./testdata/UEMCexpectedProdConfigCluster", tmpfile.Name())
+}
+
 func TestManipulateEncodeKubeconfig(t *testing.T) {
 	// load full kubeconfig
 	cfg, _, _, err := LoadKubeConfig("./testdata/UEUgivenConfig")
